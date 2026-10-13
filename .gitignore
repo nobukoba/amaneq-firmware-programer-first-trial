@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.venv/
+installed/
+firmware/
+logs/
+driver-backup/
+packages/
+package-db/
+tools/
+*.sif
+*.pkg.tar.*
+*.mpc
+*.mpcx
+*.pcap
+*.pcapng
+.env

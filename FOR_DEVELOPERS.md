@@ -1,0 +1,68 @@
+# Developer notes
+
+**Language: English | [日本語](FOR_DEVELOPERS.ja.md)**
+
+## Layout and runtime
+
+`amaneq-firmware-programer.py` is the only main Python entry point. The hyphenated filename is deliberate. Tests load it with importlib and register the module before executing dataclass declarations. Shortcuts are thin argument presets; shared helpers select Python and invoke the same `program` implementation. No second programming implementation exists.
+
+Runtime: Python 3.10+ standard library and an external openFPGALoader executable. Linux discovery checks PATH; Windows can use `--loader`, a locally provided `installed/ucrt64` layout, or PATH. SPI bridge search checks the repository's optional installation, the executable's installation prefix, `/usr/share/openFPGALoader`, and `/usr/local/share/openFPGALoader`; `--bridge` overrides it. The binary and bridge are third-party resources, not tracked here.
+
+Windows scripts honor AMANEQ_PYTHON, otherwise py -3 then python. The Python program searches cygpath via PATH, AMANEQ_CYGPATH_DIR, an explicit --cygpath-dir, Git for Windows, or an optional local tools directory. Do not embed one workstation's dependency directory. AMANEQ_HS3_SERIALS is an optional comma-separated list of user-confirmed HS3 serials.
+
+## Acquisition and history
+
+Firmware defaults map LRTDC/HRTDC/LRTDC-10G/Mikumari/mezzanine to the AMANEQ-official repositories; Skeleton maps to spadi-alliance/AMANEQ-Skeleton. Generic Skeleton filenames are permitted for v1/v4 only because the DAQ manual expressly documents that compatibility.
+
+Resolve branch/tag/SHA to a commit before listing its tree and fetching raw content. Check size and SHA1 of the Git blob framing (`blob <length>\0` plus bytes), then inspect the firmware. Save SHA256 and provenance. Raw URL mode has no Git identity guarantee unless the user supplies an expected SHA256; content validation still applies.
+
+Version components use hexadecimal ordering in these upstream filenames. Latest selection is by matching filename version in the default branch; tags can lag current firmware. Historical choices combine tags and commits, sort by commit date, and cap the total including current branch. Annotated-tag edge cases and very large histories should be checked against actual API responses if behavior is extended.
+
+Network reads have an inactivity timeout, response-size caps and Content-Length checks. English errors distinguish DNS/offline, timeout, HTTP statuses, TLS, interrupted transfer, invalid JSON/HTML and hash/format errors. No destructive retry follows a communication failure.
+
+## Target/file validation
+
+A BIT header provides part/package, design, date/time, and configuration payload. Intel HEX parsing checks records, checksums, extended addresses, EOF, overlap and the 32 MiB maximum decoded image. The configuration sync word and IDCODE packet identify the FPGA; revision bits are masked for comparison. The allowed device is XC7K160T, matching 0x0364c093 after masking.
+
+All board targets share that FPGA identity. Filename target/family evidence is checked when recognized; arbitrary renaming removes that evidence and does not prove a board revision. The physical target remains user intent, not automatic hardware identity. Skeleton BIT only; other families' BIT files are intentionally rejected even if technically loadable.
+
+## Programming sequence
+
+1. Enumerate/select cable before file choice or download. Multiple candidates without serial stop and list their serials; model-ambiguous FT232H requires an explicit declaration/evidence.
+2. Automatic GitHub MCS mezzanine path probes the flash first and uses the detected variant to filter downloadable files. That probe changes SRAM only.
+3. Validate selected/downloaded file, family, target, FPGA part and one-device JTAG chain.
+4. BIT: invoke SRAM loading and require observed DONE=1.
+5. MCS: load the SPI bridge, read JEDEC/model/capacity, validate target and recheck the selected variant, dump the complete flash to a backup, program, dump the image-length range, compare every byte, write result JSON.
+
+MCS sparse holes are represented as FF in the comparison image. Full backup size must match capacity before erase. Failed reports preserve paths and error text; no automatic recovery write or destructive retry is attempted. Users must manually power-cycle/check boot after flash programming; the SPI bridge can remain in SRAM.
+
+Flash signatures: 012018 -> S25FL128S/16MiB; 20bb19 -> 256Mbit Micron family used for MT25QU256/32MiB; 20bb18/20ba18 -> N25Q128-family/16MiB. MT25/N25Q aliases cannot establish an exact marketing part number beyond the shared JEDEC family signature. A contradictory model/capacity stops before erase. These mappings are source/documentation evidence; neither mezzanine variant has been physically exercised here.
+
+## USB and platform limits
+
+HS3 VID/PID 0403:6014 overlaps HS2 and other FT232H devices. Linux enumeration uses sysfs serial/bus/device/product fields; Windows uses a fixed read-only PnP query. No user input is interpolated into that PowerShell query. Linux FTDI selection uses bus/device; Windows FTDI selection uses serial. Xilinx candidates use known 03fd Platform Cable product IDs and the chosen binary's cable list. The upstream Xilinx constructor does not receive bus/serial, so do not claim unique selection among several Xilinx cables.
+
+macOS currently fails scan/program explicitly, rather than incorrectly using Linux sysfs. Hardware-independent downloads/inspection remain available. Linux/WSL/containers are implementation paths, not physical validation results. Native Windows drive/path conversion and USB drivers are separate requirements. libusb-compatible host configuration cannot be installed by merely copying binaries or putting a tool in a container.
+
+## Physical evidence: 2026-10-14
+
+On the local Windows machine, direct openFPGALoader v1.1.1 calls with an HS3 reached XC7K160T after switching FTDIBUS to WinUSB. Before the switch, USB opening failed with -4. BIT SRAM loading reached DONE=1. MCS programming recognized S25FL128S (JEDEC 012018) and completed.
+
+The same run printed `Verify not supported in this mode` despite exit 0. A separate flash dump matched all 6,692,572 MCS payload bytes. Payload SHA256: `15c99849279621b90f74c9ffac898fe234698204b7c51a1e5a09aac068bfa32b`. The MCS file SHA256: `8d7d8029b183090b16364dd1668e3d6c04523a0384318dc25180929ca47ea9f2`.
+
+The Windows bridge-loading path needed cygpath. A JTAG reset attempt did not establish flash boot: DONE remained 0. Reloading the matching BIT restored DONE=1. This does not establish successful persistent boot. The final Python orchestration, full-backup sequence, both mezzanine variants, Linux, macOS programming and containers were not physically verified. Later tests use mocks and synthetic fixtures; do not describe them as hardware tests.
+
+No proprietary SiTCP licenses, actual flash backups, packet captures or third-party binaries are included. SiTCP and SiTCP-XG licenses remain a separate EEPROM concern.
+
+## Tests and maintenance
+
+```bash
+python3 -m unittest test_amaneq_firmware_programer -v
+python3 -m compileall -q amaneq-firmware-programer.py test_amaneq_firmware_programer.py
+```
+
+The tracked suite is offline and self-contained: synthetic BIT/MCS parsing, checksum/EOF/overlap rejection, content-vs-extension, serial/ambiguity stops, flash backup/write/readback ordering, mismatch failure, network errors, direct URL validation, history ordering/limits, Skeleton compatibility and mezzanine pre-download selection. The initial public import has 36 tests. A passing mock is not proof of physical behavior.
+
+GitHub Actions runs the same offline tests on Ubuntu, Windows and macOS with Python 3.10/3.12. A green macOS test runner does not mean macOS USB programming is implemented. Inspect shortcut --help, not their normal programming operation, during routine validation.
+
+Use Black with the repository configuration for readable formatting. Keep code/comments/errors English and bilingual examples synchronized. Preserve shebang, LF script data, executable Git modes, and CRLF Windows checkouts. Do not publish firmware/cache/log directories. Review secret/host-path exclusions before pushing.
