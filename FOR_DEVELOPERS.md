@@ -42,7 +42,7 @@ Flash signatures: 012018 -> S25FL128S/16MiB; 20bb19 -> 256Mbit Micron family use
 
 HS3 VID/PID 0403:6014 overlaps HS2 and other FT232H devices. Linux enumeration uses sysfs serial/bus/device/product fields; Windows uses a fixed read-only PnP query. No user input is interpolated into that PowerShell query. Linux FTDI selection uses bus/device; Windows FTDI selection uses serial. Xilinx candidates use known 03fd Platform Cable product IDs and the chosen binary's cable list. The upstream Xilinx constructor does not receive bus/serial, so do not claim unique selection among several Xilinx cables.
 
-macOS currently fails scan/program explicitly, rather than incorrectly using Linux sysfs. Hardware-independent downloads/inspection remain available. Linux/WSL/containers are implementation paths, not physical validation results. Native Windows drive/path conversion and USB drivers are separate requirements. libusb-compatible host configuration cannot be installed by merely copying binaries or putting a tool in a container.
+Target Windows WSL2, native Linux and native macOS. macOS parses ioreg plist output and selects FTDI by serial; Linux/WSL uses sysfs and bus/device. WSL requires usbipd-win forwarding and Linux USB permissions. macOS enumeration is mock-tested; programming on all three environments remains physically unverified. Native Windows code/evidence is retained as legacy support.
 
 ## Physical evidence: 2026-10-14
 

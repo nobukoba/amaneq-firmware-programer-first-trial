@@ -182,12 +182,61 @@ class ProgrammerTests(unittest.TestCase):
             app.main(["wizard"])
         choose.assert_not_called()
 
-    def test_macos_scan_reports_unimplemented(self):
+    def test_macos_scan_and_serial_selection(self):
+        tree = [
+            {
+                "IORegistryEntryChildren": [
+                    {
+                        "idVendor": 0x0403,
+                        "idProduct": 0x6014,
+                        "USB Serial Number": "MAC-TEST",
+                        "USB Product Name": "Digilent JTAG-HS3",
+                    }
+                ]
+            }
+        ]
+        args = argparse.Namespace(cable="auto", serial=None, yes=True)
         with (
             patch.object(app.sys, "platform", "darwin"),
-            self.assertRaisesRegex(app.UserError, "not implemented"),
+            patch.object(app, "loader_path", return_value="loader"),
+            patch.object(
+                app.subprocess,
+                "run",
+                side_effect=[
+                    argparse.Namespace(stdout="digilent_hs3 supported"),
+                    argparse.Namespace(stdout=app.plistlib.dumps(tree)),
+                ],
+            ),
         ):
-            app.scan_cables(argparse.Namespace())
+            devices = app.scan_cables(args)
+        self.assertEqual(devices[0]["serial"], "MAC-TEST")
+        with (
+            patch.object(app.sys, "platform", "darwin"),
+            patch.object(app, "scan_cables", return_value=devices),
+        ):
+            self.assertEqual(
+                app.select_cable(args)[1],
+                ["-c", "digilent_hs3", "--ftdi-serial", "MAC-TEST"],
+            )
+            devices[0]["serial"] = ""
+            with self.assertRaisesRegex(app.UserError, "serial number"):
+                app.select_cable(args)
+
+    def test_macos_invalid_usb_output(self):
+        with (
+            patch.object(app.sys, "platform", "darwin"),
+            patch.object(app, "loader_path", return_value="loader"),
+            patch.object(
+                app.subprocess,
+                "run",
+                side_effect=[
+                    argparse.Namespace(stdout="digilent_hs3 supported"),
+                    argparse.Namespace(stdout=b"invalid"),
+                ],
+            ),
+            self.assertRaisesRegex(app.UserError, "enumeration failed"),
+        ):
+            app.scan_cables(argparse.Namespace(cable="auto"))
 
     def test_multiple_cables_always_list_and_stop(self):
         for unattended in (True, False):

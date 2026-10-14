@@ -47,7 +47,7 @@ GitHubのコミットを固定し、サイズ・Git blobハッシュを照合。
 
 本体同梱だけではWindowsドライバー、Linux USB権限、WSL転送、コンテナUSB設定は解決しません。対応ケーブルは選んだ実行ファイルのlist-cablesで判断します。確認したWindows版はXilinx純正ローダー非対応。Linux純正ローダー経路の一意選択には制約があり、1台だけ接続します。実機未確認です。
 
-macOSの機器検出・書き込みは未実装と明示します。cygpathはWindowsのパス変換用で、USBドライバーではありません。
+対象はWindows WSL2・Linuxネイティブ・macOSネイティブです。macOSはioregのplistを解析しFTDIをシリアル指定、Linux/WSLはsysfsとbus/device指定を使います。WSLはusbipd-win転送とLinuxのUSB権限が必要です。macOS検出の模擬テストと実機書き込みの検証を区別してください。Windowsネイティブは従来の実装・実機観測として保持します。
 
 ```bash
 python3 -m unittest test_amaneq_firmware_programer -v

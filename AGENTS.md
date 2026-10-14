@@ -49,7 +49,7 @@ Use the SiTCP writer's practical order: purpose, quick installation, actual writ
 
 Windows FTDI/WinUSB setup, Linux USB permissions, WSL usbipd and container USB exposure are host requirements, not solved by bundling a binary. Keep capability detection tied to the chosen executable's `--list-cables` output. The tested Windows build lacks Xilinx Platform Cable support. The upstream Xilinx adapter path does not accept unique bus/serial selection, so the Linux path requires exactly one Xilinx candidate; its physical behavior remains unverified.
 
-macOS cable enumeration/programming is not implemented in this first trial. Report that clearly; do not present Linux `/sys` enumeration as macOS support. Download/inspection remain usable. `cygpath` is a Windows path-conversion dependency in the tested flash bridge-loading path, not a USB driver. Explicit overrides must remain supported.
+Target Windows WSL2, native Linux and native macOS. macOS parses ioreg plist output and selects FTDI by serial; Linux/WSL uses sysfs and bus/device. WSL requires usbipd-win forwarding and Linux USB permissions. macOS enumeration is mock-tested; programming on all three environments remains physically unverified. Native Windows code/evidence is retained as legacy support.
 
 ## Verification and publication
 

@@ -111,31 +111,35 @@ sudo usermod -aG plugdev "$USER"
 sudo udevadm control --reload-rules
 ```
 
-## Windows native setup
+## Windows WSL2, Linux and macOS setup
 
-Install Python 3.10+ from [python.org](https://www.python.org/downloads/windows/). Install openFPGALoader in the MSYS2 UCRT64 shell using the command below. For the standard `C:/msys64` layout, use the explicit executable and cygpath paths shown here. The repository contains no per-user registry setup and does not change `.py` associations.
+The supported execution environments are Windows WSL2, native Linux and native macOS. Use Python 3.10+ and the matching OS build of openFPGALoader. Windows runs the Linux program and `.sh` shortcuts inside WSL2. Native Windows `.cmd` files remain legacy helpers outside this target scope.
 
-The tested HS3 path requires WinUSB/libusb access; Vivado's FTDIBUS driver is not interchangeable. Driver replacement can also affect another HS3 with the same hardware ID. Back up the original driver before changing it. The tested Windows build did not include Xilinx Platform Cable support.
-
-```bash
-pacman -S mingw-w64-ucrt-x86_64-openFPGALoader
-```
-
-## Windows commands
-
-Run these from PowerShell after cloning. The first two only inspect help/devices. The shortcut performs the write immediately. `AMANEQ_PYTHON` can override the Python executable; `AMANEQ_CYGPATH_DIR` can supply the directory containing `cygpath.exe`. Otherwise the Windows shortcut tries `py -3`, then `python`.
+For WSL2, install WSL2/Ubuntu and [usbipd-win](https://learn.microsoft.com/en-us/windows/wsl/connect-usb), keep a WSL terminal open, then forward the selected cable from Windows PowerShell. Binding requires Administrator rights; attaching does not. While attached, the cable is unavailable to Windows applications. Repeat attach after disconnect/reconnect. Install openFPGALoader and apply the Linux USB permissions above inside WSL. A Windows WinUSB replacement is not a prerequisite of this path.
 
 ```powershell
-py -3 amaneq-firmware-programer.py --help
-py -3 amaneq-firmware-programer.py scan --loader C:/msys64/ucrt64/bin/openFPGALoader.exe
-.\program-latest-mcs-amaneq-v4-lrtdc.cmd --cable hs3 --loader C:/msys64/ucrt64/bin/openFPGALoader.exe --cygpath-dir C:/msys64/usr/bin
+usbipd list
+# Replace 4-4 with the cable BUSID printed above.
+# Run bind in an Administrator PowerShell.
+usbipd bind --busid 4-4
+usbipd attach --wsl --busid 4-4
 ```
+
+```bash
+# Inside WSL2 (Ubuntu) or native Ubuntu/Debian:
+sudo apt update
+sudo apt install python3 git openfpgaloader
+# On native macOS with Homebrew:
+brew install python openfpgaloader
+```
+
+macOS uses `ioreg` to enumerate USB devices and selects FTDI cables by serial. It does not use Linux sysfs, udev or Windows cygpath. If access fails, close applications using the cable and inspect the openFPGALoader error; this program never changes drivers automatically. All three environments use the same Python commands and `.sh` shortcuts shown above.
 
 ## Platform and container status
 
-Windows USB enumeration and the underlying Windows openFPGALoader/HS3 BIT and MCS commands were exercised on hardware. The final Python orchestration, Linux/WSL/container programming, and all mezzanine probing are tested with mocks, not on those physical environments. macOS download/inspection can run with Python, but macOS cable enumeration/programming is explicitly not implemented yet.
+macOS enumeration/serial selection has offline mock tests. WSL2, native Linux/macOS programming, Xilinx cables and mezzanine probing remain physically unverified. Earlier native Windows openFPGALoader/HS3 tests are historical evidence, not verification of these three environments.
 
-Linux containers still require host USB access. Docker Engine needs `/dev/bus/usb` access and device permissions. Apptainer usually exposes `/dev` and `/sys`; the host user's USB permissions still apply. WSL needs usbipd-win forwarding before Linux can see the cable. No Docker image or SIF is supplied in this first trial.
+Linux containers require host USB access and device permissions. Docker Engine requires `/dev/bus/usb` exposure. Apptainer usually exposes `/dev` and `/sys`, while retaining host user permissions. WSL requires USB forwarding before running a container. No Docker image or SIF is supplied.
 
 ## Defaults, files, and failures
 

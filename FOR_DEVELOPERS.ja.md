@@ -42,7 +42,7 @@ BITヘッダーにはpart/package・design・日時・payloadがあります。M
 
 0403:6014はHS3/HS2/他のFT232Hで共通。Linuxはsysfs、Windowsは固定の読み取り専用PnPクエリーを使い、利用者文字列をPowerShellへ埋め込みません。LinuxのFTDI選択はbus/device、Windowsはserialです。Xilinx候補は既知03fd IDと本体の対応一覧で判断します。upstreamのXilinxコンストラクターへbus/serialが渡らないため、複数純正ケーブルの一意選択を保証しません。
 
-macOSはUSB検出・書き込み未実装と明示して止め、取得・検査は可能です。Linux/WSL/コンテナ経路も実機での検証ではありません。本体の同梱だけではドライバー、USB権限、転送設定は完了しません。
+対象はWindows WSL2・Linuxネイティブ・macOSネイティブです。macOSはioregのplistを解析しFTDIをシリアル指定、Linux/WSLはsysfsとbus/device指定を使います。WSLはusbipd-win転送とLinuxのUSB権限が必要です。macOS検出の模擬テストと実機書き込みの検証を区別してください。Windowsネイティブは従来の実装・実機観測として保持します。
 
 ## 2026-10-14の実機記録
 

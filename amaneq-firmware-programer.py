@@ -8,6 +8,7 @@ import http.client
 import socket
 import ssl
 import json
+import plistlib
 import os
 import re
 import shutil
@@ -622,16 +623,60 @@ def run_loader(loader, arguments, env=None):
 
 
 def scan_cables(args):
-    if sys.platform == "darwin":
-        raise UserError(
-            "macOS cable enumeration is not implemented in this first trial. Download and inspect commands remain available."
-        )
     loader = loader_path(args)
     supported = subprocess.run(
         [loader, "--list-cables"], capture_output=True, text=True, check=True
     ).stdout
     devices = []
-    if os.name == "nt":
+    if sys.platform == "darwin":
+        try:
+            result = subprocess.run(
+                ["/usr/sbin/ioreg", "-a", "-r", "-c", "IOUSBHostDevice"],
+                capture_output=True,
+                timeout=30,
+                check=True,
+            )
+            roots = plistlib.loads(result.stdout)
+        except (
+            OSError,
+            subprocess.SubprocessError,
+            plistlib.InvalidFileException,
+            ValueError,
+        ) as error:
+            raise UserError(f"macOS USB enumeration failed: {error}") from error
+        records = []
+
+        def visit(nodes):
+            for node in nodes:
+                if not isinstance(node, dict):
+                    continue
+                vid = node.get("idVendor")
+                pid = node.get("idProduct")
+                if (
+                    isinstance(vid, int)
+                    and isinstance(pid, int)
+                    and (
+                        (vid, pid) == (0x0403, 0x6014)
+                        or vid == 0x03FD
+                        and pid in (0x0007, 0x0008, 0x0009, 0x000D, 0x0013)
+                    )
+                ):
+                    serial = str(node.get("USB Serial Number", ""))
+                    records.append(
+                        {
+                            "id": f"USB\\VID_{vid:04X}&PID_{pid:04X}\\{serial}",
+                            "description": str(node.get("USB Product Name", "")),
+                            "driver": "macOS USB (access checked at JTAG)",
+                            "status": "OK",
+                        }
+                    )
+                visit(node.get("IORegistryEntryChildren", []))
+
+        if not isinstance(roots, list):
+            raise UserError("macOS USB enumeration returned an invalid device tree.")
+        visit(roots)
+
+    elif os.name == "nt":
         # Fixed read-only PowerShell query. User input is never inserted in shell code.
         query = r"""$ErrorActionPreference='Stop'; $items=@(Get-PnpDevice -PresentOnly | Where-Object {$_.InstanceId -match '^USB\\VID_(0403&PID_6014|03FD&PID_(0007|0008|0009|000D|0013))\\'}); $out=@(foreach($d in $items){$service=$null;$desc=$null;try{$service=(Get-PnpDeviceProperty -InstanceId $d.InstanceId -KeyName DEVPKEY_Device_Service -ErrorAction Stop).Data}catch{};try{$desc=(Get-PnpDeviceProperty -InstanceId $d.InstanceId -KeyName DEVPKEY_Device_BusReportedDeviceDesc -ErrorAction Stop).Data}catch{};[pscustomobject]@{id=$d.InstanceId;description=$desc;driver=$service;status=$d.Status}});ConvertTo-Json -InputObject $out -Compress"""
         result = subprocess.run(
@@ -704,10 +749,15 @@ def scan_cables(args):
                 if "xilinxPlatformCableUsb" in supported
                 else None
             )
-        driver_ok = os.name != "nt" or item["driver"] in (
-            "WinUSB",
-            "libusbK",
-            "libusb0",
+        driver_ok = (
+            sys.platform == "darwin"
+            or os.name != "nt"
+            or item["driver"]
+            in (
+                "WinUSB",
+                "libusbK",
+                "libusb0",
+            )
         )
         devices.append(
             {
@@ -791,6 +841,12 @@ def select_cable(args):
         selector += ["--vid", "0x" + vid, "--pid", "0x" + pid]
         if args.probe_firmware:
             selector += ["--probe-firmware", args.probe_firmware]
+    elif sys.platform == "darwin":
+        if not device["serial"]:
+            raise UserError(
+                "macOS FTDI selection requires a USB serial number; nothing written."
+            )
+        selector += ["--ftdi-serial", device["serial"]]
     elif os.name != "nt":
         selector += ["--busdev-num", device["busdev"]]
     elif (

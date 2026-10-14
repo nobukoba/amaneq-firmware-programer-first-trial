@@ -111,31 +111,35 @@ sudo usermod -aG plugdev "$USER"
 sudo udevadm control --reload-rules
 ```
 
-## Windowsネイティブで使う
+## Windows WSL2・Linux・macOSの準備
 
-[python.org](https://www.python.org/downloads/windows/)からPython 3.10以上を導入します。MSYS2のUCRT64シェルで次のコマンドを実行し、openFPGALoaderを導入してください。標準の`C:/msys64`構成では、以下の本体とcygpathのパスを指定します。リポジトリにはユーザーのレジストリ設定を変更する処理や`.py`関連付けの変更はありません。
+対象はWindowsのWSL2、Linuxネイティブ、macOSネイティブです。Python 3.10以降と、それぞれのOS用openFPGALoaderを使用します。WindowsではWSL2内でLinux版と`.sh`を実行します。Windowsネイティブ用`.cmd`は従来の補助ファイルとして残しますが、今回の対象には含めません。
 
-実機確認したHS3経路にはWinUSB/libusbからのアクセスが必要で、Vivado用FTDIBUSは代用できません。ドライバー変更は同じハードウェアIDの別のHS3にも影響する可能性があります。変更前に元のドライバーをバックアップしてください。確認したWindows版にはXilinx Platform Cable対応がありませんでした。
-
-```bash
-pacman -S mingw-w64-ucrt-x86_64-openFPGALoader
-```
-
-## Windowsでの実行例
-
-取得したリポジトリのフォルダーでPowerShellから実行します。最初の2つはヘルプと機器確認だけです。専用スクリプトは直ちに書き込みを始めます。`AMANEQ_PYTHON`でPython本体、`AMANEQ_CYGPATH_DIR`で`cygpath.exe`のディレクトリを指定できます。指定がなければWindows用スクリプトは`py -3`、次に`python`を使います。
+WSL2/Ubuntuと[usbipd-win](https://learn.microsoft.com/en-us/windows/wsl/connect-usb)を導入し、WSLの端末を開いた状態で、WindowsのPowerShellから対象ケーブルを転送します。bindは管理者権限、attachは通常権限で実行できます。転送中はWindowsのアプリからケーブルを使えません。抜き差し後はattachをやり直します。WSL内にopenFPGALoaderを導入し、上記のLinux用USBアクセス権限も設定してください。この経路ではWindows側のWinUSBへの置き換えは前提ではありません。
 
 ```powershell
-py -3 amaneq-firmware-programer.py --help
-py -3 amaneq-firmware-programer.py scan --loader C:/msys64/ucrt64/bin/openFPGALoader.exe
-.\program-latest-mcs-amaneq-v4-lrtdc.cmd --cable hs3 --loader C:/msys64/ucrt64/bin/openFPGALoader.exe --cygpath-dir C:/msys64/usr/bin
+usbipd list
+# Replace 4-4 with the cable BUSID printed above.
+# Run bind in an Administrator PowerShell.
+usbipd bind --busid 4-4
+usbipd attach --wsl --busid 4-4
 ```
 
-## OSとコンテナの対応状況
+```bash
+# Inside WSL2 (Ubuntu) or native Ubuntu/Debian:
+sudo apt update
+sudo apt install python3 git openfpgaloader
+# On native macOS with Homebrew:
+brew install python openfpgaloader
+```
 
-WindowsのUSB検出と、基礎となるWindows版openFPGALoader/HS3のBIT・MCSコマンドは実機で確認しました。完成したPythonの書き込み手順、Linux/WSL/コンテナでの書き込み、メザニン判定は模擬テストであり、それぞれの実機環境では未確認です。macOSではPythonによる取得・ファイル検査が可能ですが、ケーブル検出と書き込みは未実装と明示して停止します。
+macOSは`ioreg`でUSBを検出し、FTDIケーブルをシリアル番号で指定します。Linuxのsysfs・udevやWindowsのcygpathは使いません。アクセスに失敗したら、ケーブルを使用するアプリを閉じ、openFPGALoaderのエラーを確認してください。プログラムがドライバーを自動変更することはありません。3環境とも上記のPythonコマンドと`.sh`を使います。
 
-Linuxコンテナでもホスト側のUSBアクセス設定が必要です。Docker Engineでは`/dev/bus/usb`とデバイス権限を渡します。Apptainerは通常`/dev`と`/sys`が見えますが、実行ユーザーのUSB権限が必要です。WSLではusbipd-winによる転送後にLinuxからケーブルが見えます。このfirst trialにはDockerイメージやSIFはありません。
+## 各環境とコンテナの確認状況
+
+macOSの検出・シリアル選択は模擬テストで確認しました。WSL2、Linux/macOSネイティブでの書き込み、Xilinxケーブル、メザニン判定は実機未確認です。以前のWindowsネイティブ版openFPGALoader/HS3の実機結果は、これら3環境の検証とは区別します。
+
+LinuxコンテナではホストのUSBアクセス権限が必要です。Docker Engineは`/dev/bus/usb`の公開、Apptainerは通常見える`/dev`・`/sys`と実行ユーザーの権限を使います。WSLではコンテナ実行前にUSBを転送します。DockerイメージやSIFは同梱しません。
 
 ## 既定値・保存先・エラー
 
