@@ -113,3 +113,5 @@ Firmwareはケーブル自動判別、TargetとFirmwareで絞り込み、新し�
 Format選択を追加し、履歴探索・件数制限より前に形式を絞り、キャッシュキーにも含めます。BITは従来の明示指定どおりSkeletonのみで、他の種類はMCSだけです。HR-TDCメザニンはhrtdc固定でラベルとFirmware選択欄を隠し、別対象へ戻したら復帰させます。Program imageは1つを維持します。ローカル内容と選択形式の照合はTkスレッド外で書き込み前に行います。MPC/MPCXファイルは1行の読み取り専用パスで、横ホイールと左右・Home/End移動を提供します。編集可能なURL欄の通常カーソル操作は維持します。起動テストで形式切替・欄の非表示と復帰・非常に長いパスを確認します。
 
 Desktop 0.8：New device IPのラベル・入力・runtimeチェック欄を1行に配置します。表記はChange current (runtime) IP instead of saved EEPROM IPとEnable temporary static host IP addressです。動作は維持します。
+
+Desktop 0.9：周波数ラベルとプリセットを1行とし、クロックのボタン名はApplyです。Program image、Write MPC/MPCX、Write IP、Applyは共通Action.TButtonを使い、通常サイズ・通常余白の太字にします。Program imageを全幅に広げたり大型化したりしません。

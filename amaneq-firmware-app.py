@@ -768,12 +768,17 @@ def gui(smoke_test=False):
     ).pack(side="left", padx=8)
     program_area = ttk.Frame(page)
     program_area.pack(fill="x", pady=10)
-    ttk.Style(root).configure(
-        "Program.TButton", font=("TkDefaultFont", 15, "bold"), padding=(24, 15)
+    from tkinter import font as tkfont
+
+    style = ttk.Style(root)
+    action_font = tkfont.Font(
+        root=root, font=style.lookup("TButton", "font") or "TkDefaultFont"
     )
+    action_font.configure(weight="bold")
+    style.configure("Action.TButton", font=action_font)
     ttk.Button(
-        program_area, text="Program image", style="Program.TButton", command=program
-    ).pack(fill="x")
+        program_area, text="Program image", style="Action.TButton", command=program
+    ).pack(anchor="w")
     repository_url.trace_add("write", schedule_refresh)
     if os.name == "nt":
         controls = ttk.Frame(page)

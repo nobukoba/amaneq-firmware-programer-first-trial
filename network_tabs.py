@@ -166,23 +166,28 @@ class NetworkTabs:
         ttk.Label(self.clock, textvariable=self.status, wraplength=900).pack(
             anchor="w", pady=8
         )
-        ttk.Label(self.clock, text="Select input / output frequencies (MHz):").pack(
-            anchor="w"
+        frequencies = ttk.Frame(self.clock)
+        frequencies.pack(fill="x", pady=8)
+        ttk.Label(frequencies, text="Select input / output frequencies (MHz):").pack(
+            side="left", padx=(0, 8)
         )
         ttk.Combobox(
-            self.clock,
+            frequencies,
             textvariable=self.preset,
             values=tuple(operations.PRESETS),
             state="readonly",
             width=35,
-        ).pack(anchor="w", pady=8)
+        ).pack(side="left")
         ttk.Checkbutton(
             self.clock,
             text="Save clock settings for the next power-on",
             variable=self.persist,
         ).pack(anchor="w")
         ttk.Button(
-            self.clock, text="Apply clock setting", command=self.configure_clock
+            self.clock,
+            text="Apply",
+            style="Action.TButton",
+            command=self.configure_clock,
         ).pack(anchor="w", pady=10)
         ttk.Checkbutton(
             self.writer,
@@ -202,7 +207,10 @@ class NetworkTabs:
         actions.pack(fill="x", pady=10)
         for name in ("Read", "Check", "Write MPC/MPCX"):
             ttk.Button(
-                actions, text=name, command=lambda action=name: self.utility(action)
+                actions,
+                text=name,
+                style="Action.TButton" if name == "Write MPC/MPCX" else "TButton",
+                command=lambda action=name: self.utility(action),
             ).pack(side="left", padx=4)
         ttk.Label(
             self.writer,
@@ -215,7 +223,10 @@ class NetworkTabs:
             ip_actions, text="Read IP", command=lambda: self.utility("Read IP")
         ).pack(side="left", padx=4)
         ttk.Button(
-            ip_actions, text="Write IP", command=lambda: self.utility("Write IP only")
+            ip_actions,
+            text="Write IP",
+            style="Action.TButton",
+            command=lambda: self.utility("Write IP only"),
         ).pack(side="left", padx=4)
         ttk.Label(
             self.ip,

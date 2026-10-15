@@ -22,7 +22,7 @@ cd amaneq-firmware-programer-first-trial
 
 [Releases](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases)の最新macOS desktop previewでAssetsを開き、Apple Silicon（arm64）用かIntel（x86_64）用のZIPを取得してください。ZIPを展開し、amaneq-firmware-programer.appをApplicationsへ移します。macOS 15以降が対象です。Python・Tk・openFPGALoader・HTTPS用CA証明書を同梱し、利用時のHomebrew導入は不要です。
 
-0.8版はAMANEQ / CIRASAME / STAG選択の下に、左からFirmware、MPC / MPCX、IP、Jitter Cleanerの4タブを配置します。Firmwareはケーブルを自動検出し、TargetとFirmwareに一致するGitHub一覧を新しい順で表示し、先頭を自動選択します。GitHub listかLocal fileを選び、大きなProgram imageボタンひとつで書き込みます。GitHubリポジトリURLは編集でき、セッション中は対象ごとの編集値を保持します。現在のファイルに加え、タグとファームウェアディレクトリのコミットから過去版を表示します。History limitは合計10件が初期値で、1～1000件へ変更し、EnterかRefresh listで再取得できます。同じパス・同じ内容の重複はまとめ、同名でも内容が異なるファイルは残します。Tag / commit欄で版を区別し、現在のブランチを先頭として最新版を自動選択します。履歴の探索範囲には上限があり、件数を増やすと探索を広げます。API制限などで途中までしか取得できない場合は明示します。Loader欄と別のlatest-MCSボタンは廃止しました。既知のケーブルが1本なら自動選択し、複数ならシリアル選択、機種不明のFT232Hなら実物がHS3であることの確認が必要です。キャッシュ・通信失敗を明示し、表示したコミットとパスを固定して取得します。BITはSkeletonだけです。
+0.9版はAMANEQ / CIRASAME / STAG選択の下に、左からFirmware、MPC / MPCX、IP、Jitter Cleanerの4タブを配置します。Firmwareはケーブルを自動検出し、TargetとFirmwareに一致するGitHub一覧を新しい順で表示し、先頭を自動選択します。GitHub listかLocal fileを選び、通常サイズで太字のProgram imageボタンひとつで書き込みます。GitHubリポジトリURLは編集でき、セッション中は対象ごとの編集値を保持します。現在のファイルに加え、タグとファームウェアディレクトリのコミットから過去版を表示します。History limitは合計10件が初期値で、1～1000件へ変更し、EnterかRefresh listで再取得できます。同じパス・同じ内容の重複はまとめ、同名でも内容が異なるファイルは残します。Tag / commit欄で版を区別し、現在のブランチを先頭として最新版を自動選択します。履歴の探索範囲には上限があり、件数を増やすと探索を広げます。API制限などで途中までしか取得できない場合は明示します。Loader欄と別のlatest-MCSボタンは廃止しました。既知のケーブルが1本なら自動選択し、複数ならシリアル選択、機種不明のFT232Hなら実物がHS3であることの確認が必要です。キャッシュ・通信失敗を明示し、表示したコミットとパスを固定して取得します。BITはSkeletonだけです。
 
 必要に応じてEthernetアダプターを選び、Mac側のIPv4アドレスとマスクを入力してApply temporarilyを押します。DHCP・DNS・ゲートウェイの設定を保持し、固定IPを一時追加します。基板側のIP変更ではなく、USB/JTAG書き込みにも不要です。macOSの管理者許可が必要です。Restore networkか通常終了で追加IPだけを解除し、別プロセスも終了・クラッシュを監視します。既存IPの流用や他インターフェースとのサブネット重複は拒否します。解除に失敗したらエラーと記録を残し、追加IPは再起動でも消えます。起動時にネットワーク設定は変更しません。PC側の一時IPは192.168.10.20/24を初期値とし、編集できます。
 
@@ -36,7 +36,7 @@ FirmwareにFormat選択を追加しました。SkeletonはMCS / BITを選択で�
 
 Target IPは192.168.10.10 / 192.168.10.16 / CustomとPingボタンを1行に配置し、マスク表示をなくしました。Pingは2回のICMP送信を非同期で行い、横に結果、ログに詳細を表示します。応答がないことだけでRBCP通信不可とは判断できません。Jitter CleanerはデバイスモードなしでCDCE62002を設定します。MPC / MPCXは先頭のファイル選択後に種類を表示し、通常MPCなら.16、MPCX/SiTCP-XGなら.10を選択します。表示名の逆転を修正し、上流の分類と公式の合成テストデータに合わせました。拡張子で判別しません。IPはアドレス専用の読み書きを行う独立タブで、ライセンスファイルは不要です。ネットワーク用3タブで任意の一時IPを共有し、Enable temporary static host IP addressをチェックすると欄を表示します。PC側初期値は192.168.10.20 / 255.255.255.0で、macOSではApply temporarilyで明示設定します。適用中に無効化すると解除し、解除失敗時は欄を残します。
 
-クロックはhul-common-libの6プリセットから選び、Apply clock settingを押します。レジスタの読み戻し一致後にEEPROMへコピーします。Save clock settings for the next power-onは、確認したクロック設定をチップ内EEPROMへ保存して次回電源投入時に使う設定です。上流と同様初期状態で有効で、一時変更だけなら外します。保存コマンドへの応答は電源再投入後の保持確認とは区別してください。
+クロックはhul-common-libの6プリセットから選び、Applyを押します。レジスタの読み戻し一致後にEEPROMへコピーします。Save clock settings for the next power-onは、確認したクロック設定をチップ内EEPROMへ保存して次回電源投入時に使う設定です。上流と同様初期状態で有効で、一時変更だけなら外します。保存コマンドへの応答は電源再投入後の保持確認とは区別してください。
 
 MPC / MPCXタブではファイルを選び、読み取り専用のCheck、Read、Write MPC/MPCXを使います。Initialize XG EEPROMは初期状態で無効です。IPだけの読み書きはIPタブのRead IP / Write IPを使い、書き込みにはNew device IPが必須です。初期状態はEEPROM IPの変更で、current/runtime IPを選ぶと動作中IPを変更し、新しい接続先で検証します。IP変更はライセンスを保持します。Clear/resetは設けていません。書き込みは確認後に行い、上流の世代照合・待機・読み戻し検証を維持します。
 
@@ -255,3 +255,5 @@ python3 -m unittest test_amaneq_firmware_programer -v
 ```
 
 New device IPは入力欄とChange current (runtime) IP instead of saved EEPROM IPのチェック欄を1行に配置します。
+
+入出力周波数のラベルとプリセットは1行です。Program image、Write MPC/MPCX、Write IP、Applyは通常サイズの太字とします。
