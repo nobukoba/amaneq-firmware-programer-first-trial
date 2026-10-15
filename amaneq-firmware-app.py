@@ -648,18 +648,22 @@ def gui(smoke_test=False):
 
         task("Restore IPv4", operation, changes=True)
 
-    cable_box = ttk.LabelFrame(page, text="Cable (automatically detected)", padding=8)
+    cable_box = ttk.Frame(page, padding=(0, 8))
     cable_box.pack(fill="x")
+    cable_box.columnconfigure(1, weight=1)
+    ttk.Label(cable_box, text="Cable (automatically detected)").grid(
+        row=0, column=0, padx=(0, 8), sticky="w"
+    )
     cable = ttk.Combobox(cable_box, textvariable=serial, state="readonly", width=28)
-    cable.grid(row=0, column=0, sticky="ew")
+    cable.grid(row=0, column=1, sticky="ew")
     cable.bind("<<ComboboxSelected>>", lambda unused: update_cable_model())
-    ttk.Button(cable_box, text="Rescan", command=scan).grid(row=0, column=1, padx=6)
+    ttk.Button(cable_box, text="Rescan", command=scan).grid(row=0, column=2, padx=6)
     hs3_confirmation = ttk.Checkbutton(
         cable_box,
         variable=confirmed_hs3,
         text="The unidentified FT232H cable is physically an HS3",
     )
-    hs3_confirmation.grid(row=0, column=2, sticky="w")
+    hs3_confirmation.grid(row=2, column=0, columnspan=3, sticky="w")
     hs3_confirmation.grid_remove()
     ttk.Label(cable_box, textvariable=cable_status, wraplength=900).grid(
         row=1, column=0, columnspan=3, sticky="w"

@@ -222,7 +222,7 @@ def main():
     info_path = app / "Contents/Info.plist"
     info = plistlib.loads(info_path.read_bytes())
     info.update(
-        {"LSMinimumSystemVersion": "15.0", "CFBundleShortVersionString": "0.14.3"}
+        {"LSMinimumSystemVersion": "15.0", "CFBundleShortVersionString": "0.14.4"}
     )
     info_path.write_bytes(plistlib.dumps(info))
     for name in (
