@@ -132,3 +132,5 @@ Desktop 0.10：履歴とは以前の画面ではなく過去メッセージと�
 Desktop 0.11：通常のクロック画面から実装寄りのHULレジスタマップ説明を削除し、Select input / output frequencies of CDCE62002 chip (MHz):とします。STAG未対応の条件付き表示は維持し、正式なCDCE62002表記を使います。以前のタブ順指定はJitter Cleanerが重複し回答がないため、末尾をIPと解釈し、Firmware / Jitter Cleaner / MPC/MPCX / IPとする前提を明示します。HULは公式ガイドのHadron Universal Logicです。ライブラリの出所は開発資料に記載し、通常の操作欄へ混ぜません。
 
 Desktop 0.12：Target IPの表示は192.168.10.16 (SiTCP default)と192.168.10.10 (SiTCP-XG default)です。補足は表示専用で、Ping/RBCPには検証したIPアドレスだけを渡します。MPC/MPCXファイルの判定後も対応するラベルを選び、Customは維持します。
+
+Desktop 0.13のFirmware表示：lrtdc → LR-TDC、hrtdc → HR-TDC、lrtdc-10g → LR-TDC 10GbE、mikumari → MIKUMARI Hub、skeleton → Skelton（指定表記）です。UI表示だけの対応付けで、CLIオプション・リポジトリ・実ファイル名・キャッシュキー・Skeleton限定BITの内部識別名は維持します。

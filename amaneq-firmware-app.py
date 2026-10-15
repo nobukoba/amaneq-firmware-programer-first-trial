@@ -180,7 +180,16 @@ def gui(smoke_test=False):
     serial = tk.StringVar()
     loader = tk.StringVar(value=default_loader())
     target = tk.StringVar(value="amaneq-v4")
+    firmware_labels = {
+        "lrtdc": "LR-TDC",
+        "hrtdc": "HR-TDC",
+        "lrtdc-10g": "LR-TDC 10GbE",
+        "mikumari": "MIKUMARI Hub",
+        "skeleton": "Skelton",
+    }
+    firmware_ids = {label: key for key, label in firmware_labels.items()}
     firmware = tk.StringVar(value="lrtdc")
+    firmware_display = tk.StringVar(value=firmware_labels[firmware.get()])
     image_format = tk.StringVar(value="MCS")
     filename = tk.StringVar()
     source_mode = tk.StringVar(value="GitHub")
@@ -362,25 +371,35 @@ def gui(smoke_test=False):
                 600, lambda: refresh_catalog(force=False, quiet=True)
             )
 
+    def set_firmware_choices(keys):
+        firmware_box["values"] = tuple(firmware_labels[key] for key in keys)
+
+    def firmware_picked(unused=None):
+        firmware.set(firmware_ids[firmware_display.get()])
+        profile_changed()
+
     def profile_changed(*unused):
         nonlocal active_profile, changing_repository, catalog_request
         catalog_request += 1
         if target.get() == "hrtdc-mezzanine":
             firmware.set("hrtdc")
-            firmware_box["values"] = ("hrtdc",)
+            set_firmware_choices(("hrtdc",))
             firmware_label.grid_remove()
             firmware_box.grid_remove()
         else:
             firmware_label.grid()
             firmware_box.grid()
         if target.get() != "hrtdc-mezzanine" and board.get() == "AMANEQ":
-            firmware_box["values"] = (
-                "lrtdc",
-                "hrtdc",
-                "lrtdc-10g",
-                "mikumari",
-                "skeleton",
+            set_firmware_choices(
+                (
+                    "lrtdc",
+                    "hrtdc",
+                    "lrtdc-10g",
+                    "mikumari",
+                    "skeleton",
+                )
             )
+        firmware_display.set(firmware_labels[firmware.get()])
         format_box["values"] = (
             ("MCS", "BIT") if firmware.get() == "skeleton" else ("MCS",)
         )
@@ -677,13 +696,13 @@ def gui(smoke_test=False):
     firmware_label.grid(row=0, column=2)
     firmware_box = ttk.Combobox(
         settings,
-        textvariable=firmware,
+        textvariable=firmware_display,
         state="readonly",
-        values=("lrtdc", "hrtdc", "lrtdc-10g", "mikumari", "skeleton"),
-        width=15,
+        values=tuple(firmware_labels.values()),
+        width=18,
     )
     firmware_box.grid(row=0, column=3, padx=6)
-    firmware_box.bind("<<ComboboxSelected>>", profile_changed)
+    firmware_box.bind("<<ComboboxSelected>>", firmware_picked)
     ttk.Label(settings, text="Format").grid(row=0, column=4, padx=(10, 0))
     format_box = ttk.Combobox(
         settings, textvariable=image_format, state="readonly", values=("MCS",), width=7
@@ -863,19 +882,21 @@ def gui(smoke_test=False):
         if chosen == "CIRASAME":
             target_box["values"] = ("cirasame",)
             target.set("cirasame")
-            firmware_box["values"] = ("lrtdc", "lrtdc-10g", "skeleton")
-            if firmware.get() not in firmware_box["values"]:
+            set_firmware_choices(("lrtdc", "lrtdc-10g", "skeleton"))
+            if firmware.get() not in ("lrtdc", "lrtdc-10g", "skeleton"):
                 firmware.set("lrtdc")
         elif chosen == "AMANEQ":
             target_box["values"] = ("amaneq-v1", "amaneq-v4", "hrtdc-mezzanine")
             if target.get() not in target_box["values"]:
                 target.set("amaneq-v4")
-            firmware_box["values"] = (
-                "lrtdc",
-                "hrtdc",
-                "lrtdc-10g",
-                "mikumari",
-                "skeleton",
+            set_firmware_choices(
+                (
+                    "lrtdc",
+                    "hrtdc",
+                    "lrtdc-10g",
+                    "mikumari",
+                    "skeleton",
+                )
             )
         board_status.set(
             "STAG firmware and clock maps require an official reference."
@@ -1152,7 +1173,13 @@ def gui(smoke_test=False):
                 "name": "wrong-target.mcs",
             },
         ]
+        for key, label in firmware_labels.items():
+            firmware_display.set(label)
+            firmware_picked()
+            assert firmware.get() == key
+            assert firmware_display.get() == label
         firmware.set("lrtdc")
+        profile_changed()
         show_catalog()
         assert images.get_children() == ("0",)
         assert images.selection() == ("0",)
