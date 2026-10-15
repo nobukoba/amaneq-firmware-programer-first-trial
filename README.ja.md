@@ -2,7 +2,7 @@
 
 **Language: [English](README.md) | 日本語**
 
-openFPGALoaderでAMANEQファームウェアを取得・書き込みます。対応する各種類はMCS、Skeletonは一時ロード用BITにも対応します。
+openFPGALoaderでAMANEQファームウェアを取得・書き込みます。対応する各種類で永続書き込み用MCSと一時SRAMロード用BITを選べます。
 
 ## まず準備する
 
@@ -22,19 +22,19 @@ cd amaneq-firmware-programer-first-trial
 
 [Releases](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases)の最新macOS desktop previewでAssetsを開き、Apple Silicon（arm64）用かIntel（x86_64）用のZIPを取得してください。ZIPを展開し、amaneq-firmware-programer.appをApplicationsへ移します。macOS 15以降が対象です。Python・Tk・openFPGALoader・HTTPS用CA証明書を同梱し、利用時のHomebrew導入は不要です。
 
-0.13版はAMANEQ / CIRASAME / STAG選択の下に、左からFirmware、Jitter Cleaner、MPC / MPCX、IPの4タブを配置します。Firmwareはケーブルを自動検出し、TargetとFirmwareに一致するGitHub一覧を新しい順で表示し、先頭を自動選択します。GitHub listかLocal fileを選び、通常サイズで太字のProgram imageボタンひとつで書き込みます。GitHubリポジトリURLは編集でき、セッション中は対象ごとの編集値を保持します。現在のファイルに加え、タグとファームウェアディレクトリのコミットから過去版を表示します。History limitは合計10件が初期値で、1～1000件へ変更し、EnterかRefresh listで再取得できます。同じパス・同じ内容の重複はまとめ、同名でも内容が異なるファイルは残します。Tag / commit欄で版を区別し、現在のブランチを先頭として最新版を自動選択します。履歴の探索範囲には上限があり、件数を増やすと探索を広げます。API制限などで途中までしか取得できない場合は明示します。Loader欄と別のlatest-MCSボタンは廃止しました。既知のケーブルが1本なら自動選択し、複数ならシリアル選択、機種不明のFT232Hなら実物がHS3であることの確認が必要です。キャッシュ・通信失敗を明示し、表示したコミットとパスを固定して取得します。BITはSkeletonだけです。
+0.14版はAMANEQ / CIRASAME / STAG選択の下に、左からFirmware、Jitter Cleaner、MPC / MPCX、IPの4タブを配置します。Firmwareはケーブルを自動検出し、TargetとFirmwareに一致するGitHub一覧を新しい順で表示し、先頭を自動選択します。GitHub listかLocal fileを選び、通常サイズで太字のProgram imageボタンひとつで書き込みます。GitHubリポジトリURLは編集でき、セッション中は対象ごとの編集値を保持します。現在のファイルに加え、タグとファームウェアディレクトリのコミットから過去版を表示します。History limitは合計10件が初期値で、1～1000件へ変更し、EnterかRefresh listで再取得できます。同じパス・同じ内容の重複はまとめ、同名でも内容が異なるファイルは残します。Tag / commit欄で版を区別し、現在のブランチを先頭として最新版を自動選択します。履歴の探索範囲には上限があり、件数を増やすと探索を広げます。API制限などで途中までしか取得できない場合は明示します。Loader欄と別のlatest-MCSボタンは廃止しました。既知のケーブルが1本なら自動選択し、複数ならシリアル選択、機種不明のFT232Hなら実物がHS3であることの確認が必要です。キャッシュ・通信失敗を明示し、表示したコミットとパスを固定して取得します。対応する各種類でBIT / MCSを選べます。
 
 必要に応じてEthernetアダプターを選び、Mac側のIPv4アドレスとマスクを入力してApply temporarilyを押します。DHCP・DNS・ゲートウェイの設定を保持し、固定IPを一時追加します。基板側のIP変更ではなく、USB/JTAG書き込みにも不要です。macOSの管理者許可が必要です。Restore networkか通常終了で追加IPだけを解除し、別プロセスも終了・クラッシュを監視します。既存IPの流用や他インターフェースとのサブネット重複は拒否します。解除に失敗したらエラーと記録を残し、追加IPは再起動でも消えます。起動時にネットワーク設定は変更しません。PC側の一時IPは192.168.10.20/24を初期値とし、編集できます。
 
 取得物・ログ・一時設定の記録は~/Library/Application Support/AMANEQ/へ保存します。Apple公証のないアドホック署名版なので、初回はプライバシーとセキュリティの「このまま開く」が必要な場合があります。USBドライバー設定が不要なことと、Appleの配布時検査は別です。OS全体の保護は無効化しません。利用者のアダプターでの一時IP設定とHS3実機書き込みは未確認で、新しいネットワーク処理は模擬テストで確認します。
 
-FirmwareにFormat選択を追加しました。SkeletonはMCS / BITを選択でき、他の種類は従来の指定どおりMCSのみです。オンライン履歴とローカル書き込みを選択形式に合わせ、ローカルの内容照合はバックグラウンドで書き込み前に行います。HR-TDCメザニンは種類をHR-TDCに固定し、重複するFirmware選択欄を隠します。MPC / MPCX fileはラベル・パス・選択ボタンを1行にします。長いパスやGitHub URLはホイールで横スクロールでき、読み取り専用パス欄では左右キー・Home/Endも使えます。
+FirmwareにFormat選択を追加しました。対応する各種類でMCS / BITを選択できます。オンライン履歴とローカル書き込みを選択形式に合わせ、ローカルの内容照合はバックグラウンドで書き込み前に行います。HR-TDCメザニンは種類をHR-TDCに固定し、重複するFirmware選択欄を隠します。MPC / MPCX fileはラベル・パス・選択ボタンを1行にします。長いパスやGitHub URLはホイールで横スクロールでき、読み取り専用パス欄では左右キー・Home/Endも使えます。
 
 ### Firmware・クロック・ライセンス/IPのタブ
 
 上部で基板を選び、Firmware、MPC / MPCX、IP、Jitter Cleanerを切り替えます。上流の正式コマンド名はset_cdce62002です。CIRASAMEは専用の公式lrtdc・lrtdc-10g・Skeletonから取得し、AMANEQのイメージを除外します。クロック初期値はin_125_out_500_125です。STAGも標準SiTCP操作向けに選択できますが、公式の基板・レジスタ資料が提示されるまでファームウェアとクロックの書き込みを止めます。
 
-Target IPは192.168.10.10 / 192.168.10.16 / CustomとPingボタンを1行に配置し、マスク表示をなくしました。Pingは2回のICMP送信を非同期で行い、横に結果、ログに詳細を表示します。応答がないことだけでRBCP通信不可とは判断できません。Jitter CleanerはデバイスモードなしでCDCE62002を設定します。MPC / MPCXは先頭のファイル選択後に種類を表示し、通常MPCなら.16、MPCX/SiTCP-XGなら.10を選択します。表示名の逆転を修正し、上流の分類と公式の合成テストデータに合わせました。拡張子で判別しません。IPはアドレス専用の読み書きを行う独立タブで、ライセンスファイルは不要です。ネットワーク用3タブで任意の一時IPを共有し、Enable temporary static host IP addressをチェックすると欄を表示します。PC側初期値は192.168.10.20 / 255.255.255.0で、macOSではApply temporarilyで明示設定します。適用中に無効化すると解除し、解除失敗時は欄を残します。
+Target IPは192.168.10.10 / 192.168.10.16 / CustomとPingボタンを1行に配置し、マスク表示をなくしました。Pingは2回のICMP送信を非同期で行い、横に結果、ログに詳細を表示します。応答がないことだけでRBCP通信不可とは判断できません。Jitter CleanerはデバイスモードなしでCDCE62002を設定します。MPC / MPCXは先頭のファイル選択後に種類を表示し、通常MPCなら.16、MPCX/SiTCP-XGなら.10を選択します。表示名の逆転を修正し、上流の分類と公式の合成テストデータに合わせました。拡張子で判別しません。IPはアドレス専用の読み書きを行う独立タブで、ライセンスファイルは不要です。ネットワーク用3タブで任意の一時IPを共有し、Temporary static host IP address (DHCP preserved, restored on exit)をチェックすると欄を表示します。PC側初期値は192.168.10.20 / 255.255.255.0で、macOSではApply temporarilyで明示設定します。適用中に無効化すると解除し、解除失敗時は欄を残します。
 
 クロックはhul-common-libの6プリセットから選び、Applyを押します。レジスタの読み戻し一致後にEEPROMへコピーします。Save clock settings for the next power-onは、確認したクロック設定をチップ内EEPROMへ保存して次回電源投入時に使う設定です。上流と同様初期状態で有効で、一時変更だけなら外します。保存コマンドへの応答は電源再投入後の保持確認とは区別してください。
 
@@ -55,7 +55,7 @@ Windows x64向けの試作画面に、1画面にケーブル自動検出とUse W
 
 表示されたシリアルを選び、実物がHS3であることをチェックします。ドライバー変更時はHS3/FT232Hを1本だけ接続し、Vivadoなどケーブルを使うアプリを閉じてください。変更ボタンを押して確認し、Windowsの管理者許可に応答します。切り替え前に元のFTDIBUSパッケージをエクスポートし、ハッシュ付きで保存します。復元は保存済みパッケージとWindowsのデバイス導入APIを使い、共有ドライバーパッケージは削除しません。復旧情報と処理結果を含む`%LOCALAPPDATA%/AMANEQ/usb-drivers/`を保管してください。INFはハードウェアIDで一致するため、後から接続した別のFT232Hにも影響する可能性があります。シリアル指定だけではパッケージの割り当てを分離できません。
 
-ファームウェアの書き込みは別の明示操作です。GUIはHS3を指定し、最新版MCSかローカルBIT/MCSを扱います。BITはSkeletonのみです。既存CLIの履歴・URL・リポジトリ指定やXilinx経路も残っています。Linux/macOSはWindows用ドライバーボタンを使いません。変更処理の模擬テスト、DLL内の資源・実機との照合の読み取り確認、GUI起動を確認しました。新しいアプリを通じた実際の切り替え・復元は未確認です。
+ファームウェアの書き込みは別の明示操作です。GUIはHS3を指定し、最新版MCSかローカルBIT/MCSを扱います。対応する各種類でBITにも対応します。既存CLIの履歴・URL・リポジトリ指定やXilinx経路も残っています。Linux/macOSはWindows用ドライバーボタンを使いません。変更処理の模擬テスト、DLL内の資源・実機との照合の読み取り確認、GUI起動を確認しました。新しいアプリを通じた実際の切り替え・復元は未確認です。
 
 ```powershell
 python amaneq-firmware-app.py
@@ -130,7 +130,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\setup-windows-wsl.ps1 
 | Skeleton・一時BIT | AMANEQ v4 | `program-latest-bit-amaneq-v4-skeleton` |
 | HRTDCメザニン | HR-TDCメザニン | `program-latest-mcs-amaneq-hrtdc-mzn` |
 
-SkeletonはBIT/MCS、他の種類はMCSのみ対応します。`mikumari`はMikuClockHubを指し、MikuClockPrimではありません。
+対応する各種類でBIT / MCSに対応します。`mikumari`はMikuClockHubを指し、MikuClockPrimではありません。
 
 v1基板ではPythonコマンドに`--target amaneq-v1`を指定します。SkeletonはDAQマニュアルに記載されたv1/v4共通ファイルを使います。共通のFPGA IDだけでは、リビジョンや本体・メザニンを確定できません。
 
@@ -258,10 +258,12 @@ New device IPは入力欄とChange current (runtime) IP instead of saved EEPROM 
 
 入出力周波数のラベルとプリセットは1行です。Program image、Write MPC/MPCX、Write IP、Applyは通常サイズの太字とします。
 
-ウィンドウの端をドラッグしてサイズ変更でき、UI size（75～150%）で文字・部品も拡縮できます。Messages上の境界をドラッグしてログ欄の高さを変え、Expand/Restoreでも一時拡大できます。上へスクロールすると自動追従が止まり、今回の起動中の過去メッセージを読んでいる間に新しい出力が来ても末尾へ戻されません。Firstは先頭、Latestは最新位置へ移動して追従を再開します。Follow latestでも明示切替できます。タブ切替時は直後と25ms後に配置・Canvas再描画を行い、マウス移動に依存しない処理へ変更しました。Macでのビルド・起動確認と、利用者のMacでの目視確認は区別します。
+ウィンドウの端をドラッグしてサイズ変更でき、UI size（75～150%）で文字・部品も拡縮できます。Messages上の境界をドラッグしてログ欄の高さを変えられます。Expandボタンはありません。上へスクロールすると自動追従が止まり、今回の起動中の過去メッセージを読んでいる間に新しい出力が来ても末尾へ戻されません。Firstは先頭、Latestは最新位置へ移動して追従を再開します。Follow latestでも明示切替できます。タブ切替時は直後と25ms後に配置・Canvas再描画を行い、マウス移動に依存しない処理へ変更しました。Macでのビルド・起動確認と、利用者のMacでの目視確認は区別します。
 
 Jitter CleanerはSelect input / output frequencies of CDCE62002 chip (MHz):とプリセットを表示します。実装寄りのHULレジスタマップの説明は削除し、STAGのクロック未対応表示は該当時だけ残します。チップの正式表記はCDCE62002です。
 
 Desktop 0.12：Target IPの表示は192.168.10.16 (SiTCP default)と192.168.10.10 (SiTCP-XG default)です。補足は表示専用で、Ping/RBCPには検証したIPアドレスだけを渡します。MPC/MPCXファイルの判定後も対応するラベルを選び、Customは維持します。
 
-Desktop 0.13のFirmware表示：lrtdc → LR-TDC、hrtdc → HR-TDC、lrtdc-10g → LR-TDC 10GbE、mikumari → MIKUMARI Hub、skeleton → Skelton（指定表記）です。UI表示だけの対応付けで、CLIオプション・リポジトリ・実ファイル名・キャッシュキー・Skeleton限定BITの内部識別名は維持します。
+Desktop 0.13のFirmware表示：lrtdc → LR-TDC、hrtdc → HR-TDC、lrtdc-10g → LR-TDC 10GbE、mikumari → MIKUMARI Hub、skeleton → Skelton（指定表記）です。UI表示だけの対応付けで、CLIオプション・リポジトリ・実ファイル名・キャッシュキーの内部識別名は維持します。
+
+Desktop 0.14では従来のSkeleton限定BIT制限を廃止し、対応する全種類でMCS / BITを選べます。FPGA・対象・ケーブル照合は維持します。BITは一時SRAMロード、MCSは永続フラッシュ書き込みです。MessagesのExpand/Restoreを廃止し、境界のドラッグで高さを変えます。MPC/MPCXパスは左右キー・Home/End・クリックで移動したカーソル位置を横スクロールして表示します。一時IPの有効化チェックはTemporary static host IP address (DHCP preserved, restored on exit)の1行とし、重複見出しを削除します。Write IP直下の説明行も削除します。画面の動作確認では実機書き込みやホストIP変更を行いません。

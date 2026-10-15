@@ -14,7 +14,7 @@ Python 3.10以上・標準ライブラリのみで、openFPGALoaderを呼ぶ取�
 - 専用スクリプトは `program-latest-mcs-amaneq-*` と、Skeletonだけの `program-latest-bit-amaneq-v4-skeleton`。
 - 共通処理は `firmware-latest-amaneq-common.sh/.cmd`。
 
-SkeletonはBIT/MCS、他はローカル・直接URLを含めてMCSのみ。MikumariはMikuClockHubです。コード・コメント・表示・ヘルプ・エラーはすべて英語にし、利用者文書は英語・日本語を同じ実行例とLanguageリンクで同期します。ヘルプでは既定値を明示します。
+対応する各種類でローカル・直接URLを含めBIT / MCSを選べます。MikumariはMikuClockHubです。コード・コメント・表示・ヘルプ・エラーはすべて英語にし、利用者文書は英語・日本語を同じ実行例とLanguageリンクで同期します。ヘルプでは既定値を明示します。
 
 ## 文書作成
 
@@ -112,14 +112,16 @@ Firmwareはケーブル自動判別、TargetとFirmwareで絞り込み、新し�
 
 Format選択を追加し、履歴探索・件数制限より前に形式を絞り、キャッシュキーにも含めます。BITは従来の明示指定どおりSkeletonのみで、他の種類はMCSだけです。HR-TDCメザニンはhrtdc固定でラベルとFirmware選択欄を隠し、別対象へ戻したら復帰させます。Program imageは1つを維持します。ローカル内容と選択形式の照合はTkスレッド外で書き込み前に行います。MPC/MPCXファイルは1行の読み取り専用パスで、横ホイールと左右・Home/End移動を提供します。編集可能なURL欄の通常カーソル操作は維持します。起動テストで形式切替・欄の非表示と復帰・非常に長いパスを確認します。
 
-Desktop 0.8：New device IPのラベル・入力・runtimeチェック欄を1行に配置します。表記はChange current (runtime) IP instead of saved EEPROM IPとEnable temporary static host IP addressです。動作は維持します。
+Desktop 0.8：New device IPのラベル・入力・runtimeチェック欄を1行に配置します。表記はChange current (runtime) IP instead of saved EEPROM IPとTemporary static host IP address (DHCP preserved, restored on exit)です。動作は維持します。
 
 Desktop 0.9：周波数ラベルとプリセットを1行とし、クロックのボタン名はApplyです。Program image、Write MPC/MPCX、Write IP、Applyは共通Action.TButtonを使い、通常サイズ・通常余白の太字にします。Program imageを全幅に広げたり大型化したりしません。
 
-Desktop 0.10：履歴とは以前の画面ではなく過去メッセージと確認できました。起動中のログを保持し、ホイール・スクロールバー・履歴キーでは自動see(end)を停止します。First/Latest/Follow latestで表示位置を操作し、新規出力で過去の閲覧位置を奪いません。Messagesを縦Panedwindowの可変領域とし、境界ドラッグとExpand/Restoreを追加します。ウィンドウは最小720x480で拡縮し、UI sizeは元のサイズを保持して既存の名前付きフォントと太字アクションフォントを拡縮します。タブ切替のidleと25ms後に配置・Expose、Map時にCanvas内枠を再配置します。起動確認だけで利用者のMacの描画不具合を目視検証済みと扱いません。画面遷移の履歴は不要です。
+Desktop 0.10：履歴とは以前の画面ではなく過去メッセージと確認できました。起動中のログを保持し、ホイール・スクロールバー・履歴キーでは自動see(end)を停止します。First/Latest/Follow latestで表示位置を操作し、新規出力で過去の閲覧位置を奪いません。Messagesを縦Panedwindowの可変領域とし、境界ドラッグで高さを変えます。Expandボタンはありません。ウィンドウは最小720x480で拡縮し、UI sizeは元のサイズを保持して既存の名前付きフォントと太字アクションフォントを拡縮します。タブ切替のidleと25ms後に配置・Expose、Map時にCanvas内枠を再配置します。起動確認だけで利用者のMacの描画不具合を目視検証済みと扱いません。画面遷移の履歴は不要です。
 
 Desktop 0.11：通常のクロック画面から実装寄りのHULレジスタマップ説明を削除し、Select input / output frequencies of CDCE62002 chip (MHz):とします。STAG未対応の条件付き表示は維持し、正式なCDCE62002表記を使います。以前のタブ順指定はJitter Cleanerが重複し回答がないため、末尾をIPと解釈し、Firmware / Jitter Cleaner / MPC/MPCX / IPとする前提を明示します。HULは公式ガイドのHadron Universal Logicです。ライブラリの出所は開発資料に記載し、通常の操作欄へ混ぜません。
 
 Desktop 0.12：Target IPの表示は192.168.10.16 (SiTCP default)と192.168.10.10 (SiTCP-XG default)です。補足は表示専用で、Ping/RBCPには検証したIPアドレスだけを渡します。MPC/MPCXファイルの判定後も対応するラベルを選び、Customは維持します。
 
-Desktop 0.13のFirmware表示：lrtdc → LR-TDC、hrtdc → HR-TDC、lrtdc-10g → LR-TDC 10GbE、mikumari → MIKUMARI Hub、skeleton → Skelton（指定表記）です。UI表示だけの対応付けで、CLIオプション・リポジトリ・実ファイル名・キャッシュキー・Skeleton限定BITの内部識別名は維持します。
+Desktop 0.13のFirmware表示：lrtdc → LR-TDC、hrtdc → HR-TDC、lrtdc-10g → LR-TDC 10GbE、mikumari → MIKUMARI Hub、skeleton → Skelton（指定表記）です。UI表示だけの対応付けで、CLIオプション・リポジトリ・実ファイル名・キャッシュキーの内部識別名は維持します。
+
+Desktop 0.14では従来のSkeleton限定BIT制限を廃止し、対応する全種類でMCS / BITを選べます。FPGA・対象・ケーブル照合は維持します。BITは一時SRAMロード、MCSは永続フラッシュ書き込みです。MessagesのExpand/Restoreを廃止し、境界のドラッグで高さを変えます。MPC/MPCXパスは左右キー・Home/End・クリックで移動したカーソル位置を横スクロールして表示します。一時IPの有効化チェックはTemporary static host IP address (DHCP preserved, restored on exit)の1行とし、重複見出しを削除します。Write IP直下の説明行も削除します。画面の動作確認では実機書き込みやホストIP変更を行いません。

@@ -493,10 +493,8 @@ def inspect_file(path):
 
 
 def validate_firmware_format(image, args):
-    if image.kind == "bit" and args.firmware != "skeleton":
-        raise UserError(
-            "BIT files are supported only for Skeleton. Select --firmware skeleton or use an MCS file."
-        )
+    if image.kind not in ("mcs", "bit"):
+        raise UserError("Firmware format must be MCS or BIT.")
 
 
 def download(args):
@@ -1203,7 +1201,7 @@ def add_common(parser):
         "--firmware",
         choices=("lrtdc", "hrtdc", "lrtdc-10g", "mikumari", "skeleton"),
         default="lrtdc",
-        help="Firmware family; only Skeleton permits BIT programming",
+        help="Firmware family; MCS and BIT programming are supported",
     )
     parser.add_argument(
         "--target",
@@ -1336,12 +1334,6 @@ BIT/MCS format is detected from content. JTAG ID alone cannot identify the board
     if not 0 < args.timeout <= 3600:
         raise UserError("--timeout must be greater than 0 and at most 3600 seconds.")
     NETWORK_TIMEOUT = args.timeout
-    if (
-        args.command in ("download", "program")
-        and args.format == "bit"
-        and args.firmware != "skeleton"
-    ):
-        raise UserError("--format bit is supported only with --firmware skeleton.")
     if args.url and (
         args.file
         or args.repo
@@ -1395,11 +1387,7 @@ BIT/MCS format is detected from content. JTAG ID alone cannot identify the board
         elif source == "Local file":
             args.file = str(choose(local_files(args), "Choose local firmware"))
         else:
-            args.format = (
-                choose(["mcs", "bit"], "Choose download format")
-                if args.firmware == "skeleton"
-                else "mcs"
-            )
+            args.format = choose(["mcs", "bit"], "Choose download format")
             args.latest = source == "Latest GitHub firmware"
             args.choose_version = not args.latest
         program(args)

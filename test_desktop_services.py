@@ -42,8 +42,9 @@ class DesktopTests(unittest.TestCase):
             github.files.return_value = entries
             with patch.object(service.core, "GitHub", return_value=github):
                 rows = service._repository_rows("lrtdc", "AMANEQ-official/StrLrTdc")
-            self.assertEqual(len(rows), 1)
+            self.assertEqual(len(rows), 2)
             self.assertEqual(rows[0]["name"], "amaneq-4-strlrtdc-v2.A.mcs")
+            self.assertEqual(rows[1]["name"], "amaneq-4-strlrtdc-v2.B.bit")
             self.assertEqual(rows[0]["commit"], "a" * 40)
 
     def test_offline_catalog_reports_stale_cache(self):
@@ -156,7 +157,7 @@ class DesktopTests(unittest.TestCase):
             self.assertFalse(errors)
             self.assertTrue(rows[0]["is_current"])
 
-    def test_explicit_format_filters_skeleton_and_rejects_other_bit_firmware(self):
+    def test_explicit_format_filters_all_families(self):
         with tempfile.TemporaryDirectory() as tmp:
             service = desktop.DesktopServices(ROOT, Path(tmp))
             github = Mock()
@@ -176,10 +177,22 @@ class DesktopTests(unittest.TestCase):
                     github.repo, "amaneq-v4", "skeleton", image_format="mcs"
                 )
                 self.assertEqual([row["format"] for row in rows], ["mcs"])
-                with self.assertRaisesRegex(ValueError, "only for Skeleton"):
-                    service.image_list(
-                        github.repo, "amaneq-v4", "hrtdc", image_format="bit"
-                    )
+                for family, stem in (
+                    ("lrtdc", "strlrtdc"),
+                    ("hrtdc", "strhrtdc"),
+                    ("lrtdc-10g", "strlrtdc-10g"),
+                    ("mikumari", "mch"),
+                ):
+                    github.files.return_value = [
+                        {"path": f"bit/amaneq-4-{stem}-v2.2.bit"},
+                        {"path": f"mcs/amaneq-4-{stem}-v2.2.mcs"},
+                    ]
+                    for kind in ("bit", "mcs"):
+                        rows, status, errors = service.image_list(
+                            github.repo, "amaneq-v4", family, image_format=kind
+                        )
+                        self.assertFalse(errors)
+                        self.assertEqual([row["format"] for row in rows], [kind])
 
 
 class NetworkTests(unittest.TestCase):

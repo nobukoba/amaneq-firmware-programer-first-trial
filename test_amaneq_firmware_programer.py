@@ -105,14 +105,14 @@ class ProgrammerTests(unittest.TestCase):
         with self.assertRaises(app.UserError):
             app.repository(args)
 
-    def test_bit_only_for_skeleton(self):
+    def test_bit_supported_for_all_families(self):
         image = app.Image("bit", PAYLOAD, {}, 0x0364C093)
-        app.validate_firmware_format(image, argparse.Namespace(firmware="skeleton"))
-        for family in ("lrtdc", "hrtdc", "lrtdc-10g", "mikumari"):
-            with self.assertRaises(app.UserError):
-                app.validate_firmware_format(image, argparse.Namespace(firmware=family))
+        for family in ("skeleton", "lrtdc", "hrtdc", "lrtdc-10g", "mikumari"):
+            app.validate_firmware_format(image, argparse.Namespace(firmware=family))
         with self.assertRaises(app.UserError):
-            app.main(["download", "--firmware", "lrtdc", "--format", "bit"])
+            app.validate_firmware_format(
+                app.Image("html", b"", {}, None), argparse.Namespace(firmware="lrtdc")
+            )
 
     def test_new_firmware_families(self):
         self.assertEqual(

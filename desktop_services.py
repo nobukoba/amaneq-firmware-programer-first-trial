@@ -136,11 +136,9 @@ class DesktopServices:
         history_limit = int(history_limit)
         if image_format not in (None, "mcs", "bit"):
             raise ValueError("Image format must be MCS or BIT.")
-        if image_format == "bit" and firmware != "skeleton":
-            raise ValueError("BIT is supported only for Skeleton firmware.")
         github = self.core.GitHub(repository.strip())
         key = hashlib.sha256(
-            f"history-v7:{github.repo}:{target}:{firmware}:{include_history}:{history_limit}:{image_format}".encode()
+            f"history-v8:{github.repo}:{target}:{firmware}:{include_history}:{history_limit}:{image_format}".encode()
         ).hexdigest()
         cache = self.data_root / "image-lists" / (key + ".json")
         saved = None
@@ -307,7 +305,7 @@ class DesktopServices:
             family = family.split(":", 1)[1]
         firmware = "hrtdc" if family == "mezzanine" else family
         for target in targets:
-            for format in (["mcs", "bit"] if firmware == "skeleton" else ["mcs"]):
+            for format in ("mcs", "bit"):
                 args = argparse.Namespace(
                     target=target, firmware=firmware, format=format, flash="auto"
                 )

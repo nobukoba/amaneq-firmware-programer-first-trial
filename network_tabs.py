@@ -17,15 +17,26 @@ def bind_horizontal_scroll(entry):
     for event in ("<MouseWheel>", "<Shift-MouseWheel>", "<Button-4>", "<Button-5>"):
         entry.bind(event, scroll)
 
+    def reveal_cursor(event=None):
+        entry.after_idle(lambda: entry.xview(entry.index("insert")))
+
     def navigate(event):
-        if event.state & 1:
-            return None
-        if event.keysym in ("Home", "End"):
-            entry.xview_moveto(0 if event.keysym == "Home" else 1)
+        index = entry.index("insert")
+        if event.keysym == "Home":
+            index = 0
+        elif event.keysym == "End":
+            index = len(entry.get())
         else:
-            entry.xview_scroll(-1 if event.keysym == "Left" else 1, "units")
+            index += -1 if event.keysym == "Left" else 1
+        index = max(0, min(len(entry.get()), index))
+        entry.icursor(index)
+        if not event.state & 1:
+            entry.selection_clear()
+        entry.xview(index)
         return "break"
 
+    entry.bind("<KeyRelease>", reveal_cursor, add="+")
+    entry.bind("<ButtonRelease-1>", reveal_cursor, add="+")
     if str(entry.cget("state")) == "readonly":
         for event in ("<Home>", "<End>", "<Left>", "<Right>"):
             entry.bind(event, navigate)
@@ -255,11 +266,6 @@ class NetworkTabs:
             style="Action.TButton",
             command=lambda: self.utility("Write IP only"),
         ).pack(side="left", padx=4)
-        ttk.Label(
-            self.ip,
-            text="IP writes preserve MPC/MPCX license data. Saved EEPROM IP is the default; changing the current IP reconnects and verifies the new endpoint.",
-            wraplength=900,
-        ).pack(anchor="w")
         board.trace_add("write", lambda *unused: self.refresh_board())
         self.refresh_board()
 

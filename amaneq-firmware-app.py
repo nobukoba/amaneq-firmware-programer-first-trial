@@ -400,9 +400,7 @@ def gui(smoke_test=False):
                 )
             )
         firmware_display.set(firmware_labels[firmware.get()])
-        format_box["values"] = (
-            ("MCS", "BIT") if firmware.get() == "skeleton" else ("MCS",)
-        )
+        format_box["values"] = ("MCS", "BIT")
         if image_format.get() not in format_box["values"]:
             image_format.set("MCS")
         active_profile = (target.get(), firmware.get())
@@ -705,7 +703,11 @@ def gui(smoke_test=False):
     firmware_box.bind("<<ComboboxSelected>>", firmware_picked)
     ttk.Label(settings, text="Format").grid(row=0, column=4, padx=(10, 0))
     format_box = ttk.Combobox(
-        settings, textvariable=image_format, state="readonly", values=("MCS",), width=7
+        settings,
+        textvariable=image_format,
+        state="readonly",
+        values=("MCS", "BIT"),
+        width=7,
     )
     format_box.grid(row=0, column=5, padx=6)
     format_box.bind(
@@ -834,7 +836,7 @@ def gui(smoke_test=False):
         holder.pack(fill="x", pady=4)
         ttk.Checkbutton(
             holder,
-            text="Enable temporary static host IP address",
+            text="Temporary static host IP address (DHCP preserved, restored on exit)",
             variable=temporary_enabled,
             command=toggle_temporary,
         ).pack(anchor="w")
@@ -847,11 +849,7 @@ def gui(smoke_test=False):
                 wraplength=900,
             ).pack(anchor="w", pady=8)
             return
-        net = ttk.LabelFrame(
-            panel,
-            text="Temporary host IPv4 (preserves DHCP; restored on exit)",
-            padding=8,
-        )
+        net = ttk.Frame(panel, padding=8)
         net.pack(fill="x", pady=6)
         adapter_box = ttk.Combobox(
             net, textvariable=adapter_label, state="readonly", width=28
@@ -913,8 +911,6 @@ def gui(smoke_test=False):
     message_controls.pack(fill="x")
     ttk.Label(message_controls, text="Messages").pack(side="left")
     follow_messages = tk.BooleanVar(value=True)
-    expanded_messages = False
-    previous_sash = None
     follow_box = ttk.Checkbutton(
         message_controls,
         text="Follow latest",
@@ -959,27 +955,6 @@ def gui(smoke_test=False):
     ttk.Button(message_controls, text="Latest", command=latest_messages).pack(
         side="left", padx=3
     )
-
-    def expand_messages():
-        nonlocal expanded_messages, previous_sash
-        root.update_idletasks()
-        if expanded_messages:
-            split.sashpos(
-                0,
-                (
-                    previous_sash
-                    if previous_sash is not None
-                    else max(100, split.winfo_height() - 160)
-                ),
-            )
-        else:
-            previous_sash = split.sashpos(0)
-            split.sashpos(0, max(80, int(split.winfo_height() * 0.2)))
-        expanded_messages = not expanded_messages
-        expand_button.configure(text="Restore" if expanded_messages else "Expand")
-
-    expand_button = ttk.Button(message_controls, text="Expand", command=expand_messages)
-    expand_button.pack(side="right")
 
     def redraw_selected():
         if not root.winfo_exists():
@@ -1194,11 +1169,23 @@ def gui(smoke_test=False):
         image_format.set("BIT")
         firmware.set("lrtdc")
         profile_changed()
-        assert image_format.get() == "MCS"
+        assert image_format.get() == "BIT"
         network_tabs.file.set("/" + "long-directory/" * 100 + "example.mpcx")
-        network_tabs.file_entry.xview_moveto(1)
-        root.update_idletasks()
+        notebook.select(2)
+        root.update()
+        network_tabs.file_entry.focus_force()
+        root.update()
+        network_tabs.file_entry.event_generate("<End>")
+        root.update()
+        assert network_tabs.file_entry.index("insert") == len(network_tabs.file.get())
         assert network_tabs.file_entry.xview()[0] > 0
+        network_tabs.file_entry.event_generate("<Home>")
+        root.update()
+        assert network_tabs.file_entry.index("insert") == 0
+        assert network_tabs.file_entry.xview()[0] == 0
+        network_tabs.file_entry.event_generate("<Right>")
+        root.update()
+        assert network_tabs.file_entry.index("insert") == 1
         network_tabs.file.set("")
         for endpoint in ("192.168.10.16", "192.168.10.10", "192.168.2.5"):
             network_tabs.clock_target.set(endpoint)
@@ -1220,8 +1207,10 @@ def gui(smoke_test=False):
             root.update_idletasks()
         notebook.select(0)
         root.update_idletasks()
-        expand_messages()
-        expand_messages()
+        original_sash = split.sashpos(0)
+        split.sashpos(0, max(80, original_sash - 80))
+        assert split.sashpos(0) < original_sash
+        split.sashpos(0, original_sash)
         zoom.set("125%")
         resize_ui()
         zoom.set("100%")
