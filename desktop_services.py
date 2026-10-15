@@ -119,11 +119,24 @@ class DesktopServices:
             "spadi-alliance/" if firmware == "skeleton" else "AMANEQ-official/"
         ) + self.core.REPOS[firmware]
 
-    def image_list(self, repository, target, firmware, force=False):
+    def image_list(
+        self,
+        repository,
+        target,
+        firmware,
+        force=False,
+        include_history=False,
+        history_limit=10,
+    ):
         import hashlib
 
+        if isinstance(history_limit, bool) or not 1 <= int(history_limit) <= 1000:
+            raise ValueError("History limit must be between 1 and 1000.")
+        history_limit = int(history_limit)
         github = self.core.GitHub(repository.strip())
-        key = hashlib.sha256(f"{github.repo}:{target}:{firmware}".encode()).hexdigest()
+        key = hashlib.sha256(
+            f"history-v6:{github.repo}:{target}:{firmware}:{include_history}:{history_limit}".encode()
+        ).hexdigest()
         cache = self.data_root / "image-lists" / (key + ".json")
         saved = None
         try:
@@ -137,61 +150,136 @@ class DesktopServices:
         except (OSError, ValueError, AttributeError):
             pass
         if saved and not force and time.time() - saved["timestamp"] < 300:
-            return saved["rows"], f"Cached list checked {saved['checked_at']}", []
+            return (
+                saved["rows"],
+                f"Cached firmware history checked {saved['checked_at']}",
+                [],
+            )
         try:
             branch = github.get("")["default_branch"]
-            commit = github.revision(branch)
-            entries = github.files(commit)
-            rows = []
-            for image_format in (["mcs", "bit"] if firmware == "skeleton" else ["mcs"]):
-                args = argparse.Namespace(
-                    target=target, firmware=firmware, format=image_format, flash="auto"
-                )
-                for item in self.core.candidates(entries, args):
-                    inferred_family = self.core.filename_family(item["path"])
-                    if inferred_family is not None and inferred_family != firmware:
-                        continue
-                    rows.append(
-                        {
-                            "target": target,
-                            "firmware": firmware,
-                            "format": image_format,
-                            "repo": github.repo,
-                            "commit": commit,
-                            "path": item["path"],
-                            "name": Path(item["path"]).name,
-                        }
+            head = github.revision(branch)
+            rows, errors, identities = [], [], set()
+            formats = ["mcs", "bit"] if firmware == "skeleton" else ["mcs"]
+
+            def add_snapshot(commit, revision, date="", current=False):
+                entries = github.files(commit)
+                for image_format in formats:
+                    args = argparse.Namespace(
+                        target=target,
+                        firmware=firmware,
+                        format=image_format,
+                        flash="auto",
                     )
+                    for item in self.core.candidates(entries, args):
+                        family = self.core.filename_family(item["path"])
+                        if family is not None and family != firmware:
+                            continue
+                        identity = (image_format, item["path"], item.get("sha", commit))
+                        if identity in identities:
+                            continue
+                        identities.add(identity)
+                        rows.append(
+                            {
+                                "target": target,
+                                "firmware": firmware,
+                                "format": image_format,
+                                "repo": github.repo,
+                                "commit": commit,
+                                "path": item["path"],
+                                "name": Path(item["path"]).name,
+                                "revision": revision,
+                                "date": date,
+                                "is_current": current,
+                            }
+                        )
+
+            add_snapshot(head, branch + " (current)", current=True)
+            snapshots = 1
+            if include_history:
+                import urllib.parse
+
+                try:
+                    scan_limit = min(1000, max(20, history_limit * 3))
+                    tags = github.pages("/tags", scan_limit)
+                    tag_names = {}
+                    for tag in tags:
+                        tag_names.setdefault(tag["commit"]["sha"], []).append(
+                            tag["name"]
+                        )
+                    commits = {}
+                    for directory in formats:
+                        for item in github.pages(
+                            "/commits?path=" + urllib.parse.quote(directory, safe=""),
+                            scan_limit,
+                        ):
+                            commits[item["sha"]] = item
+                    ordered = sorted(
+                        commits.values(),
+                        key=lambda item: item["commit"]["committer"]["date"],
+                        reverse=True,
+                    )
+                    revisions = [
+                        (item["sha"], item["commit"]["committer"]["date"])
+                        for item in ordered
+                    ]
+                    revisions.extend(
+                        (sha, "") for sha in tag_names if sha not in commits
+                    )
+                    seen = {head}
+                    for commit, date in revisions:
+                        if commit in seen:
+                            continue
+                        seen.add(commit)
+                        if len(rows) >= history_limit:
+                            break
+                        revision = (
+                            ", ".join(tag_names.get(commit, []))
+                            or (date[:10] + " " + commit[:12]).strip()
+                        )
+                        add_snapshot(commit, revision, date)
+                        snapshots += 1
+                except Exception as error:
+                    errors.append("History lookup incomplete: " + str(error))
             rows.sort(
                 key=lambda row: (
+                    row["is_current"],
                     self.core.version_key(row["path"]),
                     row["format"] == "mcs",
+                    row["date"],
                     row["path"],
                 ),
                 reverse=True,
             )
-            rows = rows[:10]
+            rows = rows[:history_limit]
             checked = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-            cache.parent.mkdir(parents=True, exist_ok=True)
-            temporary = cache.with_name(cache.name + "." + uuid.uuid4().hex + ".tmp")
-            temporary.write_text(
-                json.dumps(
-                    {"rows": rows, "timestamp": time.time(), "checked_at": checked}
-                ),
-                encoding="utf-8",
+            if not errors:
+                cache.parent.mkdir(parents=True, exist_ok=True)
+                temporary = cache.with_name(
+                    cache.name + "." + uuid.uuid4().hex + ".tmp"
+                )
+                temporary.write_text(
+                    json.dumps(
+                        {"rows": rows, "timestamp": time.time(), "checked_at": checked}
+                    ),
+                    encoding="utf-8",
+                )
+                temporary.replace(cache)
+            scope = (
+                "Default branch + tags/firmware commits"
+                if include_history
+                else "Default branch"
             )
-            temporary.replace(cache)
-            return (
-                rows,
-                f"Default-branch images checked {checked}; newest first (up to 10)"
-                + (". No matching firmware images found." if not rows else ""),
-                [],
-            )
+            status = f"{scope}: {len(rows)} images, {snapshots} revisions checked {checked}; limit {history_limit}"
+            if errors:
+                status += " (history incomplete)"
+            if not rows:
+                status += ". No matching firmware images found."
+            return rows, status, errors
         except Exception as error:
             if saved:
                 return (
                     saved["rows"],
-                    f"Offline/cached list from {saved['checked_at']} (not refreshed)",
+                    f"Offline/cached history from {saved['checked_at']} (not refreshed)",
                     [str(error)],
                 )
             raise

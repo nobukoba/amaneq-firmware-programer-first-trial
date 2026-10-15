@@ -105,6 +105,57 @@ class DesktopTests(unittest.TestCase):
                 with self.assertRaises(OSError):
                     service.image_list(github.repo, "amaneq-v1", "lrtdc", force=True)
 
+    def test_history_recovers_replaced_versions_and_deduplicates_blobs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            service = desktop.DesktopServices(ROOT, Path(tmp))
+            github = Mock()
+            github.repo = "example/history"
+            github.get.return_value = {"default_branch": "main"}
+            github.revision.return_value = "a" * 40
+            commits = [
+                {"sha": sha * 40, "commit": {"committer": {"date": date}}}
+                for sha, date in [
+                    ("a", "2026-10-16"),
+                    ("b", "2026-10-15"),
+                    ("c", "2026-10-14"),
+                    ("d", "2026-10-13"),
+                ]
+            ]
+            github.pages.side_effect = lambda endpoint, limit: (
+                [{"name": "v2.9", "commit": {"sha": "c" * 40}}]
+                if endpoint == "/tags"
+                else commits
+            )
+            github.files.side_effect = lambda sha: (
+                [{"path": "mcs/amaneq-4-strlrtdc-v2.A.mcs", "sha": "same"}]
+                if sha[0] in "ab"
+                else (
+                    [{"path": "mcs/amaneq-4-strlrtdc-v2.9.mcs", "sha": "old"}]
+                    if sha[0] == "c"
+                    else [{"path": "mcs/amaneq-4-strlrtdc-v2.8.mcs", "sha": "older"}]
+                )
+            )
+            with patch.object(service.core, "GitHub", return_value=github):
+                rows, status, errors = service.image_list(
+                    github.repo,
+                    "amaneq-v4",
+                    "lrtdc",
+                    include_history=True,
+                    history_limit=3,
+                )
+            self.assertEqual(
+                [row["name"] for row in rows],
+                [
+                    "amaneq-4-strlrtdc-v2.A.mcs",
+                    "amaneq-4-strlrtdc-v2.9.mcs",
+                    "amaneq-4-strlrtdc-v2.8.mcs",
+                ],
+            )
+            self.assertEqual(rows[1]["commit"], "c" * 40)
+            self.assertEqual(rows[1]["revision"], "v2.9")
+            self.assertFalse(errors)
+            self.assertTrue(rows[0]["is_current"])
+
 
 class NetworkTests(unittest.TestCase):
     def test_ethernet_picker_excludes_wifi_and_bridge(self):

@@ -182,6 +182,7 @@ def gui(smoke_test=False):
     firmware = tk.StringVar(value="lrtdc")
     filename = tk.StringVar()
     source_mode = tk.StringVar(value="GitHub")
+    history_limit = tk.StringVar(value="10")
     repository_url = tk.StringVar()
     repository_overrides = {}
     active_profile = None
@@ -284,11 +285,23 @@ def gui(smoke_test=False):
             return
         chosen_repository = repository_url.get().strip()
         chosen_target, chosen_firmware = target.get(), firmware.get()
+        try:
+            chosen_limit = int(history_limit.get())
+            if not 1 <= chosen_limit <= 1000:
+                raise ValueError()
+        except ValueError:
+            catalog_status.set("History limit must be an integer between 1 and 1000.")
+            return
         catalog_status.set("Loading matching firmware images...")
 
         def operation():
             result = services.image_list(
-                chosen_repository, chosen_target, chosen_firmware, force
+                chosen_repository,
+                chosen_target,
+                chosen_firmware,
+                force,
+                include_history=True,
+                history_limit=chosen_limit,
             )
             return "catalog", (request, result)
 
@@ -310,7 +323,12 @@ def gui(smoke_test=False):
                     "",
                     "end",
                     iid=str(index),
-                    values=(row["format"].upper(), label, row["name"]),
+                    values=(
+                        row["format"].upper(),
+                        label,
+                        row["name"],
+                        row.get("revision", ""),
+                    ),
                 )
         visible = images.get_children()
         if visible:
@@ -649,12 +667,30 @@ def gui(smoke_test=False):
     ttk.Button(repository_box, text="Refresh list", command=refresh_catalog).pack(
         side="left", padx=6
     )
+    history_controls = ttk.Frame(online)
+    history_controls.pack(fill="x", pady=4)
+    ttk.Label(history_controls, text="History limit").pack(side="left")
+    history_box = ttk.Spinbox(
+        history_controls,
+        from_=1,
+        to=1000,
+        textvariable=history_limit,
+        width=7,
+        command=lambda: refresh_catalog(force=False, quiet=True),
+    )
+    history_box.pack(side="left", padx=8)
+    history_box.bind(
+        "<Return>", lambda unused: refresh_catalog(force=False, quiet=True)
+    )
+    ttk.Label(
+        history_controls, text="Default 10 images; includes tags and firmware commits"
+    ).pack(side="left")
     ttk.Label(online, textvariable=catalog_status, wraplength=930).pack(anchor="w")
     table_frame = ttk.Frame(online)
     table_frame.pack(fill="both", expand=True, pady=4)
     images = ttk.Treeview(
         table_frame,
-        columns=("format", "version", "file"),
+        columns=("format", "version", "file", "revision"),
         show="headings",
         height=7,
         selectmode="browse",
@@ -662,7 +698,8 @@ def gui(smoke_test=False):
     for name, title, width in (
         ("format", "Type", 65),
         ("version", "Version", 95),
-        ("file", "Firmware image (newest first)", 700),
+        ("file", "Firmware image", 490),
+        ("revision", "Tag / commit", 235),
     ):
         images.heading(name, text=title)
         images.column(name, width=width, stretch=name == "file")
