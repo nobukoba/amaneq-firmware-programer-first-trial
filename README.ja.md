@@ -18,6 +18,12 @@ cd amaneq-firmware-programer-first-trial
 ./amaneq-firmware-programer.py --help
 ```
 
+## macOSデスクトップ版
+
+macOS用ビルドは、macOS 15以降向けにApple Silicon（arm64）用とIntel（x86_64）用のZIPを別々に作ります。[Build macOS desktop app](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/workflows/macos-app.yml)で成功した実行を開き、対応するArtifactを取得してください。ArtifactのZIPと、その中のアプリ用ZIPを順に展開し、amaneq-firmware-programer.appをApplicationsへ移します。Python・Tk・openFPGALoaderを同梱するため、利用時のHomebrew導入は不要です。
+
+HS3を直接接続し、タブの上にあるチェック欄で実物の機種を確認してから、検出・書き込みを行います。Windows用USBドライバーボタンは無効です。取得ファイル・SPIブリッジのキャッシュ・ログは、署名済みアプリの外の~/Library/Application Support/AMANEQ/へ保存します。フラッシュのバックアップを保管してください。試作版はアドホック署名で、Appleの公証はありません。起動を止められた場合は配布元を確認し、プライバシーとセキュリティの「このまま開く」を使ってください。OS全体の保護設定を無効化しません。ビルドではGUI起動・同梱ローダー実行・機器未接続での検出・Homebrewへの実行時依存がないことを確認します。MacとHS3による実機書き込みは未確認です。
+
 ## Windowsデスクトップ版：アプリ内でUSBを設定する
 
 Windows x64向けの試作画面に、Windows HS3 USBタブを追加しました。Refresh USB（再検出）、Use openFPGALoader (WinUSB)（切り替え）、Restore Vivado driver（元に戻す）を使えます。ローカルのデスクトップ版にはPython・openFPGALoader・libwdi・cygpathを同梱でき、WSL・usbipdやZadigの別画面での手作業を省けます。ソース版は下記で起動します。ドライバー変更にはFOR_DEVELOPERSの手順でビルドしたx64版`runtime/libwdi.dll`が必要です。バイナリはGit管理しません。

@@ -18,6 +18,12 @@ cd amaneq-firmware-programer-first-trial
 ./amaneq-firmware-programer.py --help
 ```
 
+## macOS desktop app
+
+The macOS build workflow creates separate Apple Silicon (arm64) and Intel (x86_64) ZIPs for macOS 15 or later. Open [Build macOS desktop app](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/workflows/macos-app.yml), choose a successful run, and download the matching artifact. Extract the artifact ZIP and then the application ZIP inside it; drag amaneq-firmware-programer.app into Applications. Python, Tk and openFPGALoader are bundled, so Homebrew is only needed to build, not to use the app.
+
+Connect HS3 directly, confirm its physical model using the checkbox above the tabs, then scan and program. The Windows USB driver buttons are disabled. User downloads, bridge caches and logs go under ~/Library/Application Support/AMANEQ/, outside the signed app. Keep flash backups. These preview builds use ad-hoc signing without Apple notarization; if macOS blocks launching, use Privacy & Security / Open Anyway only after verifying the trusted source. No system-wide security setting is disabled. Builds check GUI startup, bundled loader execution, cable enumeration without attached hardware, and absence of Homebrew runtime links. Physical Mac/HS3 programming is not verified.
+
 ## Windows desktop app: USB setup in the app
 
 The native Windows x64 desktop preview adds a Windows HS3 USB tab with Refresh USB, Use openFPGALoader (WinUSB), and Restore Vivado driver. A local desktop bundle can include Python, openFPGALoader, libwdi and cygpath, so WSL/usbipd and a separate Zadig window are unnecessary. Source users can start the window with the command below; driver switching requires the matching x64 `runtime/libwdi.dll` built as described in FOR_DEVELOPERS. Binaries are not tracked in this repository.

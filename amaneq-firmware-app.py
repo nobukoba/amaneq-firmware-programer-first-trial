@@ -17,6 +17,37 @@ import windows_usb as usb
 ROOT = Path(__file__).resolve().parent
 
 
+def app_data_directory():
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "AMANEQ"
+    if os.name == "nt":
+        return Path(os.environ.get("LOCALAPPDATA", Path.home())) / "AMANEQ"
+    return (
+        Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "AMANEQ"
+    )
+
+
+def default_loader():
+    relative = (
+        "runtime/macos/bin/openFPGALoader"
+        if sys.platform == "darwin"
+        else "runtime/ucrt64/bin/openFPGALoader.exe"
+    )
+    candidate = ROOT / relative
+    return str(candidate) if candidate.is_file() else "openFPGALoader"
+
+
+def restore_cli_streams():
+    # Windowed macOS bundles can start with None streams, even for a CLI child.
+    for name, number in (("stdout", 1), ("stderr", 2)):
+        if getattr(sys, name) is None:
+            try:
+                stream = os.fdopen(os.dup(number), "w", encoding="utf-8", buffering=1)
+            except OSError:
+                stream = open(os.devnull, "w", encoding="utf-8")
+            setattr(sys, name, stream)
+
+
 def command_prefix():
     return (
         [sys.executable]
@@ -102,7 +133,10 @@ def firmware_cli(arguments):
     spec = importlib.util.spec_from_file_location("amaneq_core", path)
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
+    sys.dont_write_bytecode = True
     spec.loader.exec_module(module)
+    # Downloads, readbacks and bridge caches must never modify a signed .app.
+    module.ROOT = app_data_directory()
     sys.argv = [str(path)] + arguments
     try:
         return module.main()
@@ -129,18 +163,16 @@ def gui(smoke_test=False):
     busy = False
     selected_devices = []
     serial = tk.StringVar()
-    loader = tk.StringVar(
-        value=(
-            str(ROOT / "runtime" / "ucrt64" / "bin" / "openFPGALoader.exe")
-            if os.name == "nt"
-            and (ROOT / "runtime" / "ucrt64" / "bin" / "openFPGALoader.exe").exists()
-            else "openFPGALoader"
-        )
-    )
+    loader = tk.StringVar(value=default_loader())
     firmware = tk.StringVar(value="lrtdc")
     target = tk.StringVar(value="amaneq-v4")
     filename = tk.StringVar()
     is_hs3 = tk.BooleanVar(value=False)
+    ttk.Checkbutton(
+        root,
+        variable=is_hs3,
+        text="I confirm the selected physical cable is a Digilent JTAG-HS3",
+    ).pack(anchor="w", padx=12, pady=(8, 0))
     notebook = ttk.Notebook(root)
     notebook.pack(fill="x", padx=12, pady=8)
     program_tab = ttk.Frame(notebook, padding=12)
@@ -297,7 +329,7 @@ def gui(smoke_test=False):
         if not is_hs3.get():
             messagebox.showerror(
                 "Cable",
-                "Confirm that the selected physical cable is a Digilent HS3 on the USB tab.",
+                "Confirm the physical cable is a Digilent HS3 using the checkbox above.",
             )
             return
         if messagebox.askyesno(
@@ -327,11 +359,6 @@ def gui(smoke_test=False):
     ).pack(anchor="w")
     cable = ttk.Combobox(usb_tab, textvariable=serial, state="readonly", width=60)
     cable.pack(anchor="w", pady=6)
-    ttk.Checkbutton(
-        usb_tab,
-        variable=is_hs3,
-        text="I confirm this physical cable is a Digilent JTAG-HS3",
-    ).pack(anchor="w")
     controls = ttk.Frame(usb_tab)
     controls.pack(anchor="w", pady=6)
     for label, callback in [
@@ -383,6 +410,7 @@ def gui(smoke_test=False):
 
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "--firmware-cli":
+        restore_cli_streams()
         return firmware_cli(sys.argv[2:])
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(

@@ -1,0 +1,49 @@
+name: Build macOS desktop app
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '*app.py'
+      - 'windows_usb.py'
+      - 'amaneq-firmware-programer.py'
+      - 'build-macos-app.py'
+      - '.github/workflows/macos-app.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            architecture: arm64
+            python-architecture: arm64
+          - runner: macos-15-intel
+            architecture: x86_64
+            python-architecture: x64
+    runs-on: ${{ matrix.runner }}
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: ${{ matrix.python-architecture }}
+      - name: Install build dependencies
+        run: |
+          brew install openfpgaloader
+          python -m pip install pyinstaller==6.22.3
+      - name: Offline tests
+        run: python -m unittest test_amaneq_firmware_programer test_windows_usb test_macos_app -v
+      - name: Build and smoke-test app with bundled loader
+        run: python build-macos-app.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: amaneq-firmware-programer-macos-${{ matrix.architecture }}
+          path: |
+            dist/macos/*.zip
+            dist/macos/*.sha256
+          if-no-files-found: error
+          retention-days: 30
