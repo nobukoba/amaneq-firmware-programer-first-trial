@@ -181,5 +181,65 @@ class NetworkOperationTests(unittest.TestCase):
             self.assertEqual(client.send.call_count, 1)
 
 
+class NetworkPathInputTests(unittest.TestCase):
+    def make_tabs(self, filename):
+        from network_tabs import NetworkTabs
+
+        tabs = NetworkTabs.__new__(NetworkTabs)
+        tabs.file = MagicMock()
+        tabs.file.get.return_value = filename
+        tabs.file_status = MagicMock()
+        tabs.file_validation = None
+        tabs.detected_file = None
+        tabs.writer_target = MagicMock()
+        tabs.ip_target = MagicMock()
+        tabs.task = MagicMock()
+        return tabs
+
+    def test_typed_quoted_paths_detect_contents_and_preserve_custom_target(self):
+        import json
+
+        reference = Path(__file__).parent / "vendor/sitcp-utility/tests/reference"
+        with tempfile.TemporaryDirectory() as directory:
+            for fixture, kind, host in (
+                ("official_mpc_erased.json", "MPC", "192.168.10.16"),
+                ("official_mpcx_erased.json", "MPCX", "192.168.10.10"),
+            ):
+                path = Path(directory) / "typed file.wrong-extension"
+                path.write_bytes(
+                    bytes.fromhex(
+                        json.loads((reference / fixture).read_text())[
+                            "synthetic_payload"
+                        ]
+                    )
+                )
+                tabs = self.make_tabs(f'"{path}"')
+                self.assertTrue(tabs.validate_file())
+                tabs.file_status.set.assert_called_with(
+                    f"Detected from contents: {kind}"
+                )
+                tabs.writer_target.set.assert_called_once_with(host)
+                tabs.writer_target.set.reset_mock()
+                self.assertTrue(tabs.validate_file())
+                tabs.writer_target.set.assert_not_called()
+
+    def test_invalid_typed_path_stops_before_command_or_write(self):
+        with tempfile.TemporaryDirectory() as directory:
+            tabs = self.make_tabs(str(Path(directory) / "missing.mpc"))
+            self.assertFalse(tabs.validate_file())
+            self.assertIn(
+                "Invalid MPC/MPCX file", tabs.file_status.set.call_args.args[0]
+            )
+            tabs.file_status.get.return_value = "Invalid MPC/MPCX file"
+            with (
+                patch("network_tabs.messagebox.showerror") as error,
+                patch("network_tabs.operations.utility_command") as command,
+            ):
+                tabs.utility("Write MPC/MPCX")
+            error.assert_called_once()
+            command.assert_not_called()
+            tabs.task.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()

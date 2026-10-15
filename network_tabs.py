@@ -2,6 +2,7 @@
 
 import subprocess
 import sys
+from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 import tkinter as tk
 import network_operations as operations
@@ -182,7 +183,7 @@ class NetworkTabs:
         file_box = ttk.Frame(self.writer)
         file_box.pack(fill="x", pady=(0, 6))
         ttk.Label(file_box, text="MPC / MPCX file").pack(side="left", padx=(0, 8))
-        self.file_entry = ttk.Entry(file_box, textvariable=self.file, state="readonly")
+        self.file_entry = ttk.Entry(file_box, textvariable=self.file)
         self.file_entry.pack(side="left", fill="x", expand=True)
         bind_horizontal_scroll(self.file_entry)
         ttk.Button(file_box, text="Choose file", command=self.choose_file).pack(
@@ -194,6 +195,11 @@ class NetworkTabs:
         ttk.Label(self.writer, textvariable=self.file_status, wraplength=900).pack(
             anchor="w"
         )
+        self.file_validation = None
+        self.detected_file = None
+        self.file.trace_add("write", self.file_changed)
+        self.file_entry.bind("<Return>", lambda unused: self.validate_file())
+        self.file_entry.bind("<FocusOut>", lambda unused: self.validate_file())
         self.clock_target = TargetAddress(self.clock, task, events)
         self.writer_target = TargetAddress(self.writer, task, events)
         self.ip_target = TargetAddress(self.ip, task, events)
@@ -275,16 +281,47 @@ class NetworkTabs:
         )
         if not path:
             return
+        self.file.set(path)
+        self.validate_file()
+
+    def selected_file(self):
+        return (
+            str(Path(self.file.get().strip().strip('"')).expanduser())
+            if self.file.get().strip()
+            else ""
+        )
+
+    def file_changed(self, *unused):
+        if self.file_validation is not None:
+            self.file_entry.after_cancel(self.file_validation)
+        self.file_status.set(
+            "Checking file..." if self.file.get().strip() else "No file selected."
+        )
+        self.file_validation = self.file_entry.after(400, self.validate_file)
+
+    def validate_file(self):
+        if self.file_validation is not None:
+            self.file_entry.after_cancel(self.file_validation)
+            self.file_validation = None
         try:
+            path = self.selected_file()
+            if not path:
+                self.detected_file = None
+                self.file_status.set("No file selected.")
+                return False
             kind = operations.license_kind(path)
         except Exception as error:
-            messagebox.showerror("MPC/MPCX file", str(error))
-            return
-        self.file.set(path)
+            self.detected_file = None
+            self.file_status.set(f"Invalid MPC/MPCX file: {error}")
+            return False
         self.file_status.set(f"Detected from contents: {kind}")
-        address = "192.168.10.10" if kind == "MPCX" else "192.168.10.16"
-        self.writer_target.set(address)
-        self.ip_target.set(address)
+        identity = (path, kind)
+        if identity != self.detected_file:
+            address = "192.168.10.10" if kind == "MPCX" else "192.168.10.16"
+            self.writer_target.set(address)
+            self.ip_target.set(address)
+        self.detected_file = identity
+        return True
 
     def refresh_board(self):
         if self.board.get() == "CIRASAME":
@@ -328,8 +365,11 @@ class NetworkTabs:
         try:
             ip_operation = action in ("Read IP", "Write IP only")
             selected_target = self.ip_target if ip_operation else self.writer_target
+            selected_file = "" if ip_operation else self.selected_file()
+            if not ip_operation and selected_file and action != "Read":
+                if not self.validate_file():
+                    raise ValueError(self.file_status.get())
             host = selected_target.value()
-            selected_file = "" if ip_operation else self.file.get()
             selected_new_ip = self.new_ip.get() if ip_operation else ""
             command = operations.utility_command(
                 self.root_path,

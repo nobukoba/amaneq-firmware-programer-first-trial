@@ -917,6 +917,23 @@ def gui(smoke_test=False):
     board_changed()
     messages = ttk.Frame(split, padding=(0, 4))
     split.add(messages, weight=1)
+    message_grip = tk.Frame(
+        messages, height=12, borderwidth=1, relief="raised", cursor="sb_v_double_arrow"
+    )
+    message_grip.pack(fill="x", pady=(0, 4))
+    message_drag = {}
+
+    def begin_message_resize(event):
+        message_drag.update(y=event.y_root, position=split.sashpos(0))
+
+    def resize_messages(event):
+        if message_drag:
+            position = message_drag["position"] + event.y_root - message_drag["y"]
+            split.sashpos(0, max(100, min(split.winfo_height() - 80, position)))
+
+    message_grip.bind("<ButtonPress-1>", begin_message_resize)
+    message_grip.bind("<B1-Motion>", resize_messages)
+    message_grip.bind("<ButtonRelease-1>", lambda unused: message_drag.clear())
     message_controls = ttk.Frame(messages)
     message_controls.pack(fill="x")
     ttk.Label(message_controls, text="Messages").pack(side="left")
@@ -1185,6 +1202,12 @@ def gui(smoke_test=False):
         root.update()
         network_tabs.file_entry.focus_force()
         root.update()
+        assert not network_tabs.file_entry.instate(["readonly"])
+        previous_path = network_tabs.file.get()
+        network_tabs.file_entry.insert(0, "editable-")
+        assert network_tabs.file.get() == "editable-" + previous_path
+        network_tabs.file_entry.delete(0, 9)
+        assert network_tabs.file.get() == previous_path
         network_tabs.file_entry.event_generate("<End>")
         root.update()
         assert network_tabs.file_entry.index("insert") == len(network_tabs.file.get())
@@ -1218,8 +1241,14 @@ def gui(smoke_test=False):
         notebook.select(0)
         root.update_idletasks()
         original_sash = split.sashpos(0)
-        split.sashpos(0, max(80, original_sash - 80))
+        original_log_height = log.winfo_height()
+        drag_y = message_grip.winfo_rooty() + 5
+        message_grip.event_generate("<ButtonPress-1>", x=20, y=5, rooty=drag_y)
+        message_grip.event_generate("<B1-Motion>", x=20, y=-75, rooty=drag_y - 80)
+        message_grip.event_generate("<ButtonRelease-1>", x=20, y=-75, rooty=drag_y - 80)
+        root.update()
         assert split.sashpos(0) < original_sash
+        assert log.winfo_height() > original_log_height
         split.sashpos(0, original_sash)
         zoom.set("125%")
         resize_ui()
