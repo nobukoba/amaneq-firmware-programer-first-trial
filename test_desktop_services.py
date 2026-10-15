@@ -156,6 +156,31 @@ class DesktopTests(unittest.TestCase):
             self.assertFalse(errors)
             self.assertTrue(rows[0]["is_current"])
 
+    def test_explicit_format_filters_skeleton_and_rejects_other_bit_firmware(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            service = desktop.DesktopServices(ROOT, Path(tmp))
+            github = Mock()
+            github.repo = "example/skeleton"
+            github.get.return_value = {"default_branch": "main"}
+            github.revision.return_value = "a" * 40
+            github.files.return_value = [
+                {"path": "bit/amaneq-skeleton-v2.2.bit"},
+                {"path": "mcs/amaneq-skeleton-v2.2.mcs"},
+            ]
+            with patch.object(service.core, "GitHub", return_value=github):
+                rows, status, errors = service.image_list(
+                    github.repo, "amaneq-v4", "skeleton", image_format="bit"
+                )
+                self.assertEqual([row["format"] for row in rows], ["bit"])
+                rows, status, errors = service.image_list(
+                    github.repo, "amaneq-v4", "skeleton", image_format="mcs"
+                )
+                self.assertEqual([row["format"] for row in rows], ["mcs"])
+                with self.assertRaisesRegex(ValueError, "only for Skeleton"):
+                    service.image_list(
+                        github.repo, "amaneq-v4", "hrtdc", image_format="bit"
+                    )
+
 
 class NetworkTests(unittest.TestCase):
     def test_ethernet_picker_excludes_wifi_and_bridge(self):

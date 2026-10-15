@@ -14,7 +14,7 @@ import threading
 import uuid
 import windows_usb as usb
 import macos_network as network
-from network_tabs import NetworkTabs
+from network_tabs import NetworkTabs, bind_horizontal_scroll
 from desktop_services import DesktopServices, cable_arguments
 
 ROOT = Path(__file__).resolve().parent
@@ -180,6 +180,7 @@ def gui(smoke_test=False):
     loader = tk.StringVar(value=default_loader())
     target = tk.StringVar(value="amaneq-v4")
     firmware = tk.StringVar(value="lrtdc")
+    image_format = tk.StringVar(value="MCS")
     filename = tk.StringVar()
     source_mode = tk.StringVar(value="GitHub")
     history_limit = tk.StringVar(value="10")
@@ -285,6 +286,7 @@ def gui(smoke_test=False):
             return
         chosen_repository = repository_url.get().strip()
         chosen_target, chosen_firmware = target.get(), firmware.get()
+        chosen_format = image_format.get().lower()
         try:
             chosen_limit = int(history_limit.get())
             if not 1 <= chosen_limit <= 1000:
@@ -302,6 +304,7 @@ def gui(smoke_test=False):
                 force,
                 include_history=True,
                 history_limit=chosen_limit,
+                image_format=chosen_format,
             )
             return "catalog", (request, result)
 
@@ -312,7 +315,11 @@ def gui(smoke_test=False):
         if board.get() == "STAG":
             return
         for index, row in enumerate(catalog_rows):
-            if row["target"] == target.get() and row["firmware"] == firmware.get():
+            if (
+                row["target"] == target.get()
+                and row["firmware"] == firmware.get()
+                and row["format"] == image_format.get().lower()
+            ):
                 version = services.core.version_key(row["path"])
                 label = (
                     "v" + ".".join(format(part, "X") for part in version)
@@ -358,7 +365,12 @@ def gui(smoke_test=False):
         if target.get() == "hrtdc-mezzanine":
             firmware.set("hrtdc")
             firmware_box["values"] = ("hrtdc",)
-        elif board.get() == "AMANEQ":
+            firmware_label.grid_remove()
+            firmware_box.grid_remove()
+        else:
+            firmware_label.grid()
+            firmware_box.grid()
+        if target.get() != "hrtdc-mezzanine" and board.get() == "AMANEQ":
             firmware_box["values"] = (
                 "lrtdc",
                 "hrtdc",
@@ -366,6 +378,11 @@ def gui(smoke_test=False):
                 "mikumari",
                 "skeleton",
             )
+        format_box["values"] = (
+            ("MCS", "BIT") if firmware.get() == "skeleton" else ("MCS",)
+        )
+        if image_format.get() not in format_box["values"]:
+            image_format.set("MCS")
         active_profile = (target.get(), firmware.get())
         if board.get() == "STAG":
             show_catalog()
@@ -446,6 +463,7 @@ def gui(smoke_test=False):
                     row["repo"] != expected_repo
                     or row["target"] != target.get()
                     or row["firmware"] != firmware.get()
+                    or row["format"] != image_format.get().lower()
                 ):
                     raise ValueError(
                         "The image list is stale. Refresh the selected repository/profile first."
@@ -465,16 +483,33 @@ def gui(smoke_test=False):
             else:
                 if not filename.get():
                     raise ValueError("Choose a local BIT/MCS file first.")
-                arguments += ["--file", filename.get()]
+                arguments += [
+                    "--file",
+                    filename.get(),
+                    "--format",
+                    image_format.get().lower(),
+                ]
                 description = filename.get()
         except Exception as error:
             messagebox.showerror("Selection required", str(error))
             return
+        chosen_format = image_format.get().lower()
+        chosen_local_file = filename.get()
+
+        def operation():
+            if source == "local":
+                detected = services.core.inspect_file(Path(chosen_local_file))
+                if detected.kind != chosen_format:
+                    raise ValueError(
+                        "Local image contents do not match the selected MCS/BIT format."
+                    )
+            return process(arguments)
+
         if messagebox.askyesno(
             "Program firmware",
             f"Program cable serial {serial.get()}?\n{description}\n\nMCS changes persistent flash. BIT replaces the SRAM application.",
         ):
-            task("Programming", lambda: process(arguments), changes=True)
+            task("Programming", operation, changes=True)
 
     def driver(action):
         chosen = serial.get()
@@ -635,7 +670,8 @@ def gui(smoke_test=False):
     )
     target_box.grid(row=0, column=1, padx=6)
     target_box.bind("<<ComboboxSelected>>", profile_changed)
-    ttk.Label(settings, text="Firmware").grid(row=0, column=2)
+    firmware_label = ttk.Label(settings, text="Firmware")
+    firmware_label.grid(row=0, column=2)
     firmware_box = ttk.Combobox(
         settings,
         textvariable=firmware,
@@ -645,6 +681,14 @@ def gui(smoke_test=False):
     )
     firmware_box.grid(row=0, column=3, padx=6)
     firmware_box.bind("<<ComboboxSelected>>", profile_changed)
+    ttk.Label(settings, text="Format").grid(row=0, column=4, padx=(10, 0))
+    format_box = ttk.Combobox(
+        settings, textvariable=image_format, state="readonly", values=("MCS",), width=7
+    )
+    format_box.grid(row=0, column=5, padx=6)
+    format_box.bind(
+        "<<ComboboxSelected>>", lambda unused: refresh_catalog(force=False, quiet=True)
+    )
     source_controls = ttk.Frame(page)
     source_controls.pack(fill="x", pady=4)
     ttk.Label(source_controls, text="Image source").pack(side="left", padx=(0, 12))
@@ -663,6 +707,7 @@ def gui(smoke_test=False):
     ttk.Label(repository_box, text="GitHub URL").pack(side="left", padx=(0, 8))
     repository_entry = ttk.Entry(repository_box, textvariable=repository_url)
     repository_entry.pack(side="left", fill="x", expand=True)
+    bind_horizontal_scroll(repository_entry)
     repository_entry.bind("<Return>", lambda unused: refresh_catalog())
     ttk.Button(repository_box, text="Refresh list", command=refresh_catalog).pack(
         side="left", padx=6
@@ -708,9 +753,9 @@ def gui(smoke_test=False):
     scrollbar.pack(side="right", fill="y")
     images.configure(yscrollcommand=scrollbar.set)
     local = ttk.LabelFrame(page, text="Local BIT/MCS image", padding=12)
-    ttk.Entry(local, textvariable=filename, state="readonly").pack(
-        side="left", fill="x", expand=True
-    )
+    local_entry = ttk.Entry(local, textvariable=filename, state="readonly")
+    local_entry.pack(side="left", fill="x", expand=True)
+    bind_horizontal_scroll(local_entry)
     ttk.Button(
         local,
         text="Choose file",
@@ -978,6 +1023,23 @@ def gui(smoke_test=False):
         show_catalog()
         assert images.get_children() == ("0",)
         assert images.selection() == ("0",)
+        target.set("hrtdc-mezzanine")
+        profile_changed()
+        assert firmware.get() == "hrtdc"
+        assert not firmware_box.winfo_manager()
+        target.set("amaneq-v4")
+        firmware.set("skeleton")
+        profile_changed()
+        assert tuple(format_box["values"]) == ("MCS", "BIT")
+        image_format.set("BIT")
+        firmware.set("lrtdc")
+        profile_changed()
+        assert image_format.get() == "MCS"
+        network_tabs.file.set("/" + "long-directory/" * 100 + "example.mpcx")
+        network_tabs.file_entry.xview_moveto(1)
+        root.update_idletasks()
+        assert network_tabs.file_entry.xview()[0] > 0
+        network_tabs.file.set("")
         for endpoint in ("192.168.10.16", "192.168.10.10", "192.168.2.5"):
             network_tabs.clock_target.set(endpoint)
             assert network_tabs.clock_target.value() == endpoint

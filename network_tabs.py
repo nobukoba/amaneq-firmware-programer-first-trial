@@ -7,6 +7,30 @@ import tkinter as tk
 import network_operations as operations
 
 
+def bind_horizontal_scroll(entry):
+    def scroll(event):
+        delta = getattr(event, "delta", 0)
+        direction = -1 if delta > 0 or getattr(event, "num", None) == 4 else 1
+        entry.xview_scroll(direction * max(1, abs(int(delta)) // 120), "units")
+        return "break"
+
+    for event in ("<MouseWheel>", "<Shift-MouseWheel>", "<Button-4>", "<Button-5>"):
+        entry.bind(event, scroll)
+
+    def navigate(event):
+        if event.state & 1:
+            return None
+        if event.keysym in ("Home", "End"):
+            entry.xview_moveto(0 if event.keysym == "Home" else 1)
+        else:
+            entry.xview_scroll(-1 if event.keysym == "Left" else 1, "units")
+        return "break"
+
+    if str(entry.cget("state")) == "readonly":
+        for event in ("<Home>", "<End>", "<Left>", "<Right>"):
+            entry.bind(event, navigate)
+
+
 def scrollable_tab(notebook):
     outer = ttk.Frame(notebook)
     canvas = tk.Canvas(outer, highlightthickness=0)
@@ -119,11 +143,12 @@ class NetworkTabs:
         notebook.add(writer_page, text="MPC / MPCX")
         notebook.add(ip_page, text="IP")
         notebook.add(clock_page, text="Jitter Cleaner")
-        file_box = ttk.LabelFrame(self.writer, text="MPC / MPCX file", padding=8)
+        file_box = ttk.Frame(self.writer)
         file_box.pack(fill="x", pady=(0, 6))
-        ttk.Entry(file_box, textvariable=self.file, state="readonly").pack(
-            side="left", fill="x", expand=True
-        )
+        ttk.Label(file_box, text="MPC / MPCX file").pack(side="left", padx=(0, 8))
+        self.file_entry = ttk.Entry(file_box, textvariable=self.file, state="readonly")
+        self.file_entry.pack(side="left", fill="x", expand=True)
+        bind_horizontal_scroll(self.file_entry)
         ttk.Button(file_box, text="Choose file", command=self.choose_file).pack(
             side="left", padx=6
         )

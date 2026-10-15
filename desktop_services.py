@@ -127,15 +127,20 @@ class DesktopServices:
         force=False,
         include_history=False,
         history_limit=10,
+        image_format=None,
     ):
         import hashlib
 
         if isinstance(history_limit, bool) or not 1 <= int(history_limit) <= 1000:
             raise ValueError("History limit must be between 1 and 1000.")
         history_limit = int(history_limit)
+        if image_format not in (None, "mcs", "bit"):
+            raise ValueError("Image format must be MCS or BIT.")
+        if image_format == "bit" and firmware != "skeleton":
+            raise ValueError("BIT is supported only for Skeleton firmware.")
         github = self.core.GitHub(repository.strip())
         key = hashlib.sha256(
-            f"history-v6:{github.repo}:{target}:{firmware}:{include_history}:{history_limit}".encode()
+            f"history-v7:{github.repo}:{target}:{firmware}:{include_history}:{history_limit}:{image_format}".encode()
         ).hexdigest()
         cache = self.data_root / "image-lists" / (key + ".json")
         saved = None
@@ -159,7 +164,11 @@ class DesktopServices:
             branch = github.get("")["default_branch"]
             head = github.revision(branch)
             rows, errors, identities = [], [], set()
-            formats = ["mcs", "bit"] if firmware == "skeleton" else ["mcs"]
+            formats = (
+                [image_format]
+                if image_format
+                else (["mcs", "bit"] if firmware == "skeleton" else ["mcs"])
+            )
 
             def add_snapshot(commit, revision, date="", current=False):
                 entries = github.files(commit)
