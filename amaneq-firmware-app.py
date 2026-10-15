@@ -1176,6 +1176,8 @@ def gui(smoke_test=False):
         for endpoint in ("192.168.10.16", "192.168.10.10", "192.168.2.5"):
             network_tabs.clock_target.set(endpoint)
             assert network_tabs.clock_target.value() == endpoint
+            if endpoint in ("192.168.10.10", "192.168.10.16"):
+                assert "default)" in network_tabs.clock_target.choice.get()
         network_tabs.clock_target.set("192.168.10.10")
         assert not temporary_enabled.get()
         temporary_enabled.set(True)

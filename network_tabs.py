@@ -61,11 +61,17 @@ def scrollable_tab(notebook):
     return outer, body
 
 
+TARGET_IP_PRESETS = {
+    "192.168.10.10 (SiTCP-XG default)": "192.168.10.10",
+    "192.168.10.16 (SiTCP default)": "192.168.10.16",
+}
+
+
 class TargetAddress:
     def __init__(self, parent, task, events):
         self.task = task
         self.events = events
-        self.choice = tk.StringVar(value="192.168.10.10")
+        self.choice = tk.StringVar(value="192.168.10.10 (SiTCP-XG default)")
         self.custom = tk.StringVar(value="192.168.10.10")
         box = ttk.Frame(parent)
         box.pack(fill="x", pady=6)
@@ -73,9 +79,9 @@ class TargetAddress:
         selector = ttk.Combobox(
             box,
             textvariable=self.choice,
-            values=("192.168.10.10", "192.168.10.16", "Custom"),
+            values=tuple(TARGET_IP_PRESETS) + ("Custom",),
             state="readonly",
-            width=20,
+            width=35,
         )
         selector.pack(side="left")
         self.entry = ttk.Entry(box, textvariable=self.custom, width=20)
@@ -110,10 +116,11 @@ class TargetAddress:
 
     def ping_result(self, host, status):
         self.ping_button.state(["!disabled"])
-        current = (
-            self.custom.get() if self.choice.get() == "Custom" else self.choice.get()
-        )
-        self.ping_status.set(status if current.strip() == host else "")
+        try:
+            current = self.value()
+        except ValueError:
+            current = ""
+        self.ping_status.set(status if current == host else "")
 
     def show_custom(self):
         self.ping_status.set("")
@@ -124,13 +131,19 @@ class TargetAddress:
 
     def value(self):
         return operations.ipv4(
-            self.custom.get() if self.choice.get() == "Custom" else self.choice.get()
+            self.custom.get()
+            if self.choice.get() == "Custom"
+            else TARGET_IP_PRESETS[self.choice.get()]
         )
 
     def set(self, address):
         address = operations.ipv4(address)
-        if address in ("192.168.10.10", "192.168.10.16"):
-            self.choice.set(address)
+        label = next(
+            (label for label, value in TARGET_IP_PRESETS.items() if value == address),
+            None,
+        )
+        if label:
+            self.choice.set(label)
         else:
             self.custom.set(address)
             self.choice.set("Custom")
