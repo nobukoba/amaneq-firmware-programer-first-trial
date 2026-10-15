@@ -84,3 +84,5 @@ build-windows-app.py --helpに従い、UCRT64・libwdi DLLと対応ソース・C
 build-macos-app.pyはMac上で実行し、Apple Silicon arm64とIntel x86_64を対応するPythonで別々に作ります。macos-app.ymlはmacos-15とmacos-15-intelを使います。openFPGALoaderをPyInstallerのbinaryとして扱い、dylibを回収・再配置して、システム外への絶対リンクが残れば失敗させます。XC7K160T SPIブリッジは非圧縮で同梱します。openFPGALoader・libftdi・libusbの対応ソース・表示・Homebrewレシピを入れ、版やチェックサムの不一致を無視しません。
 
 .app内へ書き込みや__pycache__生成をしません。GUIのCLI子プロセスは利用者のデータ用ROOTを使い、windowed起動で標準出力がNoneなら復旧します。Macの保存先は~/Library/Application Support/AMANEQです。HS3の機種確認欄は全タブ共通で、Windows用ドライバー変更は無効です。署名・起動・ローダー・機器未接続の検出・依存関係の検査と、実機書き込みを区別します。Developer ID署名・Apple公証は設定していません。dittoでシンボリックリンク・権限・資源を保つZIPを作ります。Artifact保存は30日で、恒久的なRelease配布ではありません。
+
+2026-10-15、Actions実行38740982476でarm64・x86_64の両方のビルド・署名検査・GUI起動・同梱ローダー・機器未接続でのscanが成功しました。47件の模擬テストと通常CIの6構成も成功しました。これはHS3実機書き込みの検証ではありません。
