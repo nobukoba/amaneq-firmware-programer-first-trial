@@ -28,6 +28,24 @@ class DesktopServices:
         self.data_root = data_root
         self.core = load_core(root, data_root)
 
+    def local_profile(self, filename, board):
+        target = self.core.filename_target(filename)
+        family = self.core.filename_family(filename)
+        if not target and family == "skeleton" and board == "AMANEQ":
+            # The DAQ manual documents this image as shared by AMANEQ v1/v4.
+            target = "amaneq-v4"
+        if not target or not family:
+            raise ValueError(
+                "Cannot identify the local firmware target/family from its filename. "
+                "Use an official firmware filename."
+            )
+        expected_board = "CIRASAME" if target == "cirasame" else "AMANEQ"
+        if board != expected_board:
+            raise ValueError(
+                f"Local filename indicates {expected_board}; selected board is {board}."
+            )
+        return target, family
+
     def scan(self, loader):
         return self.core.scan_cables(argparse.Namespace(loader=loader, cable="auto"))
 

@@ -13,6 +13,34 @@ ROOT = Path(__file__).parent
 
 
 class DesktopTests(unittest.TestCase):
+    def test_local_profile_uses_filename_not_hidden_github_selection(self):
+        service = desktop.DesktopServices(ROOT, ROOT)
+        for filename, board, expected in (
+            ("amaneq-1-strlrtdc-v2.A.bit", "AMANEQ", ("amaneq-v1", "lrtdc")),
+            ("amaneq-4-strhrtdc-v2.A.mcs", "AMANEQ", ("amaneq-v4", "hrtdc")),
+            ("mzn-strhrtdc-v2.1.bit", "AMANEQ", ("hrtdc-mezzanine", "hrtdc")),
+            ("cirasame-fw-v1.0.bit", "CIRASAME", ("cirasame", "skeleton")),
+        ):
+            self.assertEqual(service.local_profile(filename, board), expected)
+
+    def test_local_profile_rejects_unknown_or_conflicting_board(self):
+        service = desktop.DesktopServices(ROOT, ROOT)
+        for filename, board in (
+            ("renamed.bit", "AMANEQ"),
+            ("amaneq-4-strlrtdc-v2.A.mcs", "CIRASAME"),
+            ("cirasame-fw-v1.0.bit", "AMANEQ"),
+            ("amaneq-4-strlrtdc-v2.A.mcs", "STAG"),
+        ):
+            with self.assertRaises(ValueError):
+                service.local_profile(filename, board)
+
+    def test_local_profile_shared_skeleton_uses_documented_compatible_profile(self):
+        service = desktop.DesktopServices(ROOT, ROOT)
+        self.assertEqual(
+            service.local_profile("amaneq-skeleton-v2.2.bit", "AMANEQ"),
+            ("amaneq-v4", "skeleton"),
+        )
+
     def test_cable_selection_requires_exact_serial_and_model(self):
         found = [
             {"serial": "A", "vidpid": "0403:6014", "cable": None},

@@ -442,17 +442,20 @@ def gui(smoke_test=False):
             )
             return
         try:
+            selected_target = target.get()
             selected_firmware = firmware.get()
             if source == "local":
-                selected_firmware = services.core.filename_family(filename.get()) or (
-                    "hrtdc" if target.get() == "hrtdc-mezzanine" else "lrtdc"
+                if not filename.get():
+                    raise ValueError("Choose a local .bit file or .mcs file first.")
+                selected_target, selected_firmware = services.local_profile(
+                    filename.get(), board.get()
                 )
             arguments = [
                 "program",
                 "--loader",
                 loader.get(),
                 "--target",
-                target.get(),
+                selected_target,
                 "--firmware",
                 selected_firmware,
                 "--yes",
@@ -513,7 +516,7 @@ def gui(smoke_test=False):
                 if not filename.get():
                     raise ValueError("Choose a local .bit file or .mcs file first.")
                 arguments += ["--file", filename.get()]
-                description = filename.get() + "\nTarget: " + target.get()
+                description = filename.get() + "\nTarget: " + selected_target
         except Exception as error:
             messagebox.showerror("Selection required", str(error))
             return
@@ -660,7 +663,7 @@ def gui(smoke_test=False):
     cable_box = ttk.Frame(page, padding=(0, 8))
     cable_box.pack(fill="x")
     cable_box.columnconfigure(1, weight=1)
-    ttk.Label(cable_box, text="Cable (automatically detected)").grid(
+    ttk.Label(cable_box, text="Cable (automatically detected):").grid(
         row=0, column=0, padx=(0, 8), sticky="w"
     )
     cable = ttk.Combobox(cable_box, textvariable=serial, state="readonly", width=28)
@@ -796,18 +799,6 @@ def gui(smoke_test=False):
             or filename.get()
         ),
     ).pack(side="left", padx=8)
-    local_target_row = ttk.Frame(local)
-    local_target_row.pack(fill="x", pady=(8, 0))
-    ttk.Label(local_target_row, text="Target").pack(side="left", padx=(0, 8))
-    local_target_box = ttk.Combobox(
-        local_target_row,
-        textvariable=target,
-        values=target_box["values"],
-        state="readonly",
-        width=21,
-    )
-    local_target_box.pack(side="left")
-    local_target_box.bind("<<ComboboxSelected>>", profile_changed)
     program_area = ttk.Frame(page)
     program_area.pack(fill="x", pady=10)
     cable_box.pack_forget()
@@ -925,7 +916,6 @@ def gui(smoke_test=False):
             if chosen == "STAG"
             else ""
         )
-        local_target_box["values"] = target_box["values"]
         profile_changed()
 
     board.trace_add("write", board_changed)
@@ -1253,7 +1243,7 @@ def gui(smoke_test=False):
         assert not settings.winfo_manager()
         assert not online.winfo_manager()
         assert local.winfo_manager() == "pack"
-        assert local_target_box.winfo_ismapped()
+        assert len(local.winfo_children()) == 1
         source_mode.set("GitHub")
         change_source()
         root.update_idletasks()
