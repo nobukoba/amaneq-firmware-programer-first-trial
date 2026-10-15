@@ -190,7 +190,9 @@ def gui(smoke_test=False):
     firmware_ids = {label: key for key, label in firmware_labels.items()}
     firmware = tk.StringVar(value="lrtdc")
     firmware_display = tk.StringVar(value=firmware_labels[firmware.get()])
-    image_format = tk.StringVar(value="MCS")
+    format_labels = {"mcs": ".mcs file", "bit": ".bit file"}
+    format_ids = {label: key for key, label in format_labels.items()}
+    image_format = tk.StringVar(value=format_labels["mcs"])
     filename = tk.StringVar()
     source_mode = tk.StringVar(value="GitHub")
     history_limit = tk.StringVar(value="10")
@@ -298,7 +300,7 @@ def gui(smoke_test=False):
             return
         chosen_repository = repository_url.get().strip()
         chosen_target, chosen_firmware = target.get(), firmware.get()
-        chosen_format = image_format.get().lower()
+        chosen_format = format_ids[image_format.get()]
         try:
             chosen_limit = int(history_limit.get())
             if not 1 <= chosen_limit <= 1000:
@@ -330,7 +332,7 @@ def gui(smoke_test=False):
             if (
                 row["target"] == target.get()
                 and row["firmware"] == firmware.get()
-                and row["format"] == image_format.get().lower()
+                and row["format"] == format_ids[image_format.get()]
             ):
                 version = services.core.version_key(row["path"])
                 label = (
@@ -343,7 +345,7 @@ def gui(smoke_test=False):
                     "end",
                     iid=str(index),
                     values=(
-                        row["format"].upper(),
+                        format_labels[row["format"]],
                         label,
                         row["name"],
                         row.get("revision", ""),
@@ -400,9 +402,9 @@ def gui(smoke_test=False):
                 )
             )
         firmware_display.set(firmware_labels[firmware.get()])
-        format_box["values"] = ("MCS", "BIT")
+        format_box["values"] = tuple(format_labels.values())
         if image_format.get() not in format_box["values"]:
-            image_format.set("MCS")
+            image_format.set(format_labels["mcs"])
         active_profile = (target.get(), firmware.get())
         if board.get() == "STAG":
             show_catalog()
@@ -483,7 +485,7 @@ def gui(smoke_test=False):
                     row["repo"] != expected_repo
                     or row["target"] != target.get()
                     or row["firmware"] != firmware.get()
-                    or row["format"] != image_format.get().lower()
+                    or row["format"] != format_ids[image_format.get()]
                 ):
                     raise ValueError(
                         "The image list is stale. Refresh the selected repository/profile first."
@@ -502,18 +504,18 @@ def gui(smoke_test=False):
                 description = row["name"] + "\nCommit: " + row["commit"][:12]
             else:
                 if not filename.get():
-                    raise ValueError("Choose a local BIT/MCS file first.")
+                    raise ValueError("Choose a local .bit file or .mcs file first.")
                 arguments += [
                     "--file",
                     filename.get(),
                     "--format",
-                    image_format.get().lower(),
+                    format_ids[image_format.get()],
                 ]
                 description = filename.get()
         except Exception as error:
             messagebox.showerror("Selection required", str(error))
             return
-        chosen_format = image_format.get().lower()
+        chosen_format = format_ids[image_format.get()]
         chosen_local_file = filename.get()
 
         def operation():
@@ -521,13 +523,13 @@ def gui(smoke_test=False):
                 detected = services.core.inspect_file(Path(chosen_local_file))
                 if detected.kind != chosen_format:
                     raise ValueError(
-                        "Local image contents do not match the selected MCS/BIT format."
+                        "Local image contents do not match the selected .mcs file / .bit file format."
                     )
             return process(arguments)
 
         if messagebox.askyesno(
             "Program firmware",
-            f"Program cable serial {serial.get()}?\n{description}\n\nMCS changes persistent flash. BIT replaces the SRAM application.",
+            f"Program cable serial {serial.get()}?\n{description}\n\nA .mcs file changes persistent flash. A .bit file replaces the SRAM application.",
         ):
             task("Programming", operation, changes=True)
 
@@ -706,8 +708,8 @@ def gui(smoke_test=False):
         settings,
         textvariable=image_format,
         state="readonly",
-        values=("MCS", "BIT"),
-        width=7,
+        values=tuple(format_labels.values()),
+        width=11,
     )
     format_box.grid(row=0, column=5, padx=6)
     format_box.bind(
@@ -765,7 +767,7 @@ def gui(smoke_test=False):
         selectmode="browse",
     )
     for name, title, width in (
-        ("format", "Type", 65),
+        ("format", "Type", 90),
         ("version", "Version", 95),
         ("file", "Firmware image", 490),
         ("revision", "Tag / commit", 235),
@@ -776,7 +778,7 @@ def gui(smoke_test=False):
     scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=images.yview)
     scrollbar.pack(side="right", fill="y")
     images.configure(yscrollcommand=scrollbar.set)
-    local = ttk.LabelFrame(page, text="Local BIT/MCS image", padding=12)
+    local = ttk.LabelFrame(page, text="Local .bit file / .mcs file", padding=12)
     local_entry = ttk.Entry(local, textvariable=filename, state="readonly")
     local_entry.pack(side="left", fill="x", expand=True)
     bind_horizontal_scroll(local_entry)
@@ -1165,11 +1167,11 @@ def gui(smoke_test=False):
         target.set("amaneq-v4")
         firmware.set("skeleton")
         profile_changed()
-        assert tuple(format_box["values"]) == ("MCS", "BIT")
-        image_format.set("BIT")
+        assert tuple(format_box["values"]) == tuple(format_labels.values())
+        image_format.set(format_labels["bit"])
         firmware.set("lrtdc")
         profile_changed()
-        assert image_format.get() == "BIT"
+        assert image_format.get() == ".bit file"
         network_tabs.file.set("/" + "long-directory/" * 100 + "example.mpcx")
         notebook.select(2)
         root.update()
