@@ -139,4 +139,4 @@ Desktop 0.14では従来のSkeleton限定BIT制限を廃止し、対応する全
 
 Desktop 0.14.1では形式選択欄と画像一覧を.mcs file / .bit fileと表示します。内部のmcs / bitに明示的に対応付け、CLIオプション・内容検証・書き込み処理は維持します。
 
-Desktop 0.14.2では形式表示をBIT / MCSに戻します。十六進バージョン解析前に.bit / .mcs拡張子を除外し、v2.A.bitをv2.Aと読みます。誤って追加されていた.Bを修正し、v2.A.B.bitのような本来の第3要素は維持します。一覧キャッシュも更新します。一時ホストIPの下はNIC:・アダプター選択・Refresh・IP:・Mask:を1行に配置し、Apply/Restoreはその下に残します。
+Desktop 0.14.2では形式表示をBIT / MCSに戻します。十六進バージョン解析前に.bit / .mcs拡張子を除外し、v2.A.bitをv2.Aと読みます。誤って追加されていた.Bを修正し、v2.A.B.bitのような本来の第3要素は維持します。一覧キャッシュも更新します。一時ホストIPの下はNIC:・アダプター選択・Refresh・Host IP:・Mask:を1行に配置し、Apply/Restoreはその下に残します。

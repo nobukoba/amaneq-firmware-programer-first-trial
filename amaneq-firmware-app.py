@@ -863,7 +863,7 @@ def gui(smoke_test=False):
         ttk.Button(net, text="Refresh", command=refresh_adapters).grid(
             row=0, column=2, padx=4
         )
-        ttk.Label(net, text="IP:").grid(row=0, column=3)
+        ttk.Label(net, text="Host IP:").grid(row=0, column=3)
         ttk.Entry(net, textvariable=address, width=15).grid(row=0, column=4)
         ttk.Label(net, text="Mask:").grid(row=0, column=5, padx=(4, 0))
         ttk.Entry(net, textvariable=mask, width=15).grid(row=0, column=6)

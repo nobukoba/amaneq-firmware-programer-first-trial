@@ -22,7 +22,7 @@ cd amaneq-firmware-programer-first-trial
 
 [Releases](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases)の最新macOS desktop previewでAssetsを開き、Apple Silicon（arm64）用かIntel（x86_64）用のZIPを取得してください。ZIPを展開し、amaneq-firmware-programer.appをApplicationsへ移します。macOS 15以降が対象です。Python・Tk・openFPGALoader・HTTPS用CA証明書を同梱し、利用時のHomebrew導入は不要です。
 
-0.14.2版はAMANEQ / CIRASAME / STAG選択の下に、左からFirmware、Jitter Cleaner、MPC / MPCX、IPの4タブを配置します。Firmwareはケーブルを自動検出し、TargetとFirmwareに一致するGitHub一覧を新しい順で表示し、先頭を自動選択します。GitHub listかLocal fileを選び、通常サイズで太字のProgram imageボタンひとつで書き込みます。GitHubリポジトリURLは編集でき、セッション中は対象ごとの編集値を保持します。現在のファイルに加え、タグとファームウェアディレクトリのコミットから過去版を表示します。History limitは合計10件が初期値で、1～1000件へ変更し、EnterかRefresh listで再取得できます。同じパス・同じ内容の重複はまとめ、同名でも内容が異なるファイルは残します。Tag / commit欄で版を区別し、現在のブランチを先頭として最新版を自動選択します。履歴の探索範囲には上限があり、件数を増やすと探索を広げます。API制限などで途中までしか取得できない場合は明示します。Loader欄と別のlatest-MCSボタンは廃止しました。既知のケーブルが1本なら自動選択し、複数ならシリアル選択、機種不明のFT232Hなら実物がHS3であることの確認が必要です。キャッシュ・通信失敗を明示し、表示したコミットとパスを固定して取得します。対応する各種類でBIT / MCSを選べます。
+0.14.3版はAMANEQ / CIRASAME / STAG選択の下に、左からFirmware、Jitter Cleaner、MPC / MPCX、IPの4タブを配置します。Firmwareはケーブルを自動検出し、TargetとFirmwareに一致するGitHub一覧を新しい順で表示し、先頭を自動選択します。GitHub listかLocal fileを選び、通常サイズで太字のProgram imageボタンひとつで書き込みます。GitHubリポジトリURLは編集でき、セッション中は対象ごとの編集値を保持します。現在のファイルに加え、タグとファームウェアディレクトリのコミットから過去版を表示します。History limitは合計10件が初期値で、1～1000件へ変更し、EnterかRefresh listで再取得できます。同じパス・同じ内容の重複はまとめ、同名でも内容が異なるファイルは残します。Tag / commit欄で版を区別し、現在のブランチを先頭として最新版を自動選択します。履歴の探索範囲には上限があり、件数を増やすと探索を広げます。API制限などで途中までしか取得できない場合は明示します。Loader欄と別のlatest-MCSボタンは廃止しました。既知のケーブルが1本なら自動選択し、複数ならシリアル選択、機種不明のFT232Hなら実物がHS3であることの確認が必要です。キャッシュ・通信失敗を明示し、表示したコミットとパスを固定して取得します。対応する各種類でBIT / MCSを選べます。
 
 必要に応じてEthernetアダプターを選び、Mac側のIPv4アドレスとマスクを入力してApply temporarilyを押します。DHCP・DNS・ゲートウェイの設定を保持し、固定IPを一時追加します。基板側のIP変更ではなく、USB/JTAG書き込みにも不要です。macOSの管理者許可が必要です。Restore networkか通常終了で追加IPだけを解除し、別プロセスも終了・クラッシュを監視します。既存IPの流用や他インターフェースとのサブネット重複は拒否します。解除に失敗したらエラーと記録を残し、追加IPは再起動でも消えます。起動時にネットワーク設定は変更しません。PC側の一時IPは192.168.10.20/24を初期値とし、編集できます。
 
@@ -270,4 +270,4 @@ Desktop 0.14では従来のSkeleton限定BIT制限を廃止し、対応する全
 
 Desktop 0.14.1では形式選択欄と画像一覧を.mcs file / .bit fileと表示します。内部のmcs / bitに明示的に対応付け、CLIオプション・内容検証・書き込み処理は維持します。
 
-Desktop 0.14.2では形式表示をBIT / MCSに戻します。十六進バージョン解析前に.bit / .mcs拡張子を除外し、v2.A.bitをv2.Aと読みます。誤って追加されていた.Bを修正し、v2.A.B.bitのような本来の第3要素は維持します。一覧キャッシュも更新します。一時ホストIPの下はNIC:・アダプター選択・Refresh・IP:・Mask:を1行に配置し、Apply/Restoreはその下に残します。
+Desktop 0.14.2では形式表示をBIT / MCSに戻します。十六進バージョン解析前に.bit / .mcs拡張子を除外し、v2.A.bitをv2.Aと読みます。誤って追加されていた.Bを修正し、v2.A.B.bitのような本来の第3要素は維持します。一覧キャッシュも更新します。一時ホストIPの下はNIC:・アダプター選択・Refresh・Host IP:・Mask:を1行に配置し、Apply/Restoreはその下に残します。
