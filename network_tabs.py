@@ -189,16 +189,13 @@ class NetworkTabs:
             text="Initialize XG EEPROM from current settings before license programming",
             variable=self.initialize,
         ).pack(anchor="w")
-        ip_box = ttk.LabelFrame(
-            self.ip,
-            text="New device IP",
-            padding=8,
-        )
+        ip_box = ttk.Frame(self.ip)
         ip_box.pack(fill="x", pady=8)
+        ttk.Label(ip_box, text="New device IP").pack(side="left", padx=(0, 8))
         ttk.Entry(ip_box, textvariable=self.new_ip, width=20).pack(side="left")
         ttk.Checkbutton(
             ip_box,
-            text="Change current/runtime IP instead of saved EEPROM IP",
+            text="Change current (runtime) IP instead of saved EEPROM IP",
             variable=self.current,
         ).pack(side="left", padx=10)
         actions = ttk.Frame(self.writer)

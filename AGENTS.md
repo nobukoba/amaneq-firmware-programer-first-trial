@@ -119,3 +119,5 @@ The GUI must include replaced/deleted historical firmware, not only files still 
 ## Desktop 0.7 format and path controls
 
 Add explicit Format selection, filtering BEFORE history traversal/limits and including format in the cache identity. Preserve the user’s Skeleton-only BIT policy; all other families offer MCS only. HR-TDC mezzanine has fixed hrtdc firmware and hides both the redundant label and selector; restore them when leaving that target. Keep one Program image button. Local selected-format/content checking runs outside the Tk thread before programming. MPC/MPCX file is one row, with read-only horizontally scrollable path. Bind wheel and read-only navigation; do not override ordinary caret navigation in editable URL entries. GUI smoke checks cover format transition, hidden/restored selectors and a very long path.
+
+Desktop 0.8: keep New device IP label/input/runtime checkbox on one row. Exact labels: Change current (runtime) IP instead of saved EEPROM IP; Enable temporary static host IP address. Behavior is unchanged.

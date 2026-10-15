@@ -807,7 +807,7 @@ def gui(smoke_test=False):
         holder.pack(fill="x", pady=4)
         ttk.Checkbutton(
             holder,
-            text="Enable temporary host IP",
+            text="Enable temporary static host IP address",
             variable=temporary_enabled,
             command=toggle_temporary,
         ).pack(anchor="w")
