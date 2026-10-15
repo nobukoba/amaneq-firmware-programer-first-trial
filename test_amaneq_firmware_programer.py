@@ -143,6 +143,10 @@ class ProgrammerTests(unittest.TestCase):
         )
 
     def test_version_hex_and_target(self):
+        self.assertEqual(app.version_key("x-v2.A.bit"), (2, 10))
+        self.assertEqual(app.version_key("x-v2.A.mcs"), (2, 10))
+        self.assertEqual(app.version_key("x-v2.A.B.bit"), (2, 10, 11))
+        self.assertEqual(app.version_key("bit/x-v2.A.BIT"), (2, 10))
         self.assertGreater(app.version_key("x-v2.A.bit"), app.version_key("x-v2.9.bit"))
         args = argparse.Namespace(
             format="mcs", target="amaneq-v4", flash="auto", firmware="lrtdc"

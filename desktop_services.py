@@ -138,7 +138,7 @@ class DesktopServices:
             raise ValueError("Image format must be MCS or BIT.")
         github = self.core.GitHub(repository.strip())
         key = hashlib.sha256(
-            f"history-v8:{github.repo}:{target}:{firmware}:{include_history}:{history_limit}:{image_format}".encode()
+            f"history-v9:{github.repo}:{target}:{firmware}:{include_history}:{history_limit}:{image_format}".encode()
         ).hexdigest()
         cache = self.data_root / "image-lists" / (key + ".json")
         saved = None

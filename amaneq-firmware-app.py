@@ -190,7 +190,7 @@ def gui(smoke_test=False):
     firmware_ids = {label: key for key, label in firmware_labels.items()}
     firmware = tk.StringVar(value="lrtdc")
     firmware_display = tk.StringVar(value=firmware_labels[firmware.get()])
-    format_labels = {"mcs": ".mcs file", "bit": ".bit file"}
+    format_labels = {"mcs": "MCS", "bit": "BIT"}
     format_ids = {label: key for key, label in format_labels.items()}
     image_format = tk.StringVar(value=format_labels["mcs"])
     filename = tk.StringVar()
@@ -853,26 +853,30 @@ def gui(smoke_test=False):
             return
         net = ttk.Frame(panel, padding=8)
         net.pack(fill="x", pady=6)
+        ttk.Label(net, text="NIC:").grid(row=0, column=0, padx=(0, 4))
+        net.columnconfigure(1, weight=1)
         adapter_box = ttk.Combobox(
-            net, textvariable=adapter_label, state="readonly", width=28
+            net, textvariable=adapter_label, state="readonly", width=22
         )
-        adapter_box.grid(row=0, column=0, sticky="ew")
+        adapter_box.grid(row=0, column=1, sticky="ew")
         adapter_boxes.append(adapter_box)
         ttk.Button(net, text="Refresh", command=refresh_adapters).grid(
-            row=0, column=1, padx=4
+            row=0, column=2, padx=4
         )
-        ttk.Label(net, text="IP").grid(row=0, column=2)
-        ttk.Entry(net, textvariable=address, width=16).grid(row=0, column=3)
-        ttk.Label(net, text="Mask").grid(row=0, column=4)
-        ttk.Entry(net, textvariable=mask, width=16).grid(row=0, column=5)
-        ttk.Button(net, text="Apply temporarily", command=apply_network).grid(
-            row=1, column=0, pady=4
+        ttk.Label(net, text="IP:").grid(row=0, column=3)
+        ttk.Entry(net, textvariable=address, width=15).grid(row=0, column=4)
+        ttk.Label(net, text="Mask:").grid(row=0, column=5, padx=(4, 0))
+        ttk.Entry(net, textvariable=mask, width=15).grid(row=0, column=6)
+        actions = ttk.Frame(net)
+        actions.grid(row=1, column=0, columnspan=7, sticky="w", pady=4)
+        ttk.Button(actions, text="Apply temporarily", command=apply_network).pack(
+            side="left"
         )
-        ttk.Button(net, text="Restore network", command=restore_network).grid(
-            row=1, column=1, columnspan=2
+        ttk.Button(actions, text="Restore network", command=restore_network).pack(
+            side="left", padx=4
         )
         ttk.Label(net, textvariable=network_status, wraplength=900).grid(
-            row=2, column=0, columnspan=6, sticky="w"
+            row=2, column=0, columnspan=7, sticky="w"
         )
 
     network_tabs = NetworkTabs(notebook, board, ROOT, task, events, network_widgets)
@@ -1171,7 +1175,7 @@ def gui(smoke_test=False):
         image_format.set(format_labels["bit"])
         firmware.set("lrtdc")
         profile_changed()
-        assert image_format.get() == ".bit file"
+        assert image_format.get() == "BIT"
         network_tabs.file.set("/" + "long-directory/" * 100 + "example.mpcx")
         notebook.select(2)
         root.update()

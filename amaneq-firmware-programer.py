@@ -251,7 +251,8 @@ def repository(args):
 
 
 def version_key(path):
-    match = re.search(r"-v([0-9A-Fa-f]+(?:\.[0-9A-Fa-f]+)*)", path)
+    name = re.sub(r"\.(?:bit|mcs)$", "", Path(path).name, flags=re.IGNORECASE)
+    match = re.search(r"-v([0-9A-Fa-f]+(?:\.[0-9A-Fa-f]+)*)", name)
     return tuple(int(part, 16) for part in match[1].split(".")) if match else ()
 
 
