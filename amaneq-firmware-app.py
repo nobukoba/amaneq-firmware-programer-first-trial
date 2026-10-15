@@ -975,9 +975,12 @@ def gui(smoke_test=False):
             position = message_drag["position"] + event.y_root - message_drag["y"]
             split.sashpos(0, max(100, min(split.winfo_height() - 80, position)))
 
-    message_grip.bind("<ButtonPress-1>", begin_message_resize)
-    message_grip.bind("<B1-Motion>", resize_messages)
-    message_grip.bind("<ButtonRelease-1>", lambda unused: message_drag.clear())
+    for event in ("<ButtonPress-1>", "<<MessageResizeStart>>"):
+        message_grip.bind(event, begin_message_resize)
+    for event in ("<B1-Motion>", "<<MessageResizeMove>>"):
+        message_grip.bind(event, resize_messages)
+    for event in ("<ButtonRelease-1>", "<<MessageResizeEnd>>"):
+        message_grip.bind(event, lambda unused: message_drag.clear())
     message_controls = ttk.Frame(messages)
     message_controls.pack(fill="x")
     ttk.Label(message_controls, text="Messages:").pack(side="left")
@@ -1311,14 +1314,21 @@ def gui(smoke_test=False):
             root.update_idletasks()
         notebook.select(0)
         root.update_idletasks()
+        split.sashpos(0, max(200, split.winfo_height() // 2))
+        root.update_idletasks()
         original_sash = split.sashpos(0)
         original_log_height = log.winfo_height()
         drag_y = message_grip.winfo_rooty() + 5
-        message_grip.event_generate("<ButtonPress-1>", x=20, y=5, rooty=drag_y)
-        message_grip.event_generate("<B1-Motion>", x=20, y=-75, rooty=drag_y - 80)
-        message_grip.event_generate("<ButtonRelease-1>", x=20, y=-75, rooty=drag_y - 80)
+        message_grip.event_generate("<<MessageResizeStart>>", x=20, y=5, rooty=drag_y, state=0)
+        message_grip.event_generate("<<MessageResizeMove>>", x=20, y=-75, rooty=drag_y - 80, state=0)
+        message_grip.event_generate("<<MessageResizeEnd>>", x=20, y=-75, rooty=drag_y - 80, state=0)
         root.update()
-        assert split.sashpos(0) < original_sash
+        assert message_grip.bind("<ButtonPress-1>")
+        assert message_grip.bind("<B1-Motion>")
+        assert split.sashpos(0) < original_sash, (
+            original_sash, split.sashpos(0), split.winfo_height(),
+            message_grip.winfo_ismapped(), message_drag
+        )
         assert log.winfo_height() > original_log_height
         split.sashpos(0, original_sash)
         zoom.set("125%")
