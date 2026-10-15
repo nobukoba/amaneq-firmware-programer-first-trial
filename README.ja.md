@@ -281,3 +281,5 @@ Desktop 0.14.6ではFirmwareの先頭をImage sourceにします。GitHub list�
 Desktop 0.14.7ではLocal fileのTarget欄を削除し、ファイル選択だけにします。対象・種類は既知の公式ファイル名、形式は検証済みの内容から判定します。不明な名前や選択基板と矛盾する名前では書き込み前に停止します。DAQマニュアルで共通とされるAMANEQ Skeltonはv1/v4互換プロファイルを使い、JTAGから基板版を確定したとは扱いません。GitHub用設定は維持し、ケーブルの表記をCable (automatically detected):にします。
 
 Desktop 0.15ではCDCE62002の選択欄を20文字幅に短縮し、Files are validatedの説明文を削除します。IPタブ名はIP addr.に変更し、EEPROM IP / Current IPのラジオボタンを使い、EEPROMを既定にします。項目ラベルに:を付けます（ボタンやタブ名は除く）。一覧取得は1件ずつ実行し、重複タイマーと古い応答のエラー表示を抑制します。GitHubのAPI情報は設定間で共有し、通常5分・固定コミット情報24時間のキャッシュを使います。明示更新は通常情報を再取得します。HTTP 403/429ではRetry-After・リセット時刻、最低60秒まで再送を止めます。任意のGitHubトークン欄はマスク表示・起動中のみとし、保存・ログ・コマンド引数には含めず、APIとファームウェア子プロセスの環境にだけ渡します。空欄へ戻すと既存GITHUB_TOKENまたは未認証へ戻ります。Open GitHubでブラウザーから取得しLocal fileを使う経路も用意します。403は権限拒否でも発生し、模擬試験だけで利用者の回線の復旧を確認したとは扱いません。公式資料: https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api。
+
+Firmwareにも縦スクロールを設け、狭いウィンドウや拡大表示でも接続欄・Cable・Program imageへ移動できるようにします。「:」は項目ラベルだけに付け、タブ名には付けません。

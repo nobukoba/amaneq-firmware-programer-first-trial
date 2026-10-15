@@ -14,7 +14,7 @@ import threading
 import uuid
 import windows_usb as usb
 import macos_network as network
-from network_tabs import NetworkTabs, bind_horizontal_scroll
+from network_tabs import NetworkTabs, bind_horizontal_scroll, scrollable_tab
 from desktop_services import DesktopServices, cable_arguments
 
 ROOT = Path(__file__).resolve().parent
@@ -233,8 +233,8 @@ def gui(smoke_test=False):
     split.pack(fill="both", expand=True)
     notebook = ttk.Notebook(split)
     split.add(notebook, weight=3)
-    page = ttk.Frame(notebook, padding=10)
-    notebook.add(page, text="Firmware:")
+    firmware_page, page = scrollable_tab(notebook)
+    notebook.add(firmware_page, text="Firmware")
     adapter_boxes = []
 
     def task(name, function, changes=False, quiet=False):
