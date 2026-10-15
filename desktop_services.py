@@ -9,6 +9,8 @@ from pathlib import Path
 import sys
 import time
 import uuid
+import threading
+from github_access import GitHubMetadata
 
 
 def load_core(root, data_root):
@@ -27,6 +29,26 @@ class DesktopServices:
     def __init__(self, root, data_root):
         self.data_root = data_root
         self.core = load_core(root, data_root)
+        self.github_token = ""
+        self.request_state = threading.local()
+        original_request = self.core.request_json
+
+        def authenticated_request(url, token):
+            self.core._DESKTOP_GITHUB_TOKEN = token
+            return original_request(url)
+
+        self.metadata = GitHubMetadata(
+            data_root / "github-metadata", authenticated_request
+        )
+        self.core.request_json = lambda url: self.metadata.get(
+            url, self.github_token, getattr(self.request_state, "force", False)
+        )
+
+    def set_github_token(self, token):
+        token = token.strip()
+        if any(character.isspace() for character in token):
+            raise ValueError("The GitHub token must not contain whitespace.")
+        self.github_token = token
 
     def local_profile(self, filename, board):
         target = self.core.filename_target(filename)
@@ -149,6 +171,7 @@ class DesktopServices:
     ):
         import hashlib
 
+        self.request_state.force = force
         if isinstance(history_limit, bool) or not 1 <= int(history_limit) <= 1000:
             raise ValueError("History limit must be between 1 and 1000.")
         history_limit = int(history_limit)
@@ -220,7 +243,7 @@ class DesktopServices:
 
             add_snapshot(head, branch + " (current)", current=True)
             snapshots = 1
-            if include_history:
+            if include_history and len(rows) < history_limit:
                 import urllib.parse
 
                 try:

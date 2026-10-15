@@ -219,7 +219,7 @@ def gui(smoke_test=False):
     board = tk.StringVar(value="AMANEQ")
     header = ttk.Frame(outer)
     header.pack(fill="x", pady=(0, 8))
-    ttk.Label(header, text="Board").pack(side="left")
+    ttk.Label(header, text="Board:").pack(side="left")
     ttk.Combobox(
         header,
         textvariable=board,
@@ -234,7 +234,7 @@ def gui(smoke_test=False):
     notebook = ttk.Notebook(split)
     split.add(notebook, weight=3)
     page = ttk.Frame(notebook, padding=10)
-    notebook.add(page, text="Firmware")
+    notebook.add(page, text="Firmware:")
     adapter_boxes = []
 
     def task(name, function, changes=False, quiet=False):
@@ -263,6 +263,8 @@ def gui(smoke_test=False):
         command = command_prefix() + ["--firmware-cli"] + arguments
         events.put(("log", subprocess.list2cmdline(command)))
         environment = {**os.environ, "PYTHONUNBUFFERED": "1"}
+        if services.github_token:
+            environment["GITHUB_TOKEN"] = services.github_token
         if os.name == "nt":
             environment["AMANEQ_CYGPATH_DIR"] = str(ROOT / "runtime/msys/bin")
         with subprocess.Popen(
@@ -292,7 +294,13 @@ def gui(smoke_test=False):
         )
 
     def refresh_catalog(force=True, quiet=False):
-        nonlocal catalog_request
+        nonlocal catalog_request, refresh_after
+        if refresh_after:
+            root.after_cancel(refresh_after)
+            refresh_after = None
+        if any(name.startswith("Firmware list #") for name in jobs):
+            refresh_after = root.after(250, lambda: refresh_catalog(force, quiet))
+            return
         catalog_request += 1
         request = catalog_request
         images.delete(*images.get_children())
@@ -651,7 +659,7 @@ def gui(smoke_test=False):
 
     source_controls = ttk.Frame(page)
     source_controls.pack(fill="x", pady=4)
-    ttk.Label(source_controls, text="Image source").pack(side="left", padx=(0, 12))
+    ttk.Label(source_controls, text="Image source:").pack(side="left", padx=(0, 12))
     for value, text in (("GitHub", "GitHub list"), ("Local", "Local file")):
         ttk.Radiobutton(
             source_controls,
@@ -698,7 +706,7 @@ def gui(smoke_test=False):
 
     settings = ttk.Frame(page)
     settings.pack(fill="x", pady=8)
-    ttk.Label(settings, text="Target").grid(row=0, column=0)
+    ttk.Label(settings, text="Target:").grid(row=0, column=0)
     target_box = ttk.Combobox(
         settings,
         textvariable=target,
@@ -708,7 +716,7 @@ def gui(smoke_test=False):
     )
     target_box.grid(row=0, column=1, padx=6)
     target_box.bind("<<ComboboxSelected>>", profile_changed)
-    firmware_label = ttk.Label(settings, text="Firmware")
+    firmware_label = ttk.Label(settings, text="Firmware:")
     firmware_label.grid(row=0, column=2)
     firmware_box = ttk.Combobox(
         settings,
@@ -719,7 +727,7 @@ def gui(smoke_test=False):
     )
     firmware_box.grid(row=0, column=3, padx=6)
     firmware_box.bind("<<ComboboxSelected>>", firmware_picked)
-    ttk.Label(settings, text="Format").grid(row=0, column=4, padx=(10, 0))
+    ttk.Label(settings, text="Format:").grid(row=0, column=4, padx=(10, 0))
     format_box = ttk.Combobox(
         settings,
         textvariable=image_format,
@@ -735,7 +743,7 @@ def gui(smoke_test=False):
     online.pack(fill="both", expand=True)
     repository_box = ttk.Frame(online)
     repository_box.pack(fill="x", pady=4)
-    ttk.Label(repository_box, text="GitHub URL").pack(side="left", padx=(0, 8))
+    ttk.Label(repository_box, text="GitHub URL:").pack(side="left", padx=(0, 8))
     repository_entry = ttk.Entry(repository_box, textvariable=repository_url)
     repository_entry.pack(side="left", fill="x", expand=True)
     bind_horizontal_scroll(repository_entry)
@@ -743,9 +751,40 @@ def gui(smoke_test=False):
     ttk.Button(repository_box, text="Refresh list", command=refresh_catalog).pack(
         side="left", padx=6
     )
+    token_row = ttk.Frame(online)
+    token_row.pack(fill="x", pady=4)
+    ttk.Label(token_row, text="GitHub token (optional, session only):").pack(
+        side="left", padx=(0, 8)
+    )
+    token_value = tk.StringVar()
+    ttk.Entry(token_row, textvariable=token_value, show="*", width=30).pack(side="left")
+
+    def apply_github_token():
+        try:
+            services.set_github_token(token_value.get())
+        except ValueError as error:
+            messagebox.showerror("GitHub access", str(error))
+            return
+        refresh_catalog(force=True, quiet=True)
+
+    ttk.Button(token_row, text="Apply", command=apply_github_token).pack(
+        side="left", padx=6
+    )
+
+    def open_repository():
+        import webbrowser
+
+        try:
+            repository = services.core.GitHub(repository_url.get().strip()).repo
+        except Exception as error:
+            messagebox.showerror("GitHub URL", str(error))
+            return
+        webbrowser.open("https://github.com/" + repository)
+
+    ttk.Button(token_row, text="Open GitHub", command=open_repository).pack(side="left")
     history_controls = ttk.Frame(online)
     history_controls.pack(fill="x", pady=4)
-    ttk.Label(history_controls, text="History limit").pack(side="left")
+    ttk.Label(history_controls, text="History limit:").pack(side="left")
     history_box = ttk.Spinbox(
         history_controls,
         from_=1,
@@ -941,7 +980,7 @@ def gui(smoke_test=False):
     message_grip.bind("<ButtonRelease-1>", lambda unused: message_drag.clear())
     message_controls = ttk.Frame(messages)
     message_controls.pack(fill="x")
-    ttk.Label(message_controls, text="Messages").pack(side="left")
+    ttk.Label(message_controls, text="Messages:").pack(side="left")
     follow_messages = tk.BooleanVar(value=True)
     follow_box = ttk.Checkbutton(
         message_controls,
@@ -1008,7 +1047,7 @@ def gui(smoke_test=False):
     zoom = tk.StringVar(value="100%")
     zoom_controls = ttk.Frame(header)
     zoom_controls.pack(side="right")
-    ttk.Label(zoom_controls, text="UI size").pack(side="left", padx=5)
+    ttk.Label(zoom_controls, text="UI size:").pack(side="left", padx=5)
     zoom_box = ttk.Combobox(
         zoom_controls,
         textvariable=zoom,
@@ -1107,6 +1146,11 @@ def gui(smoke_test=False):
                     return
             elif kind == "error":
                 name, text, quiet = value
+                if (
+                    name.startswith("Firmware list #")
+                    and name != f"Firmware list #{catalog_request}"
+                ):
+                    continue
                 log.insert("end", f"ERROR [{name}]: {text}\n")
                 if name == "Cable scan":
                     cable_status.set("Cable scan failed. " + text)
@@ -1148,8 +1192,13 @@ def gui(smoke_test=False):
             "Firmware",
             "Jitter Cleaner",
             "MPC / MPCX",
-            "IP",
+            "IP addr.",
         ]
+        assert network_tabs.current.get() is False
+        network_tabs.ip_mode_buttons[1].invoke()
+        assert network_tabs.current.get() is True
+        network_tabs.ip_mode_buttons[0].invoke()
+        assert network_tabs.current.get() is False
         board.set("CIRASAME")
         assert target.get() == "cirasame"
         assert network_tabs.preset.get() == "in_125_out_500_125"

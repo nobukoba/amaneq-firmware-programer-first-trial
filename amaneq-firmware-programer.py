@@ -147,7 +147,7 @@ def request_json(url):
         "Accept": "application/vnd.github+json",
         "User-Agent": "AMANEQ-programmer/1",
     }
-    token = os.environ.get("GITHUB_TOKEN")
+    token = globals().get("_DESKTOP_GITHUB_TOKEN") or os.environ.get("GITHUB_TOKEN")
     if token and urllib.parse.urlparse(url).hostname == "api.github.com":
         headers["Authorization"] = f"Bearer {token}"
     data = fetch_bytes(url, headers, limit=16 * 1024 * 1024)

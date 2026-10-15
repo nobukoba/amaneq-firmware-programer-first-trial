@@ -87,7 +87,7 @@ class TargetAddress:
         self.custom = tk.StringVar(value="192.168.10.10")
         box = ttk.Frame(parent)
         box.pack(fill="x", pady=6)
-        ttk.Label(box, text="Target IP").pack(side="left", padx=(0, 8))
+        ttk.Label(box, text="Target IP:").pack(side="left", padx=(0, 8))
         selector = ttk.Combobox(
             box,
             textvariable=self.choice,
@@ -179,10 +179,10 @@ class NetworkTabs:
         ip_page, self.ip = scrollable_tab(notebook)
         notebook.add(clock_page, text="Jitter Cleaner")
         notebook.add(writer_page, text="MPC / MPCX")
-        notebook.add(ip_page, text="IP")
+        notebook.add(ip_page, text="IP addr.")
         file_box = ttk.Frame(self.writer)
         file_box.pack(fill="x", pady=(0, 6))
-        ttk.Label(file_box, text="MPC / MPCX file").pack(side="left", padx=(0, 8))
+        ttk.Label(file_box, text="MPC / MPCX file:").pack(side="left", padx=(0, 8))
         self.file_entry = ttk.Entry(file_box, textvariable=self.file)
         self.file_entry.pack(side="left", fill="x", expand=True)
         bind_horizontal_scroll(self.file_entry)
@@ -220,7 +220,7 @@ class NetworkTabs:
             textvariable=self.preset,
             values=tuple(operations.PRESETS),
             state="readonly",
-            width=28,
+            width=20,
         ).pack(side="left")
         ttk.Checkbutton(
             self.clock,
@@ -240,13 +240,15 @@ class NetworkTabs:
         ).pack(anchor="w")
         ip_box = ttk.Frame(self.ip)
         ip_box.pack(fill="x", pady=8)
-        ttk.Label(ip_box, text="New device IP").pack(side="left", padx=(0, 8))
+        ttk.Label(ip_box, text="New device IP:").pack(side="left", padx=(0, 8))
         ttk.Entry(ip_box, textvariable=self.new_ip, width=20).pack(side="left")
-        ttk.Checkbutton(
-            ip_box,
-            text="Change current (runtime) IP instead of saved EEPROM IP",
-            variable=self.current,
-        ).pack(side="left", padx=10)
+        self.ip_mode_buttons = []
+        for text, value in (("EEPROM IP", False), ("Current IP", True)):
+            button = ttk.Radiobutton(
+                ip_box, text=text, variable=self.current, value=value
+            )
+            button.pack(side="left", padx=8)
+            self.ip_mode_buttons.append(button)
         actions = ttk.Frame(self.writer)
         actions.pack(fill="x", pady=10)
         for name in ("Read", "Check", "Write MPC/MPCX"):
@@ -256,11 +258,6 @@ class NetworkTabs:
                 style="Action.TButton" if name == "Write MPC/MPCX" else "TButton",
                 command=lambda action=name: self.utility(action),
             ).pack(side="left", padx=4)
-        ttk.Label(
-            self.writer,
-            text="Files are validated by content and checked against device generation. Writes use the referenced utility's readback verification. No automatic Clear or reset is performed.",
-            wraplength=900,
-        ).pack(anchor="w")
         ip_actions = ttk.Frame(self.ip)
         ip_actions.pack(fill="x", pady=10)
         ttk.Button(

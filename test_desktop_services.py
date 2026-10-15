@@ -353,5 +353,106 @@ class NetworkTests(unittest.TestCase):
             remove.assert_called_once_with(data)
 
 
+class GitHubAccessTests(unittest.TestCase):
+    def test_metadata_cache_reuses_across_profiles_and_refreshes_mutable(self):
+        from github_access import GitHubMetadata
+
+        with tempfile.TemporaryDirectory() as directory:
+            fetch = Mock(return_value={"sha": "abc"})
+            cache = GitHubMetadata(directory, fetch)
+            url = "https://api.github.com/repos/example/firmware"
+            cache.get(url)
+            cache.get(url)
+            self.assertEqual(fetch.call_count, 1)
+            cache.get(url, force=True)
+            self.assertEqual(fetch.call_count, 2)
+            pinned = url + "/git/trees/" + "a" * 40 + "?recursive=1"
+            cache.get(pinned)
+            cache.get(pinned, force=True)
+            self.assertEqual(fetch.call_count, 3)
+
+    def test_concurrent_metadata_reads_share_one_request(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from github_access import GitHubMetadata
+        import time
+
+        def fetch(url, token):
+            time.sleep(0.02)
+            return {"ok": True}
+
+        with tempfile.TemporaryDirectory() as directory:
+            request = Mock(side_effect=fetch)
+            cache = GitHubMetadata(directory, request)
+            with ThreadPoolExecutor(max_workers=4) as workers:
+                results = list(
+                    workers.map(
+                        lambda unused: cache.get("https://api.github.com/x"), range(4)
+                    )
+                )
+            self.assertEqual(results, [{"ok": True}] * 4)
+            self.assertEqual(request.call_count, 1)
+
+    def test_rate_limit_honors_reset_without_retries_and_new_token_can_proceed(self):
+        import urllib.error
+        from github_access import GitHubMetadata
+
+        headers = {"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "5000"}
+        blocked = urllib.error.HTTPError(
+            "https://api.github.com/x", 403, "limited", headers, None
+        )
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            patch("github_access.time.time", return_value=1000),
+            patch.dict("os.environ", {}, clear=True),
+        ):
+            fetch = Mock(side_effect=[blocked, {"ok": True}])
+            cache = GitHubMetadata(directory, fetch)
+            with self.assertRaisesRegex(RuntimeError, "paused until"):
+                cache.get("https://api.github.com/x")
+            with self.assertRaisesRegex(RuntimeError, "paused until"):
+                cache.get("https://api.github.com/y", force=True)
+            self.assertEqual(fetch.call_count, 1)
+            self.assertEqual(
+                cache.blocked[__import__("hashlib").sha256(b"").hexdigest()], 5001
+            )
+            self.assertEqual(
+                cache.get("https://api.github.com/y", "synthetic-token"), {"ok": True}
+            )
+            self.assertEqual(fetch.call_count, 2)
+            for path in Path(directory).glob("*.json"):
+                self.assertNotIn("synthetic-token", path.read_text())
+
+    def test_retry_after_and_non_rate_errors(self):
+        import urllib.error
+        from github_access import GitHubMetadata
+
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            patch("github_access.time.time", return_value=1000),
+            patch.dict("os.environ", {}, clear=True),
+        ):
+            limited = urllib.error.HTTPError(
+                "https://api.github.com/x", 429, "limited", {"Retry-After": "120"}, None
+            )
+            fetch = Mock(side_effect=limited)
+            cache = GitHubMetadata(directory, fetch)
+            with self.assertRaisesRegex(RuntimeError, "paused until"):
+                cache.get("https://api.github.com/x")
+            self.assertEqual(next(iter(cache.blocked.values())), 1120)
+            denied = GitHubMetadata(directory, Mock(side_effect=OSError("offline")))
+            with self.assertRaisesRegex(OSError, "offline"):
+                denied.get("https://api.github.com/z")
+            self.assertFalse(denied.blocked)
+
+    def test_token_is_session_only_and_rejects_whitespace(self):
+        service = desktop.DesktopServices(ROOT, ROOT)
+        service.set_github_token("synthetic-token")
+        self.assertEqual(service.github_token, "synthetic-token")
+        with self.assertRaises(ValueError):
+            service.set_github_token("invalid token")
+        service.set_github_token("")
+        self.assertEqual(service.github_token, "")
+
+
 if __name__ == "__main__":
     unittest.main()
