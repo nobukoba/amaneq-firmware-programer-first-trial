@@ -1,0 +1,24 @@
+name: Publish macOS desktop preview
+on:
+  push:
+    paths:
+      - '.github/workflows/publish-macos-preview.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download tested application archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 38740982476 --repo nobukoba/amaneq-firmware-programer-first-trial --name amaneq-firmware-programer-macos-arm64 --dir downloads/arm64
+          gh run download 38740982476 --repo nobukoba/amaneq-firmware-programer-first-trial --name amaneq-firmware-programer-macos-x86_64 --dir downloads/x86_64
+      - name: Publish preview download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create macos-preview-20261015 --repo nobukoba/amaneq-firmware-programer-first-trial --target e43ce6cfd02652f6e35b116d2aff88739bca1b54 --prerelease --title "macOS desktop preview (2026-10-15)" --notes "macOS 15+. Includes Python, Tk and openFPGALoader. Choose arm64 for Apple Silicon or x86_64 for Intel. Extract the ZIP and move the app to Applications. Ad-hoc signed, not notarized. Both native CI builds and startup checks passed; physical HS3 programming remains unverified." downloads/arm64/*.zip downloads/arm64/*.sha256 downloads/x86_64/*.zip downloads/x86_64/*.sha256
