@@ -65,3 +65,5 @@ Use synthetic fixtures in tracked tests. Keep actual firmware, flash dumps, cred
 Keep source readable: normal blocks, descriptive names, no compressed multiple statements. Preserve comments and guards during formatting. Keep executable Git modes for `.py` and `.sh`, and CRLF checkout settings for `.cmd`.
 
 Maintain `README.md`, `README.ja.md`, `FOR_DEVELOPERS.md`, `FOR_DEVELOPERS.ja.md`, and both AGENTS documents together. Update the user-authorized AI instruction repository with durable corrections and project-specific facts; do not turn one project's facts into universal rules.
+
+The explicit setup-windows-wsl.ps1 host installer may install usbipd-win and WSL apt packages when Setup is requested. Attach/Detach require BUSID; never automatically choose a cable, flash or reboot. This authorization is scoped to explicit setup, not normal Python execution. Distinguish parser/mock checks from an actual host installation test.

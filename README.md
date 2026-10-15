@@ -18,6 +18,40 @@ cd amaneq-firmware-programer-first-trial
 ./amaneq-firmware-programer.py --help
 ```
 
+## Windows: copy and paste setup for WSL2
+
+Use an existing Ubuntu WSL2 distribution. If absent, run `wsl --install -d Ubuntu` in Administrator PowerShell, reboot if requested, launch Ubuntu and finish its initial user setup. Then open Administrator PowerShell and paste the first block below. Review the downloaded script before running it. Setup installs usbipd-win on Windows and git/Python/openFPGALoader/usbutils in Ubuntu, reloads packaged udev rules, adds the default Linux user to plugdev, and clones the repository under the WSL user's home. It never programs the board. Installer dialogs may appear; handle a requested reboot and rerun Setup. `-Distribution` defaults to `Ubuntu`; another existing apt-based WSL2 distribution can be specified. No automatic WSL1 conversion or reboot is performed.
+
+Next open Ubuntu using the second block and leave that terminal open. In the Administrator PowerShell run List and Attach using the exact BUSID printed by List. FT232H IDs alone do not prove an HS3 model. Attach explicitly binds/shares that device, then forwards it; no cable is chosen automatically. Run the Bash commands in Ubuntu. If multiple cables are attached, add `--serial` to the programming command. Detach returns the device to Windows; persistent sharing remains until `usbipd unbind --busid 4-4` is run as administrator. Repeat Attach after unplugging/reconnecting. ExecutionPolicy Bypass applies only to the launched process. For script help use `Get-Help .\setup-windows-wsl.ps1 -Full`.
+
+```powershell
+New-Item -ItemType Directory -Force "$HOME/amaneq-wsl-setup" | Out-Null
+Set-Location "$HOME/amaneq-wsl-setup"
+Invoke-WebRequest https://raw.githubusercontent.com/nobukoba/amaneq-firmware-programer-first-trial/main/setup-windows-wsl.ps1 -OutFile setup-windows-wsl.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\setup-windows-wsl.ps1 -Action Setup
+```
+
+```powershell
+wsl -d Ubuntu
+```
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\setup-windows-wsl.ps1 -Action List
+# Replace 4-4 with the cable BUSID printed by List.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\setup-windows-wsl.ps1 -Action Attach -BusId 4-4
+```
+
+```bash
+cd ~/amaneq-firmware-programer-first-trial
+./amaneq-firmware-programer.py scan
+# This command writes firmware to the connected board:
+./program-latest-mcs-amaneq-v4-lrtdc.sh --cable hs3
+```
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\setup-windows-wsl.ps1 -Action Detach -BusId 4-4
+```
+
 ## Check the cable first
 
 Connect the cable to the correct JTAG connector and power the target board. Configure Linux USB permissions as described in the appendix, then list the connected cables:

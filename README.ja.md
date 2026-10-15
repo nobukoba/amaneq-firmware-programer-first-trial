@@ -18,6 +18,40 @@ cd amaneq-firmware-programer-first-trial
 ./amaneq-firmware-programer.py --help
 ```
 
+## Windows：コピペでWSL2を準備する
+
+既存のUbuntu WSL2を使います。未導入なら管理者PowerShellで`wsl --install -d Ubuntu`を実行し、要求されたら再起動して、Ubuntuの初回ユーザー設定を完了してください。その後、管理者PowerShellで最初のブロックを貼り付けます。ダウンロードしたスクリプトは実行前に確認してください。SetupはWindowsにusbipd-win、Ubuntuにgit・Python・openFPGALoader・usbutilsを導入し、同梱udevルールを再読み込みし、既定のLinuxユーザーをplugdevグループに追加して、WSLユーザーのホームへリポジトリを取得します。基板への書き込みはしません。インストーラーの画面や再起動要求が出たら対応し、Setupを再実行してください。`-Distribution`の既定値は`Ubuntu`で、他の既存apt系WSL2環境も指定できます。WSL1の変換や再起動は自動実行しません。
+
+次のブロックでUbuntuを開き、その端末を開いたまま、管理者PowerShellでListとAttachを実行します。BUSIDはListの実際の表示に置き換えてください。FT232HのUSB IDだけではHS3とは断定できません。Attachは明示した機器を共有して転送し、ケーブルを自動選択しません。BashのコマンドはUbuntu内で実行します。複数ケーブルなら書き込みコマンドに`--serial`を追加してください。DetachでWindowsへ戻りますが、共有設定は残るため、解除するには管理者で`usbipd unbind --busid 4-4`を実行します。抜き差し後はAttachを再実行します。ExecutionPolicy Bypassは起動したプロセスだけに適用されます。ヘルプは`Get-Help .\setup-windows-wsl.ps1 -Full`で表示します。
+
+```powershell
+New-Item -ItemType Directory -Force "$HOME/amaneq-wsl-setup" | Out-Null
+Set-Location "$HOME/amaneq-wsl-setup"
+Invoke-WebRequest https://raw.githubusercontent.com/nobukoba/amaneq-firmware-programer-first-trial/main/setup-windows-wsl.ps1 -OutFile setup-windows-wsl.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\setup-windows-wsl.ps1 -Action Setup
+```
+
+```powershell
+wsl -d Ubuntu
+```
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\setup-windows-wsl.ps1 -Action List
+# Replace 4-4 with the cable BUSID printed by List.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\setup-windows-wsl.ps1 -Action Attach -BusId 4-4
+```
+
+```bash
+cd ~/amaneq-firmware-programer-first-trial
+./amaneq-firmware-programer.py scan
+# This command writes firmware to the connected board:
+./program-latest-mcs-amaneq-v4-lrtdc.sh --cable hs3
+```
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\setup-windows-wsl.ps1 -Action Detach -BusId 4-4
+```
+
 ## 先にケーブルを確認する
 
 ケーブルを対象のJTAGコネクターへ接続して基板の電源を入れます。付録の手順でLinuxのUSBアクセス権限を設定してから、接続ケーブルを表示します。

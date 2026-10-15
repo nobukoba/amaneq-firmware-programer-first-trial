@@ -66,3 +66,5 @@ python3 -m compileall -q amaneq-firmware-programer.py test_amaneq_firmware_progr
 CIはUbuntu/Windows/macOS、Python3.10/3.12で同じテストを実行します。Macでテストが通ってもUSB実装の証明にはなりません。専用スクリプトの通常実行は避け、--helpを確認します。
 
 Blackで可読性を保ち、コードは英語、利用者例は英日同期にします。shebang、LF、Git実行権限、cmdのCRLFを維持し、公開前に秘密情報や個人パス・生成ディレクトリが混ざっていないか確認します。
+
+Windows用setup-windows-wsl.ps1は明示実行するホスト導入用です。Setupは管理者でusbipd-winとWSL内aptパッケージを導入します。Attach/DetachはBUSID必須、自動選択・書き込み・再起動はしません。通常のPython実行はホスト設定を変更しません。導入の実行検証と構文・モック検証を区別してください。

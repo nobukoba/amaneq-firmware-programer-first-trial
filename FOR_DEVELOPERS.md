@@ -66,3 +66,5 @@ The tracked suite is offline and self-contained: synthetic BIT/MCS parsing, chec
 GitHub Actions runs the same offline tests on Ubuntu, Windows and macOS with Python 3.10/3.12. A green macOS test runner does not mean macOS USB programming is implemented. Inspect shortcut --help, not their normal programming operation, during routine validation.
 
 Use Black with the repository configuration for readable formatting. Keep code/comments/errors English and bilingual examples synchronized. Preserve shebang, LF script data, executable Git modes, and CRLF Windows checkouts. Do not publish firmware/cache/log directories. Review secret/host-path exclusions before pushing.
+
+The explicit setup-windows-wsl.ps1 host installer may install usbipd-win and WSL apt packages when Setup is requested. Attach/Detach require BUSID; never automatically choose a cable, flash or reboot. This authorization is scoped to explicit setup, not normal Python execution. Distinguish parser/mock checks from an actual host installation test.

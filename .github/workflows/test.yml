@@ -14,3 +14,7 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: python -m unittest test_amaneq_firmware_programer -v
       - run: python -m compileall -q amaneq-firmware-programer.py test_amaneq_firmware_programer.py
+      - name: Check Windows WSL setup without host changes
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./test-windows-wsl-setup.ps1
