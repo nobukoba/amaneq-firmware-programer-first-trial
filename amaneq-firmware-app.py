@@ -422,14 +422,16 @@ def gui(smoke_test=False):
     def change_source(*unused):
         nonlocal catalog_request
         catalog_request += 1
+        settings.pack_forget()
         online.pack_forget()
         local.pack_forget()
         if source_mode.get() == "GitHub":
-            online.pack(fill="both", expand=True, before=program_area)
+            online.pack(fill="both", expand=True, before=cable_box)
+            settings.pack(fill="x", pady=8, before=online)
             if not smoke_test:
                 refresh_catalog(force=False, quiet=True)
         else:
-            local.pack(fill="x", pady=12, before=program_area)
+            local.pack(fill="x", pady=12, before=cable_box)
 
     def program():
         source = "selected" if source_mode.get() == "GitHub" else "local"
@@ -440,6 +442,11 @@ def gui(smoke_test=False):
             )
             return
         try:
+            selected_firmware = firmware.get()
+            if source == "local":
+                selected_firmware = services.core.filename_family(filename.get()) or (
+                    "hrtdc" if target.get() == "hrtdc-mezzanine" else "lrtdc"
+                )
             arguments = [
                 "program",
                 "--loader",
@@ -447,7 +454,7 @@ def gui(smoke_test=False):
                 "--target",
                 target.get(),
                 "--firmware",
-                firmware.get(),
+                selected_firmware,
                 "--yes",
             ]
             arguments += cable_arguments(
@@ -505,26 +512,17 @@ def gui(smoke_test=False):
             else:
                 if not filename.get():
                     raise ValueError("Choose a local .bit file or .mcs file first.")
-                arguments += [
-                    "--file",
-                    filename.get(),
-                    "--format",
-                    format_ids[image_format.get()],
-                ]
-                description = filename.get()
+                arguments += ["--file", filename.get()]
+                description = filename.get() + "\nTarget: " + target.get()
         except Exception as error:
             messagebox.showerror("Selection required", str(error))
             return
-        chosen_format = format_ids[image_format.get()]
         chosen_local_file = filename.get()
 
         def operation():
             if source == "local":
                 detected = services.core.inspect_file(Path(chosen_local_file))
-                if detected.kind != chosen_format:
-                    raise ValueError(
-                        "Local image contents do not match the selected .mcs file / .bit file format."
-                    )
+                arguments.extend(["--format", detected.kind])
             return process(arguments)
 
         if messagebox.askyesno(
@@ -648,6 +646,17 @@ def gui(smoke_test=False):
 
         task("Restore IPv4", operation, changes=True)
 
+    source_controls = ttk.Frame(page)
+    source_controls.pack(fill="x", pady=4)
+    ttk.Label(source_controls, text="Image source").pack(side="left", padx=(0, 12))
+    for value, text in (("GitHub", "GitHub list"), ("Local", "Local file")):
+        ttk.Radiobutton(
+            source_controls,
+            text=text,
+            value=value,
+            variable=source_mode,
+            command=change_source,
+        ).pack(side="left", padx=8)
     cable_box = ttk.Frame(page, padding=(0, 8))
     cable_box.pack(fill="x")
     cable_box.columnconfigure(1, weight=1)
@@ -719,17 +728,6 @@ def gui(smoke_test=False):
     format_box.bind(
         "<<ComboboxSelected>>", lambda unused: refresh_catalog(force=False, quiet=True)
     )
-    source_controls = ttk.Frame(page)
-    source_controls.pack(fill="x", pady=4)
-    ttk.Label(source_controls, text="Image source").pack(side="left", padx=(0, 12))
-    for value, text in (("GitHub", "GitHub list"), ("Local", "Local file")):
-        ttk.Radiobutton(
-            source_controls,
-            text=text,
-            value=value,
-            variable=source_mode,
-            command=change_source,
-        ).pack(side="left", padx=8)
     online = ttk.Frame(page)
     online.pack(fill="both", expand=True)
     repository_box = ttk.Frame(online)
@@ -783,11 +781,13 @@ def gui(smoke_test=False):
     scrollbar.pack(side="right", fill="y")
     images.configure(yscrollcommand=scrollbar.set)
     local = ttk.LabelFrame(page, text="Local .bit file / .mcs file", padding=12)
-    local_entry = ttk.Entry(local, textvariable=filename, state="readonly")
+    local_file_row = ttk.Frame(local)
+    local_file_row.pack(fill="x")
+    local_entry = ttk.Entry(local_file_row, textvariable=filename, state="readonly")
     local_entry.pack(side="left", fill="x", expand=True)
     bind_horizontal_scroll(local_entry)
     ttk.Button(
-        local,
+        local_file_row,
         text="Choose file",
         command=lambda: filename.set(
             filedialog.askopenfilename(
@@ -796,8 +796,22 @@ def gui(smoke_test=False):
             or filename.get()
         ),
     ).pack(side="left", padx=8)
+    local_target_row = ttk.Frame(local)
+    local_target_row.pack(fill="x", pady=(8, 0))
+    ttk.Label(local_target_row, text="Target").pack(side="left", padx=(0, 8))
+    local_target_box = ttk.Combobox(
+        local_target_row,
+        textvariable=target,
+        values=target_box["values"],
+        state="readonly",
+        width=21,
+    )
+    local_target_box.pack(side="left")
+    local_target_box.bind("<<ComboboxSelected>>", profile_changed)
     program_area = ttk.Frame(page)
     program_area.pack(fill="x", pady=10)
+    cable_box.pack_forget()
+    cable_box.pack(fill="x", before=program_area)
     from tkinter import font as tkfont
 
     style = ttk.Style(root)
@@ -911,6 +925,7 @@ def gui(smoke_test=False):
             if chosen == "STAG"
             else ""
         )
+        local_target_box["values"] = target_box["values"]
         profile_changed()
 
     board.trace_add("write", board_changed)
@@ -1231,10 +1246,27 @@ def gui(smoke_test=False):
         toggle_temporary()
         temporary_enabled.set(False)
         toggle_temporary()
+        notebook.select(0)
         source_mode.set("Local")
         change_source()
+        root.update_idletasks()
+        assert not settings.winfo_manager()
+        assert not online.winfo_manager()
+        assert local.winfo_manager() == "pack"
+        assert local_target_box.winfo_ismapped()
         source_mode.set("GitHub")
         change_source()
+        root.update_idletasks()
+        assert settings.winfo_manager() == "pack"
+        assert online.winfo_manager() == "pack"
+        assert not local.winfo_manager()
+        order = page.pack_slaves()
+        assert (
+            order.index(source_controls)
+            < order.index(settings)
+            < order.index(online)
+            < order.index(cable_box)
+        )
         for tab in notebook.tabs():
             notebook.select(tab)
             root.update_idletasks()
