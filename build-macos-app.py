@@ -6,6 +6,7 @@ import ast
 import gzip
 import hashlib
 import importlib.metadata
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -172,6 +173,15 @@ def main():
     ]:
         if path.is_file():
             shutil.copy2(path, notices / ("Python-" + path.name))
+    spec = importlib.util.spec_from_file_location(
+        "network_builder", root / "build-network-tools.py"
+    )
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+    network_bin = builder.build(root, stage / "runtime/network/bin")
+    shutil.copytree(
+        root / "vendor/sitcp-utility", notices / "sitcp-utility", dirs_exist_ok=True
+    )
     command = [
         sys.executable,
         "-m",
@@ -201,6 +211,8 @@ def main():
         "--add-data",
         f"{notices}:THIRD-PARTY",
     ]
+    for tool in network_bin.iterdir():
+        command += ["--add-binary", f"{tool}:runtime/network/bin"]
     command += ["--add-data", f"{certifi.where()}:runtime"]
     for name in hidden_imports(root / "amaneq-firmware-programer.py"):
         command += ["--hidden-import", name]
@@ -210,7 +222,7 @@ def main():
     info_path = app / "Contents/Info.plist"
     info = plistlib.loads(info_path.read_bytes())
     info.update(
-        {"LSMinimumSystemVersion": "15.0", "CFBundleShortVersionString": "0.2.0"}
+        {"LSMinimumSystemVersion": "15.0", "CFBundleShortVersionString": "0.3.0"}
     )
     info_path.write_bytes(plistlib.dumps(info))
     for name in (

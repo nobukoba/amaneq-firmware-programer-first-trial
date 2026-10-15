@@ -1,6 +1,6 @@
 # AMANEQ Firmware Programer (first trial)
 
-**Language: English | [日本語](README.ja.md)**
+**Language: English | [譌･譛ｬ隱枉(README.ja.md)**
 
 Download and program AMANEQ firmware through openFPGALoader: MCS for the supported families, and temporary BIT loading for Skeleton.
 
@@ -22,11 +22,30 @@ cd amaneq-firmware-programer-first-trial
 
 Download the Apple Silicon (arm64) or Intel (x86_64) ZIP from [Releases](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases). Expand Assets on the newest macOS desktop preview. Extract the ZIP and move amaneq-firmware-programer.app into Applications. macOS 15+ is required. Python, Tk, openFPGALoader and HTTPS CA certificates are bundled; no Homebrew setup is needed to run it.
 
-Version 0.2 uses one window. On startup it scans cables and loads the latest default-branch firmware filenames. Select the target, then an image row or a local file. A single detected cable is selected automatically; multiple cables require an explicit serial selection. Unknown FT232H models still require physical HS3 confirmation. Program selected image pins the displayed commit/path. Program latest MCS (auto) retains automatic mezzanine variant probing. BIT remains Skeleton-only. Cached lists show their check time; offline errors never pretend the list was refreshed. A list checked within five minutes can be reused; Refresh image list forces an update.
+Version 0.3 uses three tabs below a shared AMANEQ / CIRASAME / STAG board selector. On startup it scans cables and loads the latest default-branch firmware filenames. Select the target, then an image row or a local file. A single detected cable is selected automatically; multiple cables require an explicit serial selection. Unknown FT232H models still require physical HS3 confirmation. Program selected image pins the displayed commit/path. Program latest MCS (auto) retains automatic mezzanine variant probing. BIT remains Skeleton-only. Cached lists show their check time; offline errors never pretend the list was refreshed. A list checked within five minutes can be reused; Refresh image list forces an update.
 
-For optional DAQ Ethernet access, choose an Ethernet adapter, enter the host IPv4 address/mask and press Apply temporarily. This adds an IPv4 alias, preserving DHCP, DNS and gateway configuration. It does not set the board's address and is unnecessary for USB/JTAG flashing. macOS requests administrator approval. Restore network or normal exit removes only the app's alias; a separate helper also watches application exit/crash. Existing addresses and overlapping subnets on other interfaces are rejected. If cleanup fails, the app reports it and preserves the lease record; aliases are also cleared by reboot. Network changes are not performed at startup. The IP field starts empty because no workstation address was specified.
+For optional DAQ Ethernet access, choose an Ethernet adapter, enter the host IPv4 address/mask and press Apply temporarily. This adds an IPv4 alias, preserving DHCP, DNS and gateway configuration. It does not set the board's address and is unnecessary for USB/JTAG flashing. macOS requests administrator approval. Restore network or normal exit removes only the app's alias; a separate helper also watches application exit/crash. Existing addresses and overlapping subnets on other interfaces are rejected. If cleanup fails, the app reports it and preserves the lease record; aliases are also cleared by reboot. Network changes are not performed at startup. The temporary host address defaults to 192.168.10.20 with mask 255.255.255.0 and remains editable.
 
 Downloads, logs and lease records are under ~/Library/Application Support/AMANEQ/. The app is ad-hoc signed, not Apple-notarized, so the initial Privacy & Security / Open Anyway approval may still be required. USB-driver simplicity does not remove Apple's app-distribution check. No system-wide protection is disabled. Physical HS3 programming and temporary IP changes on a user's adapter remain unverified; the new network lifecycle has offline tests.
+
+### Firmware, clock and license/IP tabs
+
+Choose the board, then Firmware, set_cdce62002 or MPC / MPCX / IP. The upstream clock command is set_cdce62002. CIRASAME uses its official lrtdc, lrtdc-10g and Skeleton repositories, excluding AMANEQ images. Its clock default is in_125_out_500_125. STAG is selectable for standard SiTCP operations, but firmware/clock writes stop until its official hardware/register reference is supplied.
+
+Both network tabs share the Ethernet adapter and temporary host IP (192.168.10.20, mask 255.255.255.0). On macOS use Apply temporarily / Restore network. Device mode MPCX selects target 192.168.10.10; MPC selects 192.168.10.16; Custom permits another target. The subnet mask is 255.255.255.0. Preset changes only select a connection address; they do not write the board. Choosing a valid file detects MPC/MPCX from its contents and updates the preset unless Custom is selected.
+
+Choose one of the six hul-common-lib clock presets, then Apply clock setting. Register readback must match before copying to EEPROM. EEPROM copy defaults on, matching upstream; uncheck it for runtime-only changes. Acknowledging the copy does not prove power-cycle persistence.
+
+For licenses choose a file and Check (read-only) or Write MPC/MPCX. Read shows current and saved settings. New device IP is optional with a license write and required for Write IP only. IP-only writes preserve license data. EEPROM IP is the default; explicitly select current/runtime IP to move the active endpoint. Success updates the connection address only for runtime changes. Initialize XG EEPROM defaults off. No Clear/reset is exposed. Writes require confirmation and retain the referenced utility's generation checks, write settling and readback verification.
+
+The Mac ZIP includes the pinned native SiTCP commands and needs no compiler at runtime. For Linux/WSL source use, install Tk and a C++ compiler, then run:
+
+```bash
+python3 build-network-tools.py
+python3 amaneq-firmware-app.py
+```
+
+Temporary-IP automation is currently macOS-only. On Linux/WSL configure host Ethernet to 192.168.10.20/24; setting only a WSL guest IP does not configure Windows Ethernet. Actual clock/license writes and adapter changes in the new GUI remain physically unverified.
 
 ## Windows desktop app: USB setup in the app
 

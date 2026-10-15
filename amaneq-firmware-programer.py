@@ -27,7 +27,12 @@ ROOT = Path(__file__).resolve().parent
 SYNC = b"\xaa\x99\x55\x66"
 MAX_IMAGE = 32 * 1024 * 1024
 NETWORK_TIMEOUT = 45.0
-TARGETS = ("amaneq-v1", "amaneq-v4", "hrtdc-mezzanine")
+TARGETS = ("amaneq-v1", "amaneq-v4", "hrtdc-mezzanine", "cirasame")
+CIRASAME_REPOS = {
+    "lrtdc": "CIRASAME-StrTdc",
+    "lrtdc-10g": "CIRASAME-StrLRTDC-10G",
+    "skeleton": "CIRASAME-Skeleton",
+}
 REPOS = {
     "lrtdc": "StrLrTdc",
     "hrtdc": "StrHrTdcBase",
@@ -224,6 +229,13 @@ class GitHub:
 
 
 def repository(args):
+    if args.target == "cirasame":
+        if args.firmware not in CIRASAME_REPOS:
+            raise UserError(
+                "CIRASAME supports lrtdc, lrtdc-10g and skeleton profiles only."
+            )
+        owner = "spadi-alliance" if args.owner == "AMANEQ-official" else args.owner
+        return GitHub(args.repo or f"{owner}/{CIRASAME_REPOS[args.firmware]}")
     if args.target == "hrtdc-mezzanine":
         if args.firmware != "hrtdc":
             raise UserError("HR-TDC mezzanine requires --firmware hrtdc.")
@@ -245,6 +257,8 @@ def version_key(path):
 
 def filename_target(name):
     name = Path(name).name.lower()
+    if name.startswith("cirasame-"):
+        return "cirasame"
     if re.search(r"amaneq[-_]1[-_]", name):
         return "amaneq-v1"
     if re.search(r"amaneq[-_]4[-_]", name):
@@ -256,6 +270,13 @@ def filename_target(name):
 
 def filename_family(name):
     name = Path(name).name.lower()
+    if name.startswith("cirasame-"):
+        if "skeleton" in name or name.startswith("cirasame-fw-"):
+            return "skeleton"
+        if "strtdc10g" in name:
+            return "lrtdc-10g"
+        if "strtdc" in name:
+            return "lrtdc"
     if re.search(r"amaneq[-_]skeleton[-_]", name):
         return "skeleton"
     if "strlrtdc-10g" in name:
@@ -1031,7 +1052,7 @@ def program(args):
         f"Target: {args.target}; firmware: {args.firmware}; format from content: {image.kind}; cable: {device['serial']}"
     )
     print(
-        "AMANEQ v1/v4 and mezzanine share FPGA ID; target revision cannot be inferred from JTAG alone."
+        "AMANEQ v1/v4, mezzanine and CIRASAME share FPGA ID; board identity cannot be inferred from JTAG alone."
     )
     if not args.yes and input(
         "Program selected target? [y/N] "

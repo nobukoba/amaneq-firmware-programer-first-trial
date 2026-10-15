@@ -22,11 +22,30 @@ cd amaneq-firmware-programer-first-trial
 
 [Releases](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases)の最新macOS desktop previewでAssetsを開き、Apple Silicon（arm64）用かIntel（x86_64）用のZIPを取得してください。ZIPを展開し、amaneq-firmware-programer.appをApplicationsへ移します。macOS 15以降が対象です。Python・Tk・openFPGALoader・HTTPS用CA証明書を同梱し、利用時のHomebrew導入は不要です。
 
-0.2版は1画面です。起動時にケーブルをスキャンし、既定ブランチの最新版ファームウェア名を表示します。対象を選び、一覧の行かローカルファイルを選択します。検出が1本なら自動選択し、複数ならシリアルを明示選択します。機種不明のFT232Hは実物がHS3であることを確認してください。Program selected imageは表示したコミット・パスを固定して使用します。Program latest MCS (auto)ではメザニンの自動判定を維持します。BITはSkeletonのみです。キャッシュには確認日時を表示し、通信失敗を最新版確認済みとは扱いません。5分以内の一覧は再利用でき、Refresh image listで強制更新できます。
+0.3版はAMANEQ / CIRASAME / STAG選択の下に3タブを配置します。起動時にケーブルをスキャンし、既定ブランチの最新版ファームウェア名を表示します。対象を選び、一覧の行かローカルファイルを選択します。検出が1本なら自動選択し、複数ならシリアルを明示選択します。機種不明のFT232Hは実物がHS3であることを確認してください。Program selected imageは表示したコミット・パスを固定して使用します。Program latest MCS (auto)ではメザニンの自動判定を維持します。BITはSkeletonのみです。キャッシュには確認日時を表示し、通信失敗を最新版確認済みとは扱いません。5分以内の一覧は再利用でき、Refresh image listで強制更新できます。
 
-必要に応じてEthernetアダプターを選び、Mac側のIPv4アドレスとマスクを入力してApply temporarilyを押します。DHCP・DNS・ゲートウェイの設定を保持し、固定IPを一時追加します。基板側のIP変更ではなく、USB/JTAG書き込みにも不要です。macOSの管理者許可が必要です。Restore networkか通常終了で追加IPだけを解除し、別プロセスも終了・クラッシュを監視します。既存IPの流用や他インターフェースとのサブネット重複は拒否します。解除に失敗したらエラーと記録を残し、追加IPは再起動でも消えます。起動時にネットワーク設定は変更しません。PC側のIP指定はなかったため入力欄は空にしています。
+必要に応じてEthernetアダプターを選び、Mac側のIPv4アドレスとマスクを入力してApply temporarilyを押します。DHCP・DNS・ゲートウェイの設定を保持し、固定IPを一時追加します。基板側のIP変更ではなく、USB/JTAG書き込みにも不要です。macOSの管理者許可が必要です。Restore networkか通常終了で追加IPだけを解除し、別プロセスも終了・クラッシュを監視します。既存IPの流用や他インターフェースとのサブネット重複は拒否します。解除に失敗したらエラーと記録を残し、追加IPは再起動でも消えます。起動時にネットワーク設定は変更しません。PC側の一時IPは192.168.10.20/24を初期値とし、編集できます。
 
 取得物・ログ・一時設定の記録は~/Library/Application Support/AMANEQ/へ保存します。Apple公証のないアドホック署名版なので、初回はプライバシーとセキュリティの「このまま開く」が必要な場合があります。USBドライバー設定が不要なことと、Appleの配布時検査は別です。OS全体の保護は無効化しません。利用者のアダプターでの一時IP設定とHS3実機書き込みは未確認で、新しいネットワーク処理は模擬テストで確認します。
+
+### Firmware・クロック・ライセンス/IPのタブ
+
+上部で基板を選び、Firmware、set_cdce62002、MPC / MPCX / IPを切り替えます。上流の正式コマンド名はset_cdce62002です。CIRASAMEは専用の公式lrtdc・lrtdc-10g・Skeletonから取得し、AMANEQのイメージを除外します。クロック初期値はin_125_out_500_125です。STAGも標準SiTCP操作向けに選択できますが、公式の基板・レジスタ資料が提示されるまでファームウェアとクロックの書き込みを止めます。
+
+ネットワーク用2タブでEthernet選択とPC側一時IP（192.168.10.20、マスク255.255.255.0）を共有します。macOSではApply temporarily / Restore networkで適用・解除します。Device modeはMPCXなら接続先192.168.10.10、MPCなら192.168.10.16、Customなら任意IPです。マスクは255.255.255.0です。プリセット切替は接続先の選択で、基板への書き込みではありません。ファイル選択時は内容からMPC/MPCXを判別し、Custom以外なら接続先プリセットを更新します。
+
+クロックはhul-common-libの6プリセットから選び、Apply clock settingを押します。レジスタの読み戻し一致後にEEPROMへコピーします。上流と同様、EEPROM保存は初期状態で有効です。一時変更だけならチェックを外します。保存コマンドへの応答は電源再投入後の保持確認とは区別してください。
+
+ライセンスはファイルを選び、読み取り専用のCheckかWrite MPC/MPCXを使います。Readで現在値と保存値を表示します。New device IPはライセンス書き込み時は任意、Write IP onlyでは必須です。IPのみの変更はライセンスを保持します。初期状態はEEPROM IPの変更で、current/runtime IPを明示選択すると動作中IPを変更します。動作中IPの変更成功時だけ接続先も更新します。Initialize XG EEPROMは初期状態で無効です。Clear/resetは設けていません。書き込みは確認後に行い、参照元の世代照合・書き込み待機・読み戻し検証を保持します。
+
+Mac版ZIPには固定した版のSiTCPコマンドを同梱し、利用時のコンパイラーは不要です。Linux/WSLのソース利用ではTkとC++コンパイラーを導入して実行します。
+
+```bash
+python3 build-network-tools.py
+python3 amaneq-firmware-app.py
+```
+
+一時IPの自動設定は現時点ではmacOSのみです。Linux/WSLではホスト側Ethernetを192.168.10.20/24に設定します。WSL内のIP設定だけではWindowsのEthernetを設定できません。新GUIでのクロック・ライセンス書き込みとアダプター変更は実機未確認です。
 
 ## Windowsデスクトップ版：アプリ内でUSBを設定する
 

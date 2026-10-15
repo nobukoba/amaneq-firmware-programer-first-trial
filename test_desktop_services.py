@@ -49,7 +49,7 @@ class DesktopTests(unittest.TestCase):
     def test_offline_catalog_reports_stale_cache(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            (root / "latest-images.json").write_text(
+            (root / "latest-images-v3.json").write_text(
                 json.dumps(
                     {
                         "schema": 1,
@@ -66,7 +66,7 @@ class DesktopTests(unittest.TestCase):
                 rows, status, failures = service.catalog(force=True)
             self.assertIn("not refreshed", status)
             self.assertEqual(rows[0]["name"], "cached.mcs")
-            self.assertEqual(len(failures), 6)
+            self.assertEqual(len(failures), 9)
 
 
 class NetworkTests(unittest.TestCase):

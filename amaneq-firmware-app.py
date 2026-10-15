@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Desktop front end with explicit, elevated Windows HS3 USB actions."""
+"""Desktop firmware, clock and SiTCP configuration with explicit hardware actions."""
 
 import argparse
 import ctypes as c
@@ -14,6 +14,7 @@ import threading
 import uuid
 import windows_usb as usb
 import macos_network as network
+from network_tabs import NetworkTabs
 from desktop_services import DesktopServices, cable_arguments
 
 ROOT = Path(__file__).resolve().parent
@@ -184,13 +185,31 @@ def gui(smoke_test=False):
     cable_status = tk.StringVar(value="Scanning connected cables...")
     catalog_status = tk.StringVar(value="Loading latest firmware images...")
     adapter_label = tk.StringVar()
-    address = tk.StringVar()
+    address = tk.StringVar(value="192.168.10.20")
     mask = tk.StringVar(value="255.255.255.0")
     network_status = tk.StringVar(
-        value="Choose Ethernet and enter a temporary IPv4 address. DHCP is preserved."
+        value="Choose Ethernet; temporary host IPv4 defaults to 192.168.10.20/24. DHCP is preserved."
     )
-    page = ttk.Frame(root, padding=12)
-    page.pack(fill="both", expand=True)
+    outer = ttk.Frame(root, padding=10)
+    outer.pack(fill="both", expand=True)
+    board = tk.StringVar(value="AMANEQ")
+    header = ttk.Frame(outer)
+    header.pack(fill="x", pady=(0, 8))
+    ttk.Label(header, text="Board").pack(side="left")
+    ttk.Combobox(
+        header,
+        textvariable=board,
+        values=("AMANEQ", "CIRASAME", "STAG"),
+        state="readonly",
+        width=18,
+    ).pack(side="left", padx=8)
+    board_status = tk.StringVar()
+    ttk.Label(header, textvariable=board_status).pack(side="left")
+    notebook = ttk.Notebook(outer)
+    notebook.pack(fill="both", expand=True)
+    page = ttk.Frame(notebook, padding=10)
+    notebook.add(page, text="Firmware")
+    adapter_boxes = []
 
     def task(name, function, changes=False, quiet=False):
         nonlocal mutation
@@ -254,7 +273,7 @@ def gui(smoke_test=False):
             firmware.set("hrtdc")
         images.delete(*images.get_children())
         for index, row in enumerate(catalog_rows):
-            if row["target"] == target.get():
+            if board.get() != "STAG" and row["target"] == target.get():
                 version = services.core.version_key(row["path"])
                 label = (
                     "v" + ".".join(format(part, "X") for part in version)
@@ -275,6 +294,12 @@ def gui(smoke_test=False):
             firmware.set(row["firmware"])
 
     def program(source):
+        if board.get() == "STAG":
+            messagebox.showerror(
+                "Firmware profile",
+                "This board's FPGA and flash profile is not yet verified. AMANEQ images cannot be used. Network tabs remain available.",
+            )
+            return
         try:
             arguments = [
                 "program",
@@ -491,13 +516,14 @@ def gui(smoke_test=False):
     target_box.grid(row=0, column=1, padx=6)
     target_box.bind("<<ComboboxSelected>>", show_catalog)
     ttk.Label(settings, text="Firmware").grid(row=0, column=2)
-    ttk.Combobox(
+    firmware_box = ttk.Combobox(
         settings,
         textvariable=firmware,
         state="readonly",
         values=("lrtdc", "hrtdc", "lrtdc-10g", "mikumari", "skeleton"),
         width=15,
-    ).grid(row=0, column=3, padx=6)
+    )
+    firmware_box.grid(row=0, column=3, padx=6)
     ttk.Label(settings, text="Loader").grid(row=1, column=0)
     ttk.Entry(settings, textvariable=loader, width=62).grid(
         row=1, column=1, columnspan=3, sticky="ew", pady=4
@@ -558,10 +584,18 @@ def gui(smoke_test=False):
         ttk.Button(
             controls, text="Restore Vivado driver", command=lambda: driver("restore")
         ).pack(side="left", padx=4)
-    if sys.platform == "darwin":
+
+    def network_widgets(parent):
+        if sys.platform != "darwin":
+            ttk.Label(
+                parent,
+                text="Temporary IP automation is available on macOS. On Linux/WSL configure the host Ethernet to 192.168.10.20/24 before using network operations.",
+                wraplength=900,
+            ).pack(anchor="w", pady=8)
+            return
         net = ttk.LabelFrame(
-            page,
-            text="Temporary Ethernet IPv4 (optional; not needed for JTAG programming)",
+            parent,
+            text="Temporary host IPv4 (preserves DHCP; restored on exit)",
             padding=8,
         )
         net.pack(fill="x", pady=6)
@@ -569,6 +603,7 @@ def gui(smoke_test=False):
             net, textvariable=adapter_label, state="readonly", width=28
         )
         adapter_box.grid(row=0, column=0, sticky="ew")
+        adapter_boxes.append(adapter_box)
         ttk.Button(net, text="Refresh", command=refresh_adapters).grid(
             row=0, column=1, padx=4
         )
@@ -585,7 +620,38 @@ def gui(smoke_test=False):
         ttk.Label(net, textvariable=network_status, wraplength=900).grid(
             row=2, column=0, columnspan=6, sticky="w"
         )
-    log = tk.Text(page, height=6, wrap="word")
+
+    network_tabs = NetworkTabs(notebook, board, ROOT, task, events, network_widgets)
+
+    def board_changed(*unused):
+        chosen = board.get()
+        if chosen == "CIRASAME":
+            target_box["values"] = ("cirasame",)
+            target.set("cirasame")
+            firmware_box["values"] = ("lrtdc", "lrtdc-10g", "skeleton")
+            if firmware.get() not in firmware_box["values"]:
+                firmware.set("lrtdc")
+        elif chosen == "AMANEQ":
+            target_box["values"] = ("amaneq-v1", "amaneq-v4", "hrtdc-mezzanine")
+            if target.get() not in target_box["values"]:
+                target.set("amaneq-v4")
+            firmware_box["values"] = (
+                "lrtdc",
+                "hrtdc",
+                "lrtdc-10g",
+                "mikumari",
+                "skeleton",
+            )
+        board_status.set(
+            "STAG firmware and clock maps require an official reference."
+            if chosen == "STAG"
+            else ""
+        )
+        show_catalog()
+
+    board.trace_add("write", board_changed)
+    board_changed()
+    log = tk.Text(outer, height=6, wrap="word")
     log.pack(fill="both", expand=True, pady=(4, 0))
 
     def poll():
@@ -624,11 +690,14 @@ def gui(smoke_test=False):
                     log.insert("end", "\n".join(failures) + "\n")
             elif kind == "adapters":
                 adapters = value
-                adapter_box["values"] = [
-                    f"{item['name']} ({item['interface']})" for item in value
-                ]
-                if adapter_label.get() not in adapter_box["values"]:
+                labels = [f"{item['name']} ({item['interface']})" for item in value]
+                for adapter_box in adapter_boxes:
+                    adapter_box["values"] = labels
+                if adapter_label.get() not in labels:
                     adapter_label.set("")
+            elif kind == "endpoint":
+                network_tabs.mode.set("Custom")
+                network_tabs.custom.set(value)
             elif kind == "lease":
                 lease = value
             elif kind == "network":
@@ -677,6 +746,21 @@ def gui(smoke_test=False):
     root.protocol("WM_DELETE_WINDOW", close)
     poll()
     if smoke_test:
+        assert len(notebook.tabs()) == 3
+        board.set("CIRASAME")
+        assert target.get() == "cirasame"
+        assert network_tabs.preset.get() == "in_125_out_500_125"
+        board.set("STAG")
+        assert "official reference" in board_status.get()
+        board.set("AMANEQ")
+        assert target.get() == "amaneq-v4"
+        for mode, expected in (("MPC", "192.168.10.16"), ("MPCX", "192.168.10.10")):
+            network_tabs.mode.set(mode)
+            assert network_tabs.custom.get() == expected
+        for tab in notebook.tabs():
+            notebook.select(tab)
+            root.update_idletasks()
+        notebook.select(0)
         root.after(300, root.destroy)
     else:
         root.after(50, lambda: scan(quiet=True))

@@ -31,7 +31,7 @@ class DesktopServices:
         return self.core.scan_cables(argparse.Namespace(loader=loader, cable="auto"))
 
     def catalog(self, force=False):
-        cache = self.data_root / "latest-images.json"
+        cache = self.data_root / "latest-images-v3.json"
         saved = None
         try:
             saved = json.loads(cache.read_text(encoding="utf-8"))
@@ -58,6 +58,10 @@ class DesktopServices:
             if name != "skeleton"
         ]
         repositories.append(("skeleton", "spadi-alliance/AMANEQ-Skeleton"))
+        repositories.extend(
+            ("cirasame:" + family, "spadi-alliance/" + repo)
+            for family, repo in self.core.CIRASAME_REPOS.items()
+        )
         with ThreadPoolExecutor(max_workers=6) as executor:
             tasks = {
                 executor.submit(self._repository_rows, family, repository): repository
@@ -114,6 +118,9 @@ class DesktopServices:
         targets = (
             ["hrtdc-mezzanine"] if family == "mezzanine" else ["amaneq-v1", "amaneq-v4"]
         )
+        if family.startswith("cirasame:"):
+            targets = ["cirasame"]
+            family = family.split(":", 1)[1]
         firmware = "hrtdc" if family == "mezzanine" else family
         for target in targets:
             for format in (["mcs", "bit"] if firmware == "skeleton" else ["mcs"]):

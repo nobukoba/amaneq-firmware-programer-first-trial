@@ -1,0 +1,13 @@
+{
+  "provenance": "Official Writer 0.4.1-2-gc782, loopback synthetic normal SiTCP, erased EEPROM, FF18/40 response only 39 bytes; 2026-10-15",
+  "synthetic_payload": "02010203040583a89c99a65454000102030405060708",
+  "runtime_before": "0001020304050607536954430c0d0e0f00000201020304057f00000100186054202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f",
+  "eeprom_before": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "eeprom_after": "ffffffffffffffffffffffffffffffff0100020102030405c0a80a100018001705b4123403e8ea6013882bf201f401f43000000000000000000000000000000083a89c99a65454000102030405060708ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "data_write_payload": "0100020102030405c0a80a100018001705b4123403e8ea6013882bf201f401f43000000000000000000000000000000083a89c99a65454000102030405060708",
+  "data_write_address": "FFFFFC10",
+  "data_write_length": 64,
+  "gui_confirmation": "Initialize EEPROM by using default values(can't read RAM)",
+  "gui_success_observed": true,
+  "protection_ack_observed": true
+}

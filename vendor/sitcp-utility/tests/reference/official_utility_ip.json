@@ -1,0 +1,69 @@
+{
+  "source": "Official SiTCP Utility 0.9.0 GUI / localhost synthetic device",
+  "eeprom_before": "5a5b58595e5f5c5d5253505156575455004202060708090ac000020a464744457a7b78797e7f7c7d72737071767774756a6b68696e6f6c6d6263606166676465",
+  "runtime_before": "0001020304050607536954430c0d0e0f00000201020304057f00000100186054202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+  "eeprom_writes": [
+    {
+      "n": 5,
+      "time": 1791827292.884598,
+      "command": 128,
+      "address": "FFFFFCFF",
+      "length": 1,
+      "payload": "00",
+      "reply_status": 136,
+      "reply": "00"
+    },
+    {
+      "n": 6,
+      "time": 1791827292.8886006,
+      "command": 128,
+      "address": "FFFFFC00",
+      "length": 17,
+      "payload": "5a5b58595e5f5c5d525350515657545500",
+      "reply_status": 136,
+      "reply": "5a5b58595e5f5c5d525350515657545500"
+    },
+    {
+      "n": 7,
+      "time": 1791827292.8915975,
+      "command": 128,
+      "address": "FFFFFC18",
+      "length": 40,
+      "payload": "c000022a464744457a7b78797e7f7c7d72737071767774756a6b68696e6f6c6d6263606166676465",
+      "reply_status": 136,
+      "reply": "c000022a464744457a7b78797e7f7c7d72737071767774756a6b68696e6f6c6d6263606166676465"
+    },
+    {
+      "n": 8,
+      "time": 1791827292.8976102,
+      "command": 128,
+      "address": "FFFFFCFF",
+      "length": 1,
+      "payload": "ff",
+      "reply_status": 136,
+      "reply": "ff"
+    }
+  ],
+  "runtime_writes": [
+    {
+      "n": 11,
+      "time": 1791827532.1890595,
+      "command": 128,
+      "address": "FFFFFF00",
+      "length": 17,
+      "payload": "0001020304050607536954430c0d0e0f00",
+      "reply_status": 136,
+      "reply": "0001020304050607536954430c0d0e0f00"
+    },
+    {
+      "n": 12,
+      "time": 1791827532.1934547,
+      "command": 128,
+      "address": "FFFFFF18",
+      "length": 40,
+      "payload": "7f00000100186054202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+      "reply_status": 136,
+      "reply": "7f00000100186054202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"
+    }
+  ]
+}

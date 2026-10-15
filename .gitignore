@@ -20,3 +20,10 @@ runtime/
 dist/
 build/
 *.spec
+
+# Native builds of vendored source are local only.
+vendor/sitcp-utility/src/mpc-mpcx-ip-command
+vendor/sitcp-utility/src/mpc-mpcx-ip-reader
+vendor/sitcp-utility/src/mpc-mpcx-ip-writer
+vendor/sitcp-utility/src/sitcp-sitcpxg-ip-reader
+vendor/sitcp-utility/src/sitcp-sitcpxg-ip-writer

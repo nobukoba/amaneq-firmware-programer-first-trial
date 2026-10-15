@@ -1,0 +1,13 @@
+{
+  "provenance": "Official SiTCP MPC Writer XG 0.4.1-2-gc782; loopback simulator; synthetic data only; 2026-10-13",
+  "official_executable_sha256": "0c01fa932830f74fc996dda56f81cea8c3fa11cd222d1b6f8f6212c0294294a4",
+  "generation": "xg",
+  "synthetic_payload": "7ba094919e4c4c000102030405060708020102030405",
+  "runtime_before": "0001020304050607585443500c0d0e0f00000201020304057f00000100186054202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f",
+  "eeprom_before": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "eeprom_after": "7ba094919e4c4c00010203040506070800000201020304057f00000100186054202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "data_write_address": "FFFFFC00",
+  "data_write_length": 80,
+  "data_write_payload": "7ba094919e4c4c00010203040506070800000201020304057f00000100186054202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f",
+  "note": "XG optional extension reads were rejected by the simulator; FC50..FC7F remained unchanged."
+}
