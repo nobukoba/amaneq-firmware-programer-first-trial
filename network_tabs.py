@@ -8,7 +8,7 @@ import tkinter as tk
 import network_operations as operations
 
 
-def bind_horizontal_scroll(entry):
+def bind_horizontal_scroll(entry, explicit_navigation=False):
     def scroll(event):
         delta = getattr(event, "delta", 0)
         direction = -1 if delta > 0 or getattr(event, "num", None) == 4 else 1
@@ -21,25 +21,39 @@ def bind_horizontal_scroll(entry):
     def reveal_cursor(event=None):
         entry.after_idle(lambda: entry.xview(entry.index("insert")))
 
-    def navigate(event):
+    def navigate(event, key=None):
+        key = key or event.keysym
         index = entry.index("insert")
-        if event.keysym == "Home":
+        if key == "Home":
             index = 0
-        elif event.keysym == "End":
+        elif key == "End":
             index = len(entry.get())
         else:
-            index += -1 if event.keysym == "Left" else 1
+            index += -1 if key == "Left" else 1
         index = max(0, min(len(entry.get()), index))
+        anchor = (
+            entry.index("anchor")
+            if entry.selection_present()
+            else entry.index("insert")
+        )
         entry.icursor(index)
-        if not event.state & 1:
+        if event.state & 1:
+            entry.selection_range(min(anchor, index), max(anchor, index))
+        else:
             entry.selection_clear()
         entry.xview(index)
         return "break"
 
     entry.bind("<KeyRelease>", reveal_cursor, add="+")
     entry.bind("<ButtonRelease-1>", reveal_cursor, add="+")
-    if str(entry.cget("state")) == "readonly":
-        for event in ("<Home>", "<End>", "<Left>", "<Right>"):
+    readonly = str(entry.cget("state")) == "readonly"
+    if readonly or explicit_navigation:
+        for key in ("Home", "End"):
+            move = lambda event, key=key: navigate(event, key)
+            entry.bind(f"<{key}>", move)
+            entry.bind(f"<<Path{key}>>", move)
+    if readonly:
+        for event in ("<Left>", "<Right>"):
             entry.bind(event, navigate)
 
 
@@ -185,7 +199,7 @@ class NetworkTabs:
         ttk.Label(file_box, text="MPC / MPCX file:").pack(side="left", padx=(0, 8))
         self.file_entry = ttk.Entry(file_box, textvariable=self.file)
         self.file_entry.pack(side="left", fill="x", expand=True)
-        bind_horizontal_scroll(self.file_entry)
+        bind_horizontal_scroll(self.file_entry, explicit_navigation=True)
         ttk.Button(file_box, text="Choose file", command=self.choose_file).pack(
             side="left", padx=6
         )

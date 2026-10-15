@@ -1262,17 +1262,17 @@ def gui(smoke_test=False):
         assert network_tabs.file.get() == "editable-" + previous_path
         network_tabs.file_entry.delete(0, 9)
         assert network_tabs.file.get() == previous_path
-        network_tabs.file_entry.event_generate("<End>")
+        # Virtual navigation avoids depending on macOS application activation.
+        network_tabs.file_entry.event_generate("<<PathEnd>>", state=0)
         root.update()
-        assert network_tabs.file_entry.index("insert") == len(network_tabs.file.get())
+        assert network_tabs.file_entry.index("insert") == len(network_tabs.file.get()), (
+            network_tabs.file_entry.index("insert"), root.focus_get()
+        )
         assert network_tabs.file_entry.xview()[0] > 0
-        network_tabs.file_entry.event_generate("<Home>")
+        network_tabs.file_entry.event_generate("<<PathHome>>", state=0)
         root.update()
         assert network_tabs.file_entry.index("insert") == 0
         assert network_tabs.file_entry.xview()[0] == 0
-        network_tabs.file_entry.event_generate("<Right>")
-        root.update()
-        assert network_tabs.file_entry.index("insert") == 1
         network_tabs.file.set("")
         for endpoint in ("192.168.10.16", "192.168.10.10", "192.168.2.5"):
             network_tabs.clock_target.set(endpoint)
