@@ -105,6 +105,8 @@ def main():
     args = parser.parse_args()
     if sys.platform != "darwin":
         parser.error("Build on macOS; Windows/Linux cannot produce this .app.")
+    import certifi
+
     architecture = platform.machine()
     if architecture not in ("arm64", "x86_64"):
         parser.error(f"Unsupported architecture: {architecture}")
@@ -149,6 +151,15 @@ def main():
         formula_prefix = Path(capture("brew", "--prefix", info["name"])).resolve()
         for recipe in (formula_prefix / ".brew").glob("*.rb"):
             shutil.copy2(recipe, notices / recipe.name)
+    certificate_distribution = importlib.metadata.distribution("certifi")
+    (notices / "certifi-version.txt").write_text(
+        certificate_distribution.version + "\n", encoding="utf-8"
+    )
+    for entry in certificate_distribution.files or []:
+        if "LICENSE" in str(entry).upper():
+            original = Path(certificate_distribution.locate_file(entry))
+            if original.is_file():
+                shutil.copy2(original, notices / ("certifi-" + original.name))
     distribution = importlib.metadata.distribution("pyinstaller")
     for entry in distribution.files or []:
         if "/licenses/" in str(entry).replace("\\", "/"):
@@ -190,6 +201,7 @@ def main():
         "--add-data",
         f"{notices}:THIRD-PARTY",
     ]
+    command += ["--add-data", f"{certifi.where()}:runtime"]
     for name in hidden_imports(root / "amaneq-firmware-programer.py"):
         command += ["--hidden-import", name]
     command.append(str(root / "amaneq-firmware-app.py"))
@@ -198,7 +210,7 @@ def main():
     info_path = app / "Contents/Info.plist"
     info = plistlib.loads(info_path.read_bytes())
     info.update(
-        {"LSMinimumSystemVersion": "15.0", "CFBundleShortVersionString": "0.1.0"}
+        {"LSMinimumSystemVersion": "15.0", "CFBundleShortVersionString": "0.2.0"}
     )
     info_path.write_bytes(plistlib.dumps(info))
     for name in (
@@ -228,6 +240,7 @@ def main():
         env=environment,
         timeout=45,
     )
+    subprocess.run(["codesign", "--verify", "--deep", "--strict", str(app)], check=True)
     archive = output / f"{NAME}-macos-{architecture}.zip"
     subprocess.run(
         [

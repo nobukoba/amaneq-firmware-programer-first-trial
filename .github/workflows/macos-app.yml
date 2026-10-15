@@ -5,6 +5,9 @@ on:
     paths:
       - '*app.py'
       - 'windows_usb.py'
+      - 'desktop_services.py'
+      - 'macos_network.py'
+      - 'test_desktop_services.py'
       - 'amaneq-firmware-programer.py'
       - 'build-macos-app.py'
       - '.github/workflows/macos-app.yml'
@@ -34,9 +37,9 @@ jobs:
       - name: Install build dependencies
         run: |
           brew install openfpgaloader
-          python -m pip install pyinstaller==6.22.3
+          python -m pip install pyinstaller==6.22.3 certifi
       - name: Offline tests
-        run: python -m unittest test_amaneq_firmware_programer test_windows_usb test_macos_app -v
+        run: python -m unittest test_amaneq_firmware_programer test_windows_usb test_macos_app test_desktop_services -v
       - name: Build and smoke-test app with bundled loader
         run: python build-macos-app.py
       - uses: actions/upload-artifact@v4
@@ -47,3 +50,25 @@ jobs:
             dist/macos/*.sha256
           if-no-files-found: error
           retention-days: 30
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: amaneq-firmware-programer-macos-*
+          path: archives
+      - name: Publish tested application downloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          tag="macos-preview-v0.2.0-${GITHUB_SHA:0:7}"
+          if gh release view "$tag" --repo "$REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" --repo "$REPOSITORY" --clobber archives/*/*.zip archives/*/*.sha256
+          else
+            gh release create "$tag" --repo "$REPOSITORY" --target "$GITHUB_SHA" --prerelease --title "macOS desktop preview 0.2.0" --notes "macOS 15+. One window, automatic cable scan and latest firmware list. Selectable Ethernet adapter and optional temporary IPv4 alias, preserving DHCP. Includes Python/Tk/openFPGALoader and CA certificates. Ad-hoc signed, not notarized. Physical HS3 programming and user-adapter IP changes remain unverified; network lifecycle is mock-tested." archives/*/*.zip archives/*/*.sha256
+          fi

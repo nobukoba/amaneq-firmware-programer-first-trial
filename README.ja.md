@@ -20,15 +20,17 @@ cd amaneq-firmware-programer-first-trial
 
 ## macOSデスクトップ版
 
-2026-10-15のビルド・起動確認済みダウンロード（GitHubログインが必要・保存期間30日）：[Apple Silicon / arm64](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/38740982476/artifacts/11975467864) | [Intel / x86_64](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/38740982476/artifacts/11976337397)
+[Releases](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases)の最新macOS desktop previewでAssetsを開き、Apple Silicon（arm64）用かIntel（x86_64）用のZIPを取得してください。ZIPを展開し、amaneq-firmware-programer.appをApplicationsへ移します。macOS 15以降が対象です。Python・Tk・openFPGALoader・HTTPS用CA証明書を同梱し、利用時のHomebrew導入は不要です。
 
-macOS用ビルドは、macOS 15以降向けにApple Silicon（arm64）用とIntel（x86_64）用のZIPを別々に作ります。[Build macOS desktop app](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/workflows/macos-app.yml)で成功した実行を開き、対応するArtifactを取得してください。ArtifactのZIPと、その中のアプリ用ZIPを順に展開し、amaneq-firmware-programer.appをApplicationsへ移します。Python・Tk・openFPGALoaderを同梱するため、利用時のHomebrew導入は不要です。
+0.2版は1画面です。起動時にケーブルをスキャンし、既定ブランチの最新版ファームウェア名を表示します。対象を選び、一覧の行かローカルファイルを選択します。検出が1本なら自動選択し、複数ならシリアルを明示選択します。機種不明のFT232Hは実物がHS3であることを確認してください。Program selected imageは表示したコミット・パスを固定して使用します。Program latest MCS (auto)ではメザニンの自動判定を維持します。BITはSkeletonのみです。キャッシュには確認日時を表示し、通信失敗を最新版確認済みとは扱いません。5分以内の一覧は再利用でき、Refresh image listで強制更新できます。
 
-HS3を直接接続し、タブの上にあるチェック欄で実物の機種を確認してから、検出・書き込みを行います。Windows用USBドライバーボタンは無効です。取得ファイル・SPIブリッジのキャッシュ・ログは、署名済みアプリの外の~/Library/Application Support/AMANEQ/へ保存します。フラッシュのバックアップを保管してください。試作版はアドホック署名で、Appleの公証はありません。起動を止められた場合は配布元を確認し、プライバシーとセキュリティの「このまま開く」を使ってください。OS全体の保護設定を無効化しません。ビルドではGUI起動・同梱ローダー実行・機器未接続での検出・Homebrewへの実行時依存がないことを確認します。MacとHS3による実機書き込みは未確認です。
+必要に応じてEthernetアダプターを選び、Mac側のIPv4アドレスとマスクを入力してApply temporarilyを押します。DHCP・DNS・ゲートウェイの設定を保持し、固定IPを一時追加します。基板側のIP変更ではなく、USB/JTAG書き込みにも不要です。macOSの管理者許可が必要です。Restore networkか通常終了で追加IPだけを解除し、別プロセスも終了・クラッシュを監視します。既存IPの流用や他インターフェースとのサブネット重複は拒否します。解除に失敗したらエラーと記録を残し、追加IPは再起動でも消えます。起動時にネットワーク設定は変更しません。PC側のIP指定はなかったため入力欄は空にしています。
+
+取得物・ログ・一時設定の記録は~/Library/Application Support/AMANEQ/へ保存します。Apple公証のないアドホック署名版なので、初回はプライバシーとセキュリティの「このまま開く」が必要な場合があります。USBドライバー設定が不要なことと、Appleの配布時検査は別です。OS全体の保護は無効化しません。利用者のアダプターでの一時IP設定とHS3実機書き込みは未確認で、新しいネットワーク処理は模擬テストで確認します。
 
 ## Windowsデスクトップ版：アプリ内でUSBを設定する
 
-Windows x64向けの試作画面に、Windows HS3 USBタブを追加しました。Refresh USB（再検出）、Use openFPGALoader (WinUSB)（切り替え）、Restore Vivado driver（元に戻す）を使えます。ローカルのデスクトップ版にはPython・openFPGALoader・libwdi・cygpathを同梱でき、WSL・usbipdやZadigの別画面での手作業を省けます。ソース版は下記で起動します。ドライバー変更にはFOR_DEVELOPERSの手順でビルドしたx64版`runtime/libwdi.dll`が必要です。バイナリはGit管理しません。
+Windows x64向けの試作画面に、1画面にケーブル自動検出とUse WinUSB（切り替え）、Restore Vivado driver（元に戻す）ボタンを配置しました。ローカルのデスクトップ版にはPython・openFPGALoader・libwdi・cygpathを同梱でき、WSL・usbipdやZadigの別画面での手作業を省けます。ソース版は下記で起動します。ドライバー変更にはFOR_DEVELOPERSの手順でビルドしたx64版`runtime/libwdi.dll`が必要です。バイナリはGit管理しません。
 
 表示されたシリアルを選び、実物がHS3であることをチェックします。ドライバー変更時はHS3/FT232Hを1本だけ接続し、Vivadoなどケーブルを使うアプリを閉じてください。変更ボタンを押して確認し、Windowsの管理者許可に応答します。切り替え前に元のFTDIBUSパッケージをエクスポートし、ハッシュ付きで保存します。復元は保存済みパッケージとWindowsのデバイス導入APIを使い、共有ドライバーパッケージは削除しません。復旧情報と処理結果を含む`%LOCALAPPDATA%/AMANEQ/usb-drivers/`を保管してください。INFはハードウェアIDで一致するため、後から接続した別のFT232Hにも影響する可能性があります。シリアル指定だけではパッケージの割り当てを分離できません。
 
