@@ -18,6 +18,18 @@ cd amaneq-firmware-programer-first-trial
 ./amaneq-firmware-programer.py --help
 ```
 
+## Windows desktop app: USB setup in the app
+
+The native Windows x64 desktop preview adds a Windows HS3 USB tab with Refresh USB, Use openFPGALoader (WinUSB), and Restore Vivado driver. A local desktop bundle can include Python, openFPGALoader, libwdi and cygpath, so WSL/usbipd and a separate Zadig window are unnecessary. Source users can start the window with the command below; driver switching requires the matching x64 `runtime/libwdi.dll` built as described in FOR_DEVELOPERS. Binaries are not tracked in this repository.
+
+Select the displayed serial and confirm the physical cable is an HS3. For driver changes, connect exactly one HS3/FT232H and close Vivado/cable applications. Press the explicit driver button, confirm the operation and approve Windows UAC. The app exports the original FTDIBUS package and hashes it before switching. Restore uses that saved package with Windows' device-installation API; it does not delete a shared driver package. Preserve `%LOCALAPPDATA%/AMANEQ/usb-drivers/`, including recovery information and operation results. A driver INF matches hardware IDs, so another FT232H may be affected when reconnected; serial selection alone cannot isolate a package binding.
+
+Firmware programming remains a separate explicit action. The GUI currently presets HS3 and offers latest MCS or a local BIT/MCS; only Skeleton permits BIT. The existing CLI retains all repository/history/URL options and Xilinx cable paths. Linux/macOS do not use these Windows driver buttons. Driver operations are mock-tested, DLL resources and device matching were checked read-only, and the GUI was started. Switching and restoring through this new app have not yet been exercised on hardware.
+
+```powershell
+python amaneq-firmware-app.py
+```
+
 ## Windows: copy and paste setup for WSL2
 
 Use an existing Ubuntu WSL2 distribution. If absent, run `wsl --install -d Ubuntu` in Administrator PowerShell, reboot if requested, launch Ubuntu and finish its initial user setup. Then open Administrator PowerShell and paste the first block below. Review the downloaded script before running it. Setup installs usbipd-win on Windows and git/Python/openFPGALoader/usbutils in Ubuntu, reloads packaged udev rules, adds the default Linux user to plugdev, and clones the repository under the WSL user's home. It never programs the board. Installer dialogs may appear; handle a requested reboot and rerun Setup. `-Distribution` defaults to `Ubuntu`; another existing apt-based WSL2 distribution can be specified. No automatic WSL1 conversion or reboot is performed.

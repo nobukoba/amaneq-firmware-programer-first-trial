@@ -15,3 +15,8 @@ tools/
 *.pcap
 *.pcapng
 .env
+
+runtime/
+dist/
+build/
+*.spec

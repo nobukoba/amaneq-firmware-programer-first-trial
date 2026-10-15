@@ -18,6 +18,18 @@ cd amaneq-firmware-programer-first-trial
 ./amaneq-firmware-programer.py --help
 ```
 
+## Windowsデスクトップ版：アプリ内でUSBを設定する
+
+Windows x64向けの試作画面に、Windows HS3 USBタブを追加しました。Refresh USB（再検出）、Use openFPGALoader (WinUSB)（切り替え）、Restore Vivado driver（元に戻す）を使えます。ローカルのデスクトップ版にはPython・openFPGALoader・libwdi・cygpathを同梱でき、WSL・usbipdやZadigの別画面での手作業を省けます。ソース版は下記で起動します。ドライバー変更にはFOR_DEVELOPERSの手順でビルドしたx64版`runtime/libwdi.dll`が必要です。バイナリはGit管理しません。
+
+表示されたシリアルを選び、実物がHS3であることをチェックします。ドライバー変更時はHS3/FT232Hを1本だけ接続し、Vivadoなどケーブルを使うアプリを閉じてください。変更ボタンを押して確認し、Windowsの管理者許可に応答します。切り替え前に元のFTDIBUSパッケージをエクスポートし、ハッシュ付きで保存します。復元は保存済みパッケージとWindowsのデバイス導入APIを使い、共有ドライバーパッケージは削除しません。復旧情報と処理結果を含む`%LOCALAPPDATA%/AMANEQ/usb-drivers/`を保管してください。INFはハードウェアIDで一致するため、後から接続した別のFT232Hにも影響する可能性があります。シリアル指定だけではパッケージの割り当てを分離できません。
+
+ファームウェアの書き込みは別の明示操作です。GUIはHS3を指定し、最新版MCSかローカルBIT/MCSを扱います。BITはSkeletonのみです。既存CLIの履歴・URL・リポジトリ指定やXilinx経路も残っています。Linux/macOSはWindows用ドライバーボタンを使いません。変更処理の模擬テスト、DLL内の資源・実機との照合の読み取り確認、GUI起動を確認しました。新しいアプリを通じた実際の切り替え・復元は未確認です。
+
+```powershell
+python amaneq-firmware-app.py
+```
+
 ## Windows：コピペでWSL2を準備する
 
 既存のUbuntu WSL2を使います。未導入なら管理者PowerShellで`wsl --install -d Ubuntu`を実行し、要求されたら再起動して、Ubuntuの初回ユーザー設定を完了してください。その後、管理者PowerShellで最初のブロックを貼り付けます。ダウンロードしたスクリプトは実行前に確認してください。SetupはWindowsにusbipd-win、Ubuntuにgit・Python・openFPGALoader・usbutilsを導入し、同梱udevルールを再読み込みし、既定のLinuxユーザーをplugdevグループに追加して、WSLユーザーのホームへリポジトリを取得します。基板への書き込みはしません。インストーラーの画面や再起動要求が出たら対応し、Setupを再実行してください。`-Distribution`の既定値は`Ubuntu`で、他の既存apt系WSL2環境も指定できます。WSL1の変換や再起動は自動実行しません。
