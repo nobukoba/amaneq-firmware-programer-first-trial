@@ -704,7 +704,10 @@ def gui(smoke_test=False):
         ).pack(side="left", padx=4)
 
     def toggle_temporary():
-        if not temporary_enabled.get() and mutation in ("Temporary IPv4", "Restore IPv4"):
+        if not temporary_enabled.get() and mutation in (
+            "Temporary IPv4",
+            "Restore IPv4",
+        ):
             temporary_enabled.set(True)
             return
         if not temporary_enabled.get() and lease:
@@ -841,8 +844,11 @@ def gui(smoke_test=False):
                     adapter_box["values"] = labels
                 if adapter_label.get() not in labels:
                     adapter_label.set("")
+            elif kind == "ping":
+                field, host, status = value
+                field.ping_result(host, status)
             elif kind == "endpoint":
-                network_tabs.writer_target.set(value)
+                network_tabs.ip_target.set(value)
             elif kind == "lease":
                 lease = value
             elif kind == "network":
@@ -895,7 +901,12 @@ def gui(smoke_test=False):
     root.protocol("WM_DELETE_WINDOW", close)
     poll()
     if smoke_test:
-        assert len(notebook.tabs()) == 3
+        assert [notebook.tab(tab, "text") for tab in notebook.tabs()] == [
+            "Firmware",
+            "MPC / MPCX",
+            "IP",
+            "Jitter Cleaner",
+        ]
         board.set("CIRASAME")
         assert target.get() == "cirasame"
         assert network_tabs.preset.get() == "in_125_out_500_125"

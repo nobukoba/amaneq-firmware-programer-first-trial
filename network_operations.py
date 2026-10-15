@@ -3,6 +3,8 @@
 import ipaddress
 from pathlib import Path
 import shutil
+import subprocess
+import sys
 import socket
 import struct
 
@@ -136,11 +138,46 @@ def license_kind(path):
             for value in decoded
         )
 
+    # Upstream type 2 is normal SiTCP/MPC; type 1 is SiTCP-XG/MPCX.
     if valid_tag(6, 0x34):
-        return "MPCX"
-    if valid_tag(0, 0x2C):
         return "MPC"
+    if valid_tag(0, 0x2C):
+        return "MPCX"
     raise ValueError("File contents do not match the referenced MPC/MPCX format.")
+
+
+def ping_command(host, platform=None):
+    host = ipv4(host)
+    platform = sys.platform if platform is None else platform
+    if platform == "win32":
+        return ["ping", "-n", "2", "-w", "1000", host]
+    return [
+        "/sbin/ping" if platform == "darwin" else "ping",
+        "-n",
+        "-c",
+        "2",
+        "-W",
+        "1000" if platform == "darwin" else "1",
+        host,
+    ]
+
+
+def ping_target(host):
+    command = ping_command(host)
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=8,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except subprocess.TimeoutExpired:
+        return False, f"Ping to {host} timed out after 8 seconds."
+    except OSError as error:
+        raise RuntimeError(f"Could not run ping: {error}") from error
+    return result.returncode == 0, result.stdout.strip() + "\n" + result.stderr.strip()
 
 
 def utility_path(root, name):
@@ -161,6 +198,8 @@ def utility_command(
     host = ipv4(host)
     if action == "Read":
         return [utility_path(root, "mpc-mpcx-ip-reader"), host]
+    if action == "Read IP":
+        return [utility_path(root, "sitcp-sitcpxg-ip-reader"), host]
     if action == "Write IP only":
         return [
             utility_path(root, "sitcp-sitcpxg-ip-writer"),

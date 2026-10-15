@@ -69,9 +69,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
         run: |
-          tag="macos-preview-v0.4.0-${GITHUB_SHA:0:7}"
+          tag="macos-preview-v0.5.0-${GITHUB_SHA:0:7}"
           if gh release view "$tag" --repo "$REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$tag" --repo "$REPOSITORY" --clobber archives/*/*.zip archives/*/*.sha256
           else
-            gh release create "$tag" --repo "$REPOSITORY" --target "$GITHUB_SHA" --prerelease --title "macOS desktop preview 0.4.0" --notes "macOS 15+. Simplified three-tab UI: filtered newest-first firmware list, editable GitHub URL, GitHub/local source and one Program image button. File-content MPC/MPCX detection first, Target IP presets and opt-in temporary host controls. AMANEQ/CIRASAME firmware; STAG maps pending. Selectable Ethernet and temporary host 192.168.10.20/24; MPCX .10, MPC .16 or custom. Bundled pinned SiTCP commands with verification. Includes Python/Tk/openFPGALoader and CA certificates. Ad-hoc signed, not notarized. Physical HS3, clock/license writes and user-adapter IP changes remain unverified; network lifecycle is mock-tested." archives/*/*.zip archives/*/*.sha256
+            gh release create "$tag" --repo "$REPOSITORY" --target "$GITHUB_SHA" --prerelease --title "macOS desktop preview 0.5.0" --notes "macOS 15+. Tabs: Firmware, MPC/MPCX, IP, Jitter Cleaner. Correct MPC/MPCX labels verified against official synthetic fixtures. One-line Target IP with asynchronous Ping. Separate IP-only reader/writer; opt-in temporary host settings. Bundled Python/Tk/openFPGALoader and four pinned SiTCP helpers. Ad-hoc signed, not notarized. STAG firmware/clock maps pending; new GUI hardware operations remain physically unverified." archives/*/*.zip archives/*/*.sha256
           fi

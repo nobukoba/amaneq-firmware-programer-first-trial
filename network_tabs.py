@@ -26,11 +26,14 @@ def scrollable_tab(notebook):
 
 
 class TargetAddress:
-    def __init__(self, parent):
+    def __init__(self, parent, task, events):
+        self.task = task
+        self.events = events
         self.choice = tk.StringVar(value="192.168.10.10")
         self.custom = tk.StringVar(value="192.168.10.10")
-        box = ttk.LabelFrame(parent, text="Target IP", padding=8)
+        box = ttk.Frame(parent)
         box.pack(fill="x", pady=6)
+        ttk.Label(box, text="Target IP").pack(side="left", padx=(0, 8))
         selector = ttk.Combobox(
             box,
             textvariable=self.choice,
@@ -40,14 +43,46 @@ class TargetAddress:
         )
         selector.pack(side="left")
         self.entry = ttk.Entry(box, textvariable=self.custom, width=20)
-        ttk.Label(box, text="Mask 255.255.255.0 | UDP 4660 | timeout 3 s").pack(
-            side="right"
-        )
+        self.ping_button = ttk.Button(box, text="Ping", command=self.ping)
+        self.ping_button.pack(side="left", padx=8)
+        self.ping_status = tk.StringVar()
+        ttk.Label(box, textvariable=self.ping_status).pack(side="left")
         self.choice.trace_add("write", lambda *unused: self.show_custom())
+        self.custom.trace_add("write", lambda *unused: self.ping_status.set(""))
+
+    def ping(self):
+        try:
+            host = self.value()
+        except ValueError as error:
+            messagebox.showerror("Target IP", str(error))
+            return
+        if self.ping_button.instate(["disabled"]):
+            return
+        self.ping_button.state(["disabled"])
+        self.ping_status.set("Pinging...")
+
+        def operation():
+            try:
+                success, output = operations.ping_target(host)
+                status = "Reply received" if success else "No ICMP reply"
+            except Exception as error:
+                status, output = "Ping failed", str(error)
+            self.events.put(("log", f"Ping {host}: {status}\n{output}"))
+            return "ping", (self, host, status)
+
+        self.task(f"Ping {id(self)} {host}", operation)
+
+    def ping_result(self, host, status):
+        self.ping_button.state(["!disabled"])
+        current = (
+            self.custom.get() if self.choice.get() == "Custom" else self.choice.get()
+        )
+        self.ping_status.set(status if current.strip() == host else "")
 
     def show_custom(self):
+        self.ping_status.set("")
         if self.choice.get() == "Custom":
-            self.entry.pack(side="left", padx=8)
+            self.entry.pack(side="left", padx=8, before=self.ping_button)
         else:
             self.entry.pack_forget()
 
@@ -80,8 +115,10 @@ class NetworkTabs:
         self.status = tk.StringVar()
         clock_page, self.clock = scrollable_tab(notebook)
         writer_page, self.writer = scrollable_tab(notebook)
-        notebook.add(clock_page, text="set_cdce62002")
-        notebook.add(writer_page, text="MPC / MPCX / IP")
+        ip_page, self.ip = scrollable_tab(notebook)
+        notebook.add(writer_page, text="MPC / MPCX")
+        notebook.add(ip_page, text="IP")
+        notebook.add(clock_page, text="Jitter Cleaner")
         file_box = ttk.LabelFrame(self.writer, text="MPC / MPCX file", padding=8)
         file_box.pack(fill="x", pady=(0, 6))
         ttk.Entry(file_box, textvariable=self.file, state="readonly").pack(
@@ -91,14 +128,15 @@ class NetworkTabs:
             side="left", padx=6
         )
         self.file_status = tk.StringVar(
-            value="No file selected. IP-only operations do not require a license file."
+            value="No file selected. Choose an MPC/MPCX file to detect its type."
         )
         ttk.Label(self.writer, textvariable=self.file_status, wraplength=900).pack(
             anchor="w"
         )
-        self.clock_target = TargetAddress(self.clock)
-        self.writer_target = TargetAddress(self.writer)
-        for tab in (self.clock, self.writer):
+        self.clock_target = TargetAddress(self.clock, task, events)
+        self.writer_target = TargetAddress(self.writer, task, events)
+        self.ip_target = TargetAddress(self.ip, task, events)
+        for tab in (self.clock, self.writer, self.ip):
             network_widgets(tab)
         ttk.Label(self.clock, textvariable=self.status, wraplength=900).pack(
             anchor="w", pady=8
@@ -127,8 +165,8 @@ class NetworkTabs:
             variable=self.initialize,
         ).pack(anchor="w")
         ip_box = ttk.LabelFrame(
-            self.writer,
-            text="New device IP (optional for license writes; required for IP-only writes)",
+            self.ip,
+            text="New device IP",
             padding=8,
         )
         ip_box.pack(fill="x", pady=8)
@@ -140,13 +178,26 @@ class NetworkTabs:
         ).pack(side="left", padx=10)
         actions = ttk.Frame(self.writer)
         actions.pack(fill="x", pady=10)
-        for name in ("Read", "Check", "Write MPC/MPCX", "Write IP only"):
+        for name in ("Read", "Check", "Write MPC/MPCX"):
             ttk.Button(
                 actions, text=name, command=lambda action=name: self.utility(action)
             ).pack(side="left", padx=4)
         ttk.Label(
             self.writer,
             text="Files are validated by content and checked against device generation. Writes use the referenced utility's readback verification. No automatic Clear or reset is performed.",
+            wraplength=900,
+        ).pack(anchor="w")
+        ip_actions = ttk.Frame(self.ip)
+        ip_actions.pack(fill="x", pady=10)
+        ttk.Button(
+            ip_actions, text="Read IP", command=lambda: self.utility("Read IP")
+        ).pack(side="left", padx=4)
+        ttk.Button(
+            ip_actions, text="Write IP", command=lambda: self.utility("Write IP only")
+        ).pack(side="left", padx=4)
+        ttk.Label(
+            self.ip,
+            text="IP writes preserve MPC/MPCX license data. Saved EEPROM IP is the default; changing the current IP reconnects and verifies the new endpoint.",
             wraplength=900,
         ).pack(anchor="w")
         board.trace_add("write", lambda *unused: self.refresh_board())
@@ -165,7 +216,9 @@ class NetworkTabs:
             return
         self.file.set(path)
         self.file_status.set(f"Detected from contents: {kind}")
-        self.writer_target.set("192.168.10.10" if kind == "MPCX" else "192.168.10.16")
+        address = "192.168.10.10" if kind == "MPCX" else "192.168.10.16"
+        self.writer_target.set(address)
+        self.ip_target.set(address)
 
     def refresh_board(self):
         if self.board.get() == "CIRASAME":
@@ -203,26 +256,32 @@ class NetworkTabs:
 
     def utility(self, action):
         try:
-            host = self.writer_target.value()
+            ip_operation = action in ("Read IP", "Write IP only")
+            selected_target = self.ip_target if ip_operation else self.writer_target
+            host = selected_target.value()
+            selected_file = "" if ip_operation else self.file.get()
+            selected_new_ip = self.new_ip.get() if ip_operation else ""
             command = operations.utility_command(
                 self.root_path,
                 host,
                 action,
-                self.file.get(),
-                self.new_ip.get(),
-                self.current.get(),
-                self.initialize.get(),
+                selected_file,
+                selected_new_ip,
+                self.current.get() if ip_operation else False,
+                self.initialize.get() if not ip_operation else False,
             )
         except Exception as error:
             messagebox.showerror("Network operation", str(error))
             return
         changes = action.startswith("Write")
         new_endpoint = (
-            self.new_ip.get().strip() if self.current.get() and changes else ""
+            selected_new_ip.strip()
+            if self.current.get() and ip_operation and changes
+            else ""
         )
         if changes and not messagebox.askyesno(
             action,
-            f"{self.board.get()} at {host}\n{action}\nFile: {self.file.get() or '(none)'}\nNew IP: {self.new_ip.get() or '(unchanged)'}\nContinue?",
+            f"{self.board.get()} at {host}\n{action}\nFile: {selected_file or '(none)'}\nNew IP: {selected_new_ip or '(unchanged)'}\nContinue?",
         ):
             return
 

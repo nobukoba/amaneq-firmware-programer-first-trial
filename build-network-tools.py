@@ -6,7 +6,12 @@ from pathlib import Path
 import shutil
 import subprocess
 
-NAMES = ("mpc-mpcx-ip-writer", "mpc-mpcx-ip-reader", "sitcp-sitcpxg-ip-writer")
+NAMES = (
+    "mpc-mpcx-ip-writer",
+    "mpc-mpcx-ip-reader",
+    "sitcp-sitcpxg-ip-writer",
+    "sitcp-sitcpxg-ip-reader",
+)
 
 
 def build(root, output, compiler="c++"):

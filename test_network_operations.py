@@ -134,6 +134,36 @@ class NetworkOperationTests(unittest.TestCase):
             core.filename_family("cirasame-strtdc10g-v2.3.mcs"), "lrtdc-10g"
         )
 
+    def test_license_labels_match_official_synthetic_payloads(self):
+        import json
+
+        reference = Path(__file__).parent / "vendor/sitcp-utility/tests/reference"
+        with tempfile.TemporaryDirectory() as directory:
+            for fixture, expected in (
+                ("official_mpc_erased.json", "MPC"),
+                ("official_mpcx_erased.json", "MPCX"),
+            ):
+                payload = bytes.fromhex(
+                    json.loads((reference / fixture).read_text())["synthetic_payload"]
+                )
+                path = Path(directory) / "misleading-extension.bin"
+                path.write_bytes(payload)
+                self.assertEqual(ops.license_kind(path), expected)
+
+    def test_ping_platform_flags_and_timeout(self):
+        self.assertIn("1000", ops.ping_command("192.168.10.10", "darwin"))
+        self.assertEqual(
+            ops.ping_command("192.168.10.16", "linux")[-2:], ["1", "192.168.10.16"]
+        )
+        self.assertIn("-n", ops.ping_command("192.168.10.10", "win32"))
+        with patch.object(
+            ops.subprocess, "run", side_effect=ops.subprocess.TimeoutExpired("ping", 8)
+        ) as run:
+            success, output = ops.ping_target("192.168.10.10")
+            self.assertFalse(success)
+            self.assertIn("timed out", output)
+            self.assertEqual(run.call_count, 1)
+
     def test_rbcp_rejects_bus_error_short_ack_and_timeout_without_retry(self):
         for reply in (b"", struct.pack("!BBBBI", 255, 0xC9, 1, 1, 0xB2000000) + b"\0"):
             client = MagicMock()
