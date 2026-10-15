@@ -46,6 +46,18 @@ def scrollable_tab(notebook):
     canvas.bind(
         "<Configure>", lambda event: canvas.itemconfigure(window, width=event.width)
     )
+
+    def redraw():
+        if not canvas.winfo_exists() or not canvas.winfo_ismapped():
+            return
+        canvas.itemconfigure(window, width=max(1, canvas.winfo_width()))
+        canvas.configure(scrollregion=canvas.bbox("all"))
+        canvas.event_generate("<Expose>", when="tail")
+        body.event_generate("<Expose>", when="tail")
+
+    outer.refresh_content = redraw
+    canvas.bind("<Map>", lambda unused: canvas.after_idle(redraw), add="+")
+    outer.bind("<Map>", lambda unused: outer.after_idle(redraw), add="+")
     return outer, body
 
 

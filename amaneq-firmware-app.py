@@ -168,7 +168,8 @@ def gui(smoke_test=False):
     root = tk.Tk()
     root.title("AMANEQ Firmware Programer")
     root.geometry("1000x740")
-    root.minsize(880, 680)
+    root.minsize(720, 480)
+    root.resizable(True, True)
     events = queue.Queue()
     services = DesktopServices(ROOT, app_data_directory())
     found_cables, catalog_rows, adapters = [], [], []
@@ -217,8 +218,10 @@ def gui(smoke_test=False):
     ).pack(side="left", padx=8)
     board_status = tk.StringVar()
     ttk.Label(header, textvariable=board_status).pack(side="left")
-    notebook = ttk.Notebook(outer)
-    notebook.pack(fill="both", expand=True)
+    split = ttk.Panedwindow(outer, orient="vertical")
+    split.pack(fill="both", expand=True)
+    notebook = ttk.Notebook(split)
+    split.add(notebook, weight=3)
     page = ttk.Frame(notebook, padding=10)
     notebook.add(page, text="Firmware")
     adapter_boxes = []
@@ -883,8 +886,132 @@ def gui(smoke_test=False):
 
     board.trace_add("write", board_changed)
     board_changed()
-    log = tk.Text(outer, height=6, wrap="word")
-    log.pack(fill="both", expand=True, pady=(4, 0))
+    messages = ttk.Frame(split, padding=(0, 4))
+    split.add(messages, weight=1)
+    message_controls = ttk.Frame(messages)
+    message_controls.pack(fill="x")
+    ttk.Label(message_controls, text="Messages").pack(side="left")
+    follow_messages = tk.BooleanVar(value=True)
+    expanded_messages = False
+    previous_sash = None
+    follow_box = ttk.Checkbutton(
+        message_controls,
+        text="Follow latest",
+        variable=follow_messages,
+        command=lambda: log.see("end") if follow_messages.get() else None,
+    )
+    follow_box.pack(side="left", padx=10)
+    log_body = ttk.Frame(messages)
+    log_body.pack(fill="both", expand=True)
+    log = tk.Text(log_body, height=6, wrap="word")
+    log_scrollbar = ttk.Scrollbar(log_body, orient="vertical")
+    log_scrollbar.pack(side="right", fill="y")
+    log.pack(side="left", fill="both", expand=True)
+    log.configure(yscrollcommand=log_scrollbar.set)
+
+    def scroll_messages(*arguments):
+        follow_messages.set(False)
+        log.yview(*arguments)
+
+    log_scrollbar.configure(command=scroll_messages)
+    for event in (
+        "<MouseWheel>",
+        "<Button-4>",
+        "<Button-5>",
+        "<Prior>",
+        "<Home>",
+        "<Up>",
+    ):
+        log.bind(event, lambda unused: follow_messages.set(False), add="+")
+
+    def latest_messages():
+        follow_messages.set(True)
+        log.see("end")
+
+    def first_messages():
+        follow_messages.set(False)
+        log.yview_moveto(0)
+
+    ttk.Button(message_controls, text="First", command=first_messages).pack(
+        side="left", padx=3
+    )
+    ttk.Button(message_controls, text="Latest", command=latest_messages).pack(
+        side="left", padx=3
+    )
+
+    def expand_messages():
+        nonlocal expanded_messages, previous_sash
+        root.update_idletasks()
+        if expanded_messages:
+            split.sashpos(
+                0,
+                (
+                    previous_sash
+                    if previous_sash is not None
+                    else max(100, split.winfo_height() - 160)
+                ),
+            )
+        else:
+            previous_sash = split.sashpos(0)
+            split.sashpos(0, max(80, int(split.winfo_height() * 0.2)))
+        expanded_messages = not expanded_messages
+        expand_button.configure(text="Restore" if expanded_messages else "Expand")
+
+    expand_button = ttk.Button(message_controls, text="Expand", command=expand_messages)
+    expand_button.pack(side="right")
+
+    def redraw_selected():
+        if not root.winfo_exists():
+            return
+        root.update_idletasks()
+        selected = root.nametowidget(notebook.select())
+        refresh = getattr(selected, "refresh_content", None)
+        if refresh:
+            refresh()
+        selected.event_generate("<Expose>", when="tail")
+        notebook.event_generate("<Expose>", when="tail")
+
+    def tab_changed(unused=None):
+        root.after_idle(redraw_selected)
+        root.after(25, redraw_selected)
+
+    notebook.bind("<<NotebookTabChanged>>", tab_changed, add="+")
+
+    zoom = tk.StringVar(value="100%")
+    zoom_controls = ttk.Frame(header)
+    zoom_controls.pack(side="right")
+    ttk.Label(zoom_controls, text="UI size").pack(side="left", padx=5)
+    zoom_box = ttk.Combobox(
+        zoom_controls,
+        textvariable=zoom,
+        values=("75%", "90%", "100%", "110%", "125%", "150%"),
+        width=6,
+        state="readonly",
+    )
+    zoom_box.pack(side="left")
+    fonts = {
+        name: tkfont.nametofont(name)
+        for name in tkfont.names(root)
+        if name.startswith("Tk")
+    }
+    fonts[str(action_font)] = action_font
+    base_sizes = {name: font.cget("size") for name, font in fonts.items()}
+
+    def resize_ui(unused=None):
+        scale = int(zoom.get().removesuffix("%")) / 100
+        for name, font in fonts.items():
+            original = base_sizes[name]
+            font.configure(
+                size=max(1, round(abs(original) * scale)) * (-1 if original < 0 else 1)
+            )
+        style.configure(
+            "Treeview",
+            rowheight=tkfont.nametofont("TkDefaultFont").metrics("linespace") + 6,
+        )
+        redraw_selected()
+
+    zoom_box.bind("<<ComboboxSelected>>", resize_ui)
+    root.after_idle(lambda: split.sashpos(0, max(200, split.winfo_height() - 160)))
 
     def poll():
         nonlocal mutation, found_cables, catalog_rows, adapters, lease, closing
@@ -968,7 +1095,8 @@ def gui(smoke_test=False):
                     messagebox.showerror(name, text)
             elif kind == "log":
                 log.insert("end", value + "\n")
-            log.see("end")
+            if follow_messages.get():
+                log.see("end")
         root.after(100, poll)
 
     def close():
@@ -1062,6 +1190,24 @@ def gui(smoke_test=False):
             notebook.select(tab)
             root.update_idletasks()
         notebook.select(0)
+        root.update_idletasks()
+        expand_messages()
+        expand_messages()
+        zoom.set("125%")
+        resize_ui()
+        zoom.set("100%")
+        resize_ui()
+        for index in range(100):
+            log.insert("end", f"Synthetic message {index}\n")
+        first_messages()
+        assert not follow_messages.get()
+        position = log.yview()[0]
+        events.put(("log", "Synthetic message while viewing history"))
+        poll()
+        root.update_idletasks()
+        assert log.yview()[0] == position
+        latest_messages()
+        assert follow_messages.get()
         root.after(300, root.destroy)
     else:
         root.after(50, lambda: scan(quiet=True))
