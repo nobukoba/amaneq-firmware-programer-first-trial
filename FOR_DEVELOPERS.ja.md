@@ -128,3 +128,5 @@ Desktop 0.8：New device IPのラベル・入力・runtimeチェック欄を1行
 Desktop 0.9：周波数ラベルとプリセットを1行とし、クロックのボタン名はApplyです。Program image、Write MPC/MPCX、Write IP、Applyは共通Action.TButtonを使い、通常サイズ・通常余白の太字にします。Program imageを全幅に広げたり大型化したりしません。
 
 Desktop 0.10：履歴とは以前の画面ではなく過去メッセージと確認できました。起動中のログを保持し、ホイール・スクロールバー・履歴キーでは自動see(end)を停止します。First/Latest/Follow latestで表示位置を操作し、新規出力で過去の閲覧位置を奪いません。Messagesを縦Panedwindowの可変領域とし、境界ドラッグとExpand/Restoreを追加します。ウィンドウは最小720x480で拡縮し、UI sizeは元のサイズを保持して既存の名前付きフォントと太字アクションフォントを拡縮します。タブ切替のidleと25ms後に配置・Expose、Map時にCanvas内枠を再配置します。起動確認だけで利用者のMacの描画不具合を目視検証済みと扱いません。画面遷移の履歴は不要です。
+
+Desktop 0.11：通常のクロック画面から実装寄りのHULレジスタマップ説明を削除し、Select input / output frequencies of CDCE62002 chip (MHz):とします。STAG未対応の条件付き表示は維持し、正式なCDCE62002表記を使います。以前のタブ順指定はJitter Cleanerが重複し回答がないため、末尾をIPと解釈し、Firmware / Jitter Cleaner / MPC/MPCX / IPとする前提を明示します。HULは公式ガイドのHadron Universal Logicです。ライブラリの出所は開発資料に記載し、通常の操作欄へ混ぜません。

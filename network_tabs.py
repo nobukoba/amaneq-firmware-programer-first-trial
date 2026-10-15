@@ -152,9 +152,9 @@ class NetworkTabs:
         clock_page, self.clock = scrollable_tab(notebook)
         writer_page, self.writer = scrollable_tab(notebook)
         ip_page, self.ip = scrollable_tab(notebook)
+        notebook.add(clock_page, text="Jitter Cleaner")
         notebook.add(writer_page, text="MPC / MPCX")
         notebook.add(ip_page, text="IP")
-        notebook.add(clock_page, text="Jitter Cleaner")
         file_box = ttk.Frame(self.writer)
         file_box.pack(fill="x", pady=(0, 6))
         ttk.Label(file_box, text="MPC / MPCX file").pack(side="left", padx=(0, 8))
@@ -175,20 +175,22 @@ class NetworkTabs:
         self.ip_target = TargetAddress(self.ip, task, events)
         for tab in (self.clock, self.writer, self.ip):
             network_widgets(tab)
-        ttk.Label(self.clock, textvariable=self.status, wraplength=900).pack(
-            anchor="w", pady=8
+        self.status_label = ttk.Label(
+            self.clock, textvariable=self.status, wraplength=900
         )
         frequencies = ttk.Frame(self.clock)
+        self.frequency_row = frequencies
         frequencies.pack(fill="x", pady=8)
-        ttk.Label(frequencies, text="Select input / output frequencies (MHz):").pack(
-            side="left", padx=(0, 8)
-        )
+        ttk.Label(
+            frequencies,
+            text="Select input / output frequencies of CDCE62002 chip (MHz):",
+        ).pack(side="left", padx=(0, 8))
         ttk.Combobox(
             frequencies,
             textvariable=self.preset,
             values=tuple(operations.PRESETS),
             state="readonly",
-            width=35,
+            width=28,
         ).pack(side="left")
         ttk.Checkbutton(
             self.clock,
@@ -271,8 +273,12 @@ class NetworkTabs:
         self.status.set(
             "STAG clock register map is not verified; clock writes are unavailable."
             if self.board.get() == "STAG"
-            else "HUL CDCE62002 register map. Confirm the selected board runs compatible firmware."
+            else ""
         )
+        if self.status.get():
+            self.status_label.pack(anchor="w", pady=8, before=self.frequency_row)
+        else:
+            self.status_label.pack_forget()
 
     def configure_clock(self):
         if self.board.get() == "STAG":

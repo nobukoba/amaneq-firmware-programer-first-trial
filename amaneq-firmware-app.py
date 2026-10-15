@@ -1118,9 +1118,9 @@ def gui(smoke_test=False):
     if smoke_test:
         assert [notebook.tab(tab, "text") for tab in notebook.tabs()] == [
             "Firmware",
+            "Jitter Cleaner",
             "MPC / MPCX",
             "IP",
-            "Jitter Cleaner",
         ]
         board.set("CIRASAME")
         assert target.get() == "cirasame"
