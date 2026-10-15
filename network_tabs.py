@@ -7,14 +7,70 @@ import tkinter as tk
 import network_operations as operations
 
 
+def scrollable_tab(notebook):
+    outer = ttk.Frame(notebook)
+    canvas = tk.Canvas(outer, highlightthickness=0)
+    scrollbar = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
+    canvas.configure(yscrollcommand=scrollbar.set)
+    scrollbar.pack(side="right", fill="y")
+    canvas.pack(side="left", fill="both", expand=True)
+    body = ttk.Frame(canvas, padding=10)
+    window = canvas.create_window((0, 0), window=body, anchor="nw")
+    body.bind(
+        "<Configure>", lambda unused: canvas.configure(scrollregion=canvas.bbox("all"))
+    )
+    canvas.bind(
+        "<Configure>", lambda event: canvas.itemconfigure(window, width=event.width)
+    )
+    return outer, body
+
+
+class TargetAddress:
+    def __init__(self, parent):
+        self.choice = tk.StringVar(value="192.168.10.10")
+        self.custom = tk.StringVar(value="192.168.10.10")
+        box = ttk.LabelFrame(parent, text="Target IP", padding=8)
+        box.pack(fill="x", pady=6)
+        selector = ttk.Combobox(
+            box,
+            textvariable=self.choice,
+            values=("192.168.10.10", "192.168.10.16", "Custom"),
+            state="readonly",
+            width=20,
+        )
+        selector.pack(side="left")
+        self.entry = ttk.Entry(box, textvariable=self.custom, width=20)
+        ttk.Label(box, text="Mask 255.255.255.0 | UDP 4660 | timeout 3 s").pack(
+            side="right"
+        )
+        self.choice.trace_add("write", lambda *unused: self.show_custom())
+
+    def show_custom(self):
+        if self.choice.get() == "Custom":
+            self.entry.pack(side="left", padx=8)
+        else:
+            self.entry.pack_forget()
+
+    def value(self):
+        return operations.ipv4(
+            self.custom.get() if self.choice.get() == "Custom" else self.choice.get()
+        )
+
+    def set(self, address):
+        address = operations.ipv4(address)
+        if address in ("192.168.10.10", "192.168.10.16"):
+            self.choice.set(address)
+        else:
+            self.custom.set(address)
+            self.choice.set("Custom")
+
+
 class NetworkTabs:
     def __init__(self, notebook, board, root_path, task, events, network_widgets):
         self.board = board
         self.root_path = root_path
         self.task = task
         self.events = events
-        self.mode = tk.StringVar(value="MPCX")
-        self.custom = tk.StringVar(value="192.168.10.10")
         self.preset = tk.StringVar(value=next(iter(operations.PRESETS)))
         self.persist = tk.BooleanVar(value=True)
         self.file = tk.StringVar()
@@ -22,41 +78,27 @@ class NetworkTabs:
         self.current = tk.BooleanVar(value=False)
         self.initialize = tk.BooleanVar(value=False)
         self.status = tk.StringVar()
-        self.clock = ttk.Frame(notebook, padding=10)
-        self.writer = ttk.Frame(notebook, padding=10)
-        notebook.add(self.clock, text="set_cdce62002")
-        notebook.add(self.writer, text="MPC / MPCX / IP")
+        clock_page, self.clock = scrollable_tab(notebook)
+        writer_page, self.writer = scrollable_tab(notebook)
+        notebook.add(clock_page, text="set_cdce62002")
+        notebook.add(writer_page, text="MPC / MPCX / IP")
+        file_box = ttk.LabelFrame(self.writer, text="MPC / MPCX file", padding=8)
+        file_box.pack(fill="x", pady=(0, 6))
+        ttk.Entry(file_box, textvariable=self.file, state="readonly").pack(
+            side="left", fill="x", expand=True
+        )
+        ttk.Button(file_box, text="Choose file", command=self.choose_file).pack(
+            side="left", padx=6
+        )
+        self.file_status = tk.StringVar(
+            value="No file selected. IP-only operations do not require a license file."
+        )
+        ttk.Label(self.writer, textvariable=self.file_status, wraplength=900).pack(
+            anchor="w"
+        )
+        self.clock_target = TargetAddress(self.clock)
+        self.writer_target = TargetAddress(self.writer)
         for tab in (self.clock, self.writer):
-            connection = ttk.LabelFrame(
-                tab, text="Target connection (UDP 4660; timeout 3 s)", padding=8
-            )
-            connection.pack(fill="x", pady=5)
-            ttk.Label(connection, text="Device mode").grid(row=0, column=0)
-            mode_box = ttk.Combobox(
-                connection,
-                textvariable=self.mode,
-                values=("MPCX", "MPC", "Custom"),
-                state="readonly",
-                width=12,
-            )
-            mode_box.grid(row=0, column=1, padx=6)
-            ttk.Label(connection, text="Target IP").grid(row=0, column=2)
-            ip_entry = ttk.Entry(connection, textvariable=self.custom, width=18)
-            ip_entry.grid(row=0, column=3, padx=6)
-            ttk.Label(connection, text="Subnet mask: 255.255.255.0").grid(
-                row=0, column=4
-            )
-
-            def selected(unused=None, entry=ip_entry):
-                if self.mode.get() != "Custom":
-                    self.custom.set(operations.endpoint(self.mode.get(), ""))
-                entry.configure(
-                    state="normal" if self.mode.get() == "Custom" else "readonly"
-                )
-
-            mode_box.bind("<<ComboboxSelected>>", selected)
-            self.mode.trace_add("write", lambda *unused, callback=selected: callback())
-            selected()
             network_widgets(tab)
         ttk.Label(self.clock, textvariable=self.status, wraplength=900).pack(
             anchor="w", pady=8
@@ -73,24 +115,12 @@ class NetworkTabs:
         ).pack(anchor="w", pady=8)
         ttk.Checkbutton(
             self.clock,
-            text="Copy verified settings to CDCE62002 EEPROM (hul-common-lib default)",
+            text="Save clock settings for the next power-on",
             variable=self.persist,
         ).pack(anchor="w")
         ttk.Button(
             self.clock, text="Apply clock setting", command=self.configure_clock
         ).pack(anchor="w", pady=10)
-        file_box = ttk.LabelFrame(
-            self.writer, text="MPC / MPCX license file", padding=8
-        )
-        file_box.pack(fill="x", pady=8)
-        ttk.Entry(file_box, textvariable=self.file).pack(
-            side="left", fill="x", expand=True
-        )
-        ttk.Button(
-            file_box,
-            text="Choose file",
-            command=self.choose_file,
-        ).pack(side="left")
         ttk.Checkbutton(
             self.writer,
             text="Initialize XG EEPROM from current settings before license programming",
@@ -134,8 +164,8 @@ class NetworkTabs:
             messagebox.showerror("MPC/MPCX file", str(error))
             return
         self.file.set(path)
-        if self.mode.get() != "Custom":
-            self.mode.set(kind)
+        self.file_status.set(f"Detected from contents: {kind}")
+        self.writer_target.set("192.168.10.10" if kind == "MPCX" else "192.168.10.16")
 
     def refresh_board(self):
         if self.board.get() == "CIRASAME":
@@ -151,7 +181,7 @@ class NetworkTabs:
             messagebox.showerror("Unsupported clock map", self.status.get())
             return
         try:
-            host = operations.endpoint(self.mode.get(), self.custom.get())
+            host = self.clock_target.value()
         except ValueError as error:
             messagebox.showerror("Target IP", str(error))
             return
@@ -173,7 +203,7 @@ class NetworkTabs:
 
     def utility(self, action):
         try:
-            host = operations.endpoint(self.mode.get(), self.custom.get())
+            host = self.writer_target.value()
             command = operations.utility_command(
                 self.root_path,
                 host,

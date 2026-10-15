@@ -120,7 +120,10 @@ def configure_clock(host, preset, persist=False, client_factory=Rbcp):
 
 
 def license_kind(path):
-    data = Path(path).read_bytes()
+    path = Path(path)
+    if path.stat().st_size != 22:
+        raise ValueError("MPC/MPCX files must contain exactly 22 bytes.")
+    data = path.read_bytes()
     if len(data) != 22:
         raise ValueError("MPC/MPCX files must contain exactly 22 bytes.")
 

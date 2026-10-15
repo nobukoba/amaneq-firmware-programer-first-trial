@@ -68,6 +68,43 @@ class DesktopTests(unittest.TestCase):
             self.assertEqual(rows[0]["name"], "cached.mcs")
             self.assertEqual(len(failures), 9)
 
+    def test_profile_image_list_filters_versions_and_caches_custom_repository(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            service = desktop.DesktopServices(ROOT, Path(tmp))
+            github = Mock()
+            github.repo = "example/custom-firmware"
+            github.get.return_value = {"default_branch": "main"}
+            github.revision.return_value = "b" * 40
+            github.files.return_value = [
+                {"path": f"mcs/amaneq-4-strlrtdc-v2.{i:X}.mcs"} for i in range(12)
+            ] + [
+                {"path": "mcs/amaneq-1-strlrtdc-v3.0.mcs"},
+                {"path": "mcs/amaneq-4-strhrtdc-v3.0.mcs"},
+                {"path": "bit/amaneq-4-strlrtdc-v3.0.bit"},
+            ]
+            with patch.object(service.core, "GitHub", return_value=github):
+                rows, status, errors = service.image_list(
+                    github.repo, "amaneq-v4", "lrtdc"
+                )
+                self.assertEqual(len(rows), 10)
+                self.assertEqual(rows[0]["name"], "amaneq-4-strlrtdc-v2.B.mcs")
+                self.assertTrue(
+                    all(
+                        row["repo"] == github.repo and row["commit"] == "b" * 40
+                        for row in rows
+                    )
+                )
+                self.assertFalse(errors)
+                github.get.side_effect = OSError("offline")
+                cached, status, errors = service.image_list(
+                    github.repo, "amaneq-v4", "lrtdc", force=True
+                )
+                self.assertEqual(cached, rows)
+                self.assertIn("not refreshed", status)
+                self.assertIn("offline", errors[0])
+                with self.assertRaises(OSError):
+                    service.image_list(github.repo, "amaneq-v1", "lrtdc", force=True)
+
 
 class NetworkTests(unittest.TestCase):
     def test_ethernet_picker_excludes_wifi_and_bridge(self):

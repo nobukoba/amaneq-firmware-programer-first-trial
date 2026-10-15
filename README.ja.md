@@ -22,7 +22,7 @@ cd amaneq-firmware-programer-first-trial
 
 [Releases](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases)の最新macOS desktop previewでAssetsを開き、Apple Silicon（arm64）用かIntel（x86_64）用のZIPを取得してください。ZIPを展開し、amaneq-firmware-programer.appをApplicationsへ移します。macOS 15以降が対象です。Python・Tk・openFPGALoader・HTTPS用CA証明書を同梱し、利用時のHomebrew導入は不要です。
 
-0.3版はAMANEQ / CIRASAME / STAG選択の下に3タブを配置します。起動時にケーブルをスキャンし、既定ブランチの最新版ファームウェア名を表示します。対象を選び、一覧の行かローカルファイルを選択します。検出が1本なら自動選択し、複数ならシリアルを明示選択します。機種不明のFT232Hは実物がHS3であることを確認してください。Program selected imageは表示したコミット・パスを固定して使用します。Program latest MCS (auto)ではメザニンの自動判定を維持します。BITはSkeletonのみです。キャッシュには確認日時を表示し、通信失敗を最新版確認済みとは扱いません。5分以内の一覧は再利用でき、Refresh image listで強制更新できます。
+0.4版はAMANEQ / CIRASAME / STAG選択の下に3タブを配置します。Firmwareはケーブルを自動検出し、TargetとFirmwareに一致するGitHub一覧を新しい順で表示し、先頭を自動選択します。GitHub listかLocal fileを選び、大きなProgram imageボタンひとつで書き込みます。GitHubリポジトリURLは編集でき、セッション中は対象ごとの編集値を保持します。既定ブランチの一致するファイルを最大10件表示し、Refresh listで再取得します。Loader欄と別のlatest-MCSボタンは廃止しました。既知のケーブルが1本なら自動選択し、複数ならシリアル選択、機種不明のFT232Hなら実物がHS3であることの確認が必要です。キャッシュ・通信失敗を明示し、表示したコミットとパスを固定して取得します。BITはSkeletonだけです。
 
 必要に応じてEthernetアダプターを選び、Mac側のIPv4アドレスとマスクを入力してApply temporarilyを押します。DHCP・DNS・ゲートウェイの設定を保持し、固定IPを一時追加します。基板側のIP変更ではなく、USB/JTAG書き込みにも不要です。macOSの管理者許可が必要です。Restore networkか通常終了で追加IPだけを解除し、別プロセスも終了・クラッシュを監視します。既存IPの流用や他インターフェースとのサブネット重複は拒否します。解除に失敗したらエラーと記録を残し、追加IPは再起動でも消えます。起動時にネットワーク設定は変更しません。PC側の一時IPは192.168.10.20/24を初期値とし、編集できます。
 
@@ -32,9 +32,9 @@ cd amaneq-firmware-programer-first-trial
 
 上部で基板を選び、Firmware、set_cdce62002、MPC / MPCX / IPを切り替えます。上流の正式コマンド名はset_cdce62002です。CIRASAMEは専用の公式lrtdc・lrtdc-10g・Skeletonから取得し、AMANEQのイメージを除外します。クロック初期値はin_125_out_500_125です。STAGも標準SiTCP操作向けに選択できますが、公式の基板・レジスタ資料が提示されるまでファームウェアとクロックの書き込みを止めます。
 
-ネットワーク用2タブでEthernet選択とPC側一時IP（192.168.10.20、マスク255.255.255.0）を共有します。macOSではApply temporarily / Restore networkで適用・解除します。Device modeはMPCXなら接続先192.168.10.10、MPCなら192.168.10.16、Customなら任意IPです。マスクは255.255.255.0です。プリセット切替は接続先の選択で、基板への書き込みではありません。ファイル選択時は内容からMPC/MPCXを判別し、Custom以外なら接続先プリセットを更新します。
+クロックのタブにデバイスモード欄はありません。Target IPは192.168.10.10、192.168.10.16、Customから選びます。ライセンス/IPのタブは最上部でファイルを選び、内容からMPC/MPCXを判別・表示してTarget IPをそれぞれ.16/.10へ設定します。その下にTarget IP、一時IPの順で配置します。Enable temporary host IPをチェックすると、共通のEthernet・PC側IP欄が表示されます。初期状態は無効・非表示で、PC側初期値は192.168.10.20、マスク255.255.255.0です。チェックだけでは設定せず、macOSでApply temporarilyを押して一時追加します。追加中にチェックを外すと解除し、失敗した場合は欄を残します。Target IPの選択だけでは基板へ書き込みません。
 
-クロックはhul-common-libの6プリセットから選び、Apply clock settingを押します。レジスタの読み戻し一致後にEEPROMへコピーします。上流と同様、EEPROM保存は初期状態で有効です。一時変更だけならチェックを外します。保存コマンドへの応答は電源再投入後の保持確認とは区別してください。
+クロックはhul-common-libの6プリセットから選び、Apply clock settingを押します。レジスタの読み戻し一致後にEEPROMへコピーします。Save clock settings for the next power-onは、確認したクロック設定をチップ内EEPROMへ保存して次回電源投入時に使う設定です。上流と同様初期状態で有効で、一時変更だけなら外します。保存コマンドへの応答は電源再投入後の保持確認とは区別してください。
 
 ライセンスはファイルを選び、読み取り専用のCheckかWrite MPC/MPCXを使います。Readで現在値と保存値を表示します。New device IPはライセンス書き込み時は任意、Write IP onlyでは必須です。IPのみの変更はライセンスを保持します。初期状態はEEPROM IPの変更で、current/runtime IPを明示選択すると動作中IPを変更します。動作中IPの変更成功時だけ接続先も更新します。Initialize XG EEPROMは初期状態で無効です。Clear/resetは設けていません。書き込みは確認後に行い、参照元の世代照合・書き込み待機・読み戻し検証を保持します。
 

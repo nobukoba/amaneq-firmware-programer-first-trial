@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import sys
 import time
+import uuid
 
 
 def load_core(root, data_root):
@@ -108,6 +109,92 @@ class DesktopServices:
             + (" (partial results)" if errors else ""),
             errors,
         )
+
+    def default_repository(self, target, firmware):
+        if target == "cirasame":
+            return "spadi-alliance/" + self.core.CIRASAME_REPOS[firmware]
+        if target == "hrtdc-mezzanine":
+            return "AMANEQ-official/" + self.core.REPOS["mezzanine"]
+        return (
+            "spadi-alliance/" if firmware == "skeleton" else "AMANEQ-official/"
+        ) + self.core.REPOS[firmware]
+
+    def image_list(self, repository, target, firmware, force=False):
+        import hashlib
+
+        github = self.core.GitHub(repository.strip())
+        key = hashlib.sha256(f"{github.repo}:{target}:{firmware}".encode()).hexdigest()
+        cache = self.data_root / "image-lists" / (key + ".json")
+        saved = None
+        try:
+            saved = json.loads(cache.read_text(encoding="utf-8"))
+            if (
+                not isinstance(saved.get("rows"), list)
+                or not isinstance(saved.get("timestamp"), (float, int))
+                or not isinstance(saved.get("checked_at"), str)
+            ):
+                saved = None
+        except (OSError, ValueError, AttributeError):
+            pass
+        if saved and not force and time.time() - saved["timestamp"] < 300:
+            return saved["rows"], f"Cached list checked {saved['checked_at']}", []
+        try:
+            branch = github.get("")["default_branch"]
+            commit = github.revision(branch)
+            entries = github.files(commit)
+            rows = []
+            for image_format in (["mcs", "bit"] if firmware == "skeleton" else ["mcs"]):
+                args = argparse.Namespace(
+                    target=target, firmware=firmware, format=image_format, flash="auto"
+                )
+                for item in self.core.candidates(entries, args):
+                    inferred_family = self.core.filename_family(item["path"])
+                    if inferred_family is not None and inferred_family != firmware:
+                        continue
+                    rows.append(
+                        {
+                            "target": target,
+                            "firmware": firmware,
+                            "format": image_format,
+                            "repo": github.repo,
+                            "commit": commit,
+                            "path": item["path"],
+                            "name": Path(item["path"]).name,
+                        }
+                    )
+            rows.sort(
+                key=lambda row: (
+                    self.core.version_key(row["path"]),
+                    row["format"] == "mcs",
+                    row["path"],
+                ),
+                reverse=True,
+            )
+            rows = rows[:10]
+            checked = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            temporary = cache.with_name(cache.name + "." + uuid.uuid4().hex + ".tmp")
+            temporary.write_text(
+                json.dumps(
+                    {"rows": rows, "timestamp": time.time(), "checked_at": checked}
+                ),
+                encoding="utf-8",
+            )
+            temporary.replace(cache)
+            return (
+                rows,
+                f"Default-branch images checked {checked}; newest first (up to 10)"
+                + (". No matching firmware images found." if not rows else ""),
+                [],
+            )
+        except Exception as error:
+            if saved:
+                return (
+                    saved["rows"],
+                    f"Offline/cached list from {saved['checked_at']} (not refreshed)",
+                    [str(error)],
+                )
+            raise
 
     def _repository_rows(self, family, repository):
         github = self.core.GitHub(repository)

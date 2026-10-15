@@ -181,6 +181,16 @@ def gui(smoke_test=False):
     target = tk.StringVar(value="amaneq-v4")
     firmware = tk.StringVar(value="lrtdc")
     filename = tk.StringVar()
+    source_mode = tk.StringVar(value="GitHub")
+    repository_url = tk.StringVar()
+    repository_overrides = {}
+    active_profile = None
+    catalog_request = 0
+    refresh_after = None
+    changing_repository = False
+    last_cable_serial = None
+    temporary_enabled = tk.BooleanVar(value=False)
+    temporary_panels = []
     confirmed_hs3 = tk.BooleanVar(value=False)
     cable_status = tk.StringVar(value="Scanning connected cables...")
     catalog_status = tk.StringVar(value="Loading latest firmware images...")
@@ -266,14 +276,30 @@ def gui(smoke_test=False):
         )
 
     def refresh_catalog(force=True, quiet=False):
-        task("Firmware list", lambda: ("catalog", services.catalog(force)), quiet=quiet)
+        nonlocal catalog_request
+        catalog_request += 1
+        request = catalog_request
+        images.delete(*images.get_children())
+        if source_mode.get() != "GitHub" or board.get() == "STAG":
+            return
+        chosen_repository = repository_url.get().strip()
+        chosen_target, chosen_firmware = target.get(), firmware.get()
+        catalog_status.set("Loading matching firmware images...")
+
+        def operation():
+            result = services.image_list(
+                chosen_repository, chosen_target, chosen_firmware, force
+            )
+            return "catalog", (request, result)
+
+        task(f"Firmware list #{request}", operation, quiet=quiet)
 
     def show_catalog(*unused):
-        if target.get() == "hrtdc-mezzanine":
-            firmware.set("hrtdc")
         images.delete(*images.get_children())
+        if board.get() == "STAG":
+            return
         for index, row in enumerate(catalog_rows):
-            if board.get() != "STAG" and row["target"] == target.get():
+            if row["target"] == target.get() and row["firmware"] == firmware.get():
                 version = services.core.version_key(row["path"])
                 label = (
                     "v" + ".".join(format(part, "X") for part in version)
@@ -284,16 +310,72 @@ def gui(smoke_test=False):
                     "",
                     "end",
                     iid=str(index),
-                    values=(row["firmware"], row["format"].upper(), label, row["name"]),
+                    values=(row["format"].upper(), label, row["name"]),
                 )
+        visible = images.get_children()
+        if visible:
+            images.selection_set(visible[0])
+            images.focus(visible[0])
+            images.see(visible[0])
 
-    def pick_image(unused=None):
-        selection = images.selection()
-        if selection:
-            row = catalog_rows[int(selection[0])]
-            firmware.set(row["firmware"])
+    def schedule_refresh(*unused):
+        nonlocal refresh_after, catalog_request
+        if changing_repository:
+            return
+        catalog_request += 1
+        images.delete(*images.get_children())
+        if active_profile:
+            repository_overrides[active_profile] = repository_url.get()
+        if refresh_after:
+            root.after_cancel(refresh_after)
+        catalog_status.set("Repository changed. Loading matching images...")
+        if not smoke_test:
+            refresh_after = root.after(
+                600, lambda: refresh_catalog(force=False, quiet=True)
+            )
 
-    def program(source):
+    def profile_changed(*unused):
+        nonlocal active_profile, changing_repository, catalog_request
+        catalog_request += 1
+        if target.get() == "hrtdc-mezzanine":
+            firmware.set("hrtdc")
+            firmware_box["values"] = ("hrtdc",)
+        elif board.get() == "AMANEQ":
+            firmware_box["values"] = (
+                "lrtdc",
+                "hrtdc",
+                "lrtdc-10g",
+                "mikumari",
+                "skeleton",
+            )
+        active_profile = (target.get(), firmware.get())
+        if board.get() == "STAG":
+            show_catalog()
+            return
+        changing_repository = True
+        repository_url.set(
+            repository_overrides.get(
+                active_profile,
+                "https://github.com/" + services.default_repository(*active_profile),
+            )
+        )
+        changing_repository = False
+        refresh_catalog(force=False, quiet=True) if not smoke_test else show_catalog()
+
+    def change_source(*unused):
+        nonlocal catalog_request
+        catalog_request += 1
+        online.pack_forget()
+        local.pack_forget()
+        if source_mode.get() == "GitHub":
+            online.pack(fill="both", expand=True, before=program_area)
+            if not smoke_test:
+                refresh_catalog(force=False, quiet=True)
+        else:
+            local.pack(fill="x", pady=12, before=program_area)
+
+    def program():
+        source = "selected" if source_mode.get() == "GitHub" else "local"
         if board.get() == "STAG":
             messagebox.showerror(
                 "Firmware profile",
@@ -341,6 +423,15 @@ def gui(smoke_test=False):
                     "--format",
                     row["format"],
                 ]
+                expected_repo = services.core.GitHub(repository_url.get().strip()).repo
+                if (
+                    row["repo"] != expected_repo
+                    or row["target"] != target.get()
+                    or row["firmware"] != firmware.get()
+                ):
+                    raise ValueError(
+                        "The image list is stale. Refresh the selected repository/profile first."
+                    )
                 if row["target"] == "hrtdc-mezzanine":
                     variant = next(
                         (
@@ -350,15 +441,9 @@ def gui(smoke_test=False):
                         ),
                         None,
                     )
-                    if not variant:
-                        raise ValueError(
-                            "Use Program latest MCS (auto) to probe and select the mezzanine variant."
-                        )
-                    arguments += ["--flash", variant]
+                    if variant:
+                        arguments += ["--flash", variant]
                 description = row["name"] + "\nCommit: " + row["commit"][:12]
-            elif source == "latest":
-                arguments += ["--latest", "--format", "mcs"]
-                description = f"Latest {target.get()} / {firmware.get()} MCS (resolved before download)"
             else:
                 if not filename.get():
                     raise ValueError("Choose a local BIT/MCS file first.")
@@ -488,21 +573,38 @@ def gui(smoke_test=False):
 
         task("Restore IPv4", operation, changes=True)
 
-    cable_box = ttk.LabelFrame(page, text="Connected cable", padding=8)
+    cable_box = ttk.LabelFrame(page, text="Cable (automatically detected)", padding=8)
     cable_box.pack(fill="x")
     cable = ttk.Combobox(cable_box, textvariable=serial, state="readonly", width=28)
     cable.grid(row=0, column=0, sticky="ew")
-    ttk.Button(cable_box, text="Rescan cables", command=scan).grid(
-        row=0, column=1, padx=6
-    )
-    ttk.Checkbutton(
+    cable.bind("<<ComboboxSelected>>", lambda unused: update_cable_model())
+    ttk.Button(cable_box, text="Rescan", command=scan).grid(row=0, column=1, padx=6)
+    hs3_confirmation = ttk.Checkbutton(
         cable_box,
         variable=confirmed_hs3,
-        text="My cable is an HS3 (confirm if model is unknown)",
-    ).grid(row=0, column=2, sticky="w")
+        text="The unidentified FT232H cable is physically an HS3",
+    )
+    hs3_confirmation.grid(row=0, column=2, sticky="w")
+    hs3_confirmation.grid_remove()
     ttk.Label(cable_box, textvariable=cable_status, wraplength=900).grid(
         row=1, column=0, columnspan=3, sticky="w"
     )
+
+    def update_cable_model():
+        nonlocal last_cable_serial
+        if serial.get() != last_cable_serial:
+            confirmed_hs3.set(False)
+            last_cable_serial = serial.get()
+        matches = [item for item in found_cables if item.get("serial") == serial.get()]
+        if (
+            len(matches) == 1
+            and matches[0].get("vidpid", "").upper() == "0403:6014"
+            and not matches[0].get("cable")
+        ):
+            hs3_confirmation.grid()
+        else:
+            hs3_confirmation.grid_remove()
+
     settings = ttk.Frame(page)
     settings.pack(fill="x", pady=8)
     ttk.Label(settings, text="Target").grid(row=0, column=0)
@@ -514,7 +616,7 @@ def gui(smoke_test=False):
         width=21,
     )
     target_box.grid(row=0, column=1, padx=6)
-    target_box.bind("<<ComboboxSelected>>", show_catalog)
+    target_box.bind("<<ComboboxSelected>>", profile_changed)
     ttk.Label(settings, text="Firmware").grid(row=0, column=2)
     firmware_box = ttk.Combobox(
         settings,
@@ -524,57 +626,73 @@ def gui(smoke_test=False):
         width=15,
     )
     firmware_box.grid(row=0, column=3, padx=6)
-    ttk.Label(settings, text="Loader").grid(row=1, column=0)
-    ttk.Entry(settings, textvariable=loader, width=62).grid(
-        row=1, column=1, columnspan=3, sticky="ew", pady=4
+    firmware_box.bind("<<ComboboxSelected>>", profile_changed)
+    source_controls = ttk.Frame(page)
+    source_controls.pack(fill="x", pady=4)
+    ttk.Label(source_controls, text="Image source").pack(side="left", padx=(0, 12))
+    for value, text in (("GitHub", "GitHub list"), ("Local", "Local file")):
+        ttk.Radiobutton(
+            source_controls,
+            text=text,
+            value=value,
+            variable=source_mode,
+            command=change_source,
+        ).pack(side="left", padx=8)
+    online = ttk.Frame(page)
+    online.pack(fill="both", expand=True)
+    repository_box = ttk.Frame(online)
+    repository_box.pack(fill="x", pady=4)
+    ttk.Label(repository_box, text="GitHub URL").pack(side="left", padx=(0, 8))
+    repository_entry = ttk.Entry(repository_box, textvariable=repository_url)
+    repository_entry.pack(side="left", fill="x", expand=True)
+    repository_entry.bind("<Return>", lambda unused: refresh_catalog())
+    ttk.Button(repository_box, text="Refresh list", command=refresh_catalog).pack(
+        side="left", padx=6
     )
-    ttk.Button(
-        settings,
-        text="Browse",
-        command=lambda: loader.set(filedialog.askopenfilename() or loader.get()),
-    ).grid(row=1, column=4)
-    ttk.Label(page, textvariable=catalog_status, wraplength=950).pack(anchor="w")
-    table_frame = ttk.Frame(page)
+    ttk.Label(online, textvariable=catalog_status, wraplength=930).pack(anchor="w")
+    table_frame = ttk.Frame(online)
     table_frame.pack(fill="both", expand=True, pady=4)
     images = ttk.Treeview(
         table_frame,
-        columns=("family", "format", "version", "file"),
+        columns=("format", "version", "file"),
         show="headings",
         height=7,
         selectmode="browse",
     )
-    for name, title, width in [
-        ("family", "Firmware", 110),
-        ("format", "Type", 55),
+    for name, title, width in (
+        ("format", "Type", 65),
         ("version", "Version", 95),
-        ("file", "Latest filename", 580),
-    ]:
+        ("file", "Firmware image (newest first)", 700),
+    ):
         images.heading(name, text=title)
         images.column(name, width=width, stretch=name == "file")
     images.pack(side="left", fill="both", expand=True)
     scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=images.yview)
     scrollbar.pack(side="right", fill="y")
     images.configure(yscrollcommand=scrollbar.set)
-    images.bind("<<TreeviewSelect>>", pick_image)
-    buttons = ttk.Frame(page)
-    buttons.pack(fill="x", pady=4)
-    for title, callback in [
-        ("Program selected image", lambda: program("selected")),
-        ("Program latest MCS (auto)", lambda: program("latest")),
-        ("Refresh image list", refresh_catalog),
-    ]:
-        ttk.Button(buttons, text=title, command=callback).pack(side="left", padx=(0, 6))
-    local = ttk.Frame(page)
-    local.pack(fill="x", pady=4)
-    ttk.Entry(local, textvariable=filename).pack(side="left", fill="x", expand=True)
+    local = ttk.LabelFrame(page, text="Local BIT/MCS image", padding=12)
+    ttk.Entry(local, textvariable=filename, state="readonly").pack(
+        side="left", fill="x", expand=True
+    )
     ttk.Button(
         local,
-        text="Local file",
-        command=lambda: filename.set(filedialog.askopenfilename() or filename.get()),
-    ).pack(side="left", padx=6)
-    ttk.Button(local, text="Program local file", command=lambda: program("local")).pack(
-        side="left"
+        text="Choose file",
+        command=lambda: filename.set(
+            filedialog.askopenfilename(
+                filetypes=[("Firmware", "*.mcs *.bit"), ("All files", "*")]
+            )
+            or filename.get()
+        ),
+    ).pack(side="left", padx=8)
+    program_area = ttk.Frame(page)
+    program_area.pack(fill="x", pady=10)
+    ttk.Style(root).configure(
+        "Program.TButton", font=("TkDefaultFont", 15, "bold"), padding=(24, 15)
     )
+    ttk.Button(
+        program_area, text="Program image", style="Program.TButton", command=program
+    ).pack(fill="x")
+    repository_url.trace_add("write", schedule_refresh)
     if os.name == "nt":
         controls = ttk.Frame(page)
         controls.pack(fill="x", pady=4)
@@ -585,16 +703,40 @@ def gui(smoke_test=False):
             controls, text="Restore Vivado driver", command=lambda: driver("restore")
         ).pack(side="left", padx=4)
 
+    def toggle_temporary():
+        if not temporary_enabled.get() and mutation in ("Temporary IPv4", "Restore IPv4"):
+            temporary_enabled.set(True)
+            return
+        if not temporary_enabled.get() and lease:
+            temporary_enabled.set(True)
+            restore_network()
+            return
+        for panel in temporary_panels:
+            if temporary_enabled.get():
+                panel.pack(fill="x")
+            else:
+                panel.pack_forget()
+
     def network_widgets(parent):
+        holder = ttk.Frame(parent)
+        holder.pack(fill="x", pady=4)
+        ttk.Checkbutton(
+            holder,
+            text="Enable temporary host IP",
+            variable=temporary_enabled,
+            command=toggle_temporary,
+        ).pack(anchor="w")
+        panel = ttk.Frame(holder)
+        temporary_panels.append(panel)
         if sys.platform != "darwin":
             ttk.Label(
-                parent,
+                panel,
                 text="Temporary IP automation is available on macOS. On Linux/WSL configure the host Ethernet to 192.168.10.20/24 before using network operations.",
                 wraplength=900,
             ).pack(anchor="w", pady=8)
             return
         net = ttk.LabelFrame(
-            parent,
+            panel,
             text="Temporary host IPv4 (preserves DHCP; restored on exit)",
             padding=8,
         )
@@ -647,7 +789,7 @@ def gui(smoke_test=False):
             if chosen == "STAG"
             else ""
         )
-        show_catalog()
+        profile_changed()
 
     board.trace_add("write", board_changed)
     board_changed()
@@ -670,6 +812,7 @@ def gui(smoke_test=False):
                     serial.set(values[0])
                 elif serial.get() not in values or len(values) != len(set(values)):
                     serial.set("")
+                update_cable_model()
                 description = "; ".join(
                     f"{item.get('serial') or '<not reported>'}: {item.get('type')} / {item.get('driver')}"
                     for item in value
@@ -683,7 +826,10 @@ def gui(smoke_test=False):
                         "Multiple cables: explicitly select a serial. " + description
                     )
             elif kind == "catalog":
-                catalog_rows, status, failures = value
+                request, result = value
+                if request != catalog_request or source_mode.get() != "GitHub":
+                    continue
+                catalog_rows, status, failures = result
                 catalog_status.set(status)
                 show_catalog()
                 if failures:
@@ -696,14 +842,15 @@ def gui(smoke_test=False):
                 if adapter_label.get() not in labels:
                     adapter_label.set("")
             elif kind == "endpoint":
-                network_tabs.mode.set("Custom")
-                network_tabs.custom.set(value)
+                network_tabs.writer_target.set(value)
             elif kind == "lease":
                 lease = value
             elif kind == "network":
                 network_status.set(value)
             elif kind == "released":
                 lease = None
+                temporary_enabled.set(False)
+                toggle_temporary()
                 network_status.set(
                     "Temporary IPv4 removed. Original DHCP/DNS/gateway settings were preserved."
                 )
@@ -715,7 +862,9 @@ def gui(smoke_test=False):
                 log.insert("end", f"ERROR [{name}]: {text}\n")
                 if name == "Cable scan":
                     cable_status.set("Cable scan failed. " + text)
-                elif name == "Firmware list":
+                elif name.startswith("Firmware list #"):
+                    if name != f"Firmware list #{catalog_request}":
+                        continue
                     catalog_status.set("Firmware list unavailable. " + text)
                 elif "IPv4" in name:
                     network_status.set(
@@ -754,9 +903,46 @@ def gui(smoke_test=False):
         assert "official reference" in board_status.get()
         board.set("AMANEQ")
         assert target.get() == "amaneq-v4"
-        for mode, expected in (("MPC", "192.168.10.16"), ("MPCX", "192.168.10.10")):
-            network_tabs.mode.set(mode)
-            assert network_tabs.custom.get() == expected
+        catalog_rows = [
+            {
+                "target": "amaneq-v4",
+                "firmware": "lrtdc",
+                "format": "mcs",
+                "path": "mcs/amaneq-4-strlrtdc-v2.A.mcs",
+                "name": "newest.mcs",
+            },
+            {
+                "target": "amaneq-v4",
+                "firmware": "hrtdc",
+                "format": "mcs",
+                "path": "mcs/amaneq-4-strhrtdc-v2.A.mcs",
+                "name": "other.mcs",
+            },
+            {
+                "target": "amaneq-v1",
+                "firmware": "lrtdc",
+                "format": "mcs",
+                "path": "mcs/amaneq-1-strlrtdc-v2.A.mcs",
+                "name": "wrong-target.mcs",
+            },
+        ]
+        firmware.set("lrtdc")
+        show_catalog()
+        assert images.get_children() == ("0",)
+        assert images.selection() == ("0",)
+        for endpoint in ("192.168.10.16", "192.168.10.10", "192.168.2.5"):
+            network_tabs.clock_target.set(endpoint)
+            assert network_tabs.clock_target.value() == endpoint
+        network_tabs.clock_target.set("192.168.10.10")
+        assert not temporary_enabled.get()
+        temporary_enabled.set(True)
+        toggle_temporary()
+        temporary_enabled.set(False)
+        toggle_temporary()
+        source_mode.set("Local")
+        change_source()
+        source_mode.set("GitHub")
+        change_source()
         for tab in notebook.tabs():
             notebook.select(tab)
             root.update_idletasks()
@@ -764,7 +950,6 @@ def gui(smoke_test=False):
         root.after(300, root.destroy)
     else:
         root.after(50, lambda: scan(quiet=True))
-        root.after(75, lambda: refresh_catalog(force=False, quiet=True))
         if sys.platform == "darwin":
             root.after(100, lambda: refresh_adapters(quiet=True))
     root.mainloop()
