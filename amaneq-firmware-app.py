@@ -211,9 +211,7 @@ def gui(smoke_test=False):
     adapter_label = tk.StringVar()
     address = tk.StringVar(value="192.168.10.20")
     mask = tk.StringVar(value="255.255.255.0")
-    network_status = tk.StringVar(
-        value="Choose Ethernet; temporary host IPv4 defaults to 192.168.10.20/24. DHCP is preserved."
-    )
+    network_status = tk.StringVar()
     outer = ttk.Frame(root, padding=10)
     outer.pack(fill="both", expand=True)
     board = tk.StringVar(value="AMANEQ")
@@ -923,9 +921,18 @@ def gui(smoke_test=False):
         ttk.Button(actions, text="Restore network", command=restore_network).pack(
             side="left", padx=4
         )
-        ttk.Label(net, textvariable=network_status, wraplength=900).grid(
-            row=2, column=0, columnspan=7, sticky="w"
-        )
+        status_label = ttk.Label(net, textvariable=network_status, wraplength=900)
+
+        def show_network_status(*unused):
+            if not status_label.winfo_exists():
+                return
+            if network_status.get():
+                status_label.grid(row=2, column=0, columnspan=7, sticky="w")
+            else:
+                status_label.grid_remove()
+
+        network_status.trace_add("write", show_network_status)
+        show_network_status()
 
     network_tabs = NetworkTabs(notebook, board, ROOT, task, events, network_widgets)
 
