@@ -222,7 +222,7 @@ def main():
     info_path = app / "Contents/Info.plist"
     info = plistlib.loads(info_path.read_bytes())
     info.update(
-        {"LSMinimumSystemVersion": "15.0", "CFBundleShortVersionString": "0.15.1"}
+        {"LSMinimumSystemVersion": "15.0", "CFBundleShortVersionString": "0.15.2"}
     )
     info_path.write_bytes(plistlib.dumps(info))
     for name in (
@@ -250,7 +250,7 @@ def main():
         [str(executable), "--firmware-cli", "scan", "--loader", str(bundled_loader)],
         check=True,
         env=environment,
-        timeout=45,
+        timeout=120,
     )
     subprocess.run(["codesign", "--verify", "--deep", "--strict", str(app)], check=True)
     archive = output / f"{NAME}-macos-{architecture}.zip"

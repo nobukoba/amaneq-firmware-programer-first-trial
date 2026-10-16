@@ -227,10 +227,27 @@ def gui(smoke_test=False):
     ).pack(side="left", padx=8)
     board_status = tk.StringVar()
     ttk.Label(header, textvariable=board_status).pack(side="left")
-    split = ttk.Panedwindow(outer, orient="vertical")
+
+    class MessagePanes(tk.PanedWindow):
+        def __init__(self, parent):
+            super().__init__(
+                parent,
+                orient="vertical",
+                sashwidth=8,
+                sashrelief="raised",
+                opaqueresize=True,
+                borderwidth=0,
+            )
+
+        def sashpos(self, index, position=None):
+            if position is not None:
+                self.sash_place(index, 0, position)
+            return self.sash_coord(index)[1]
+
+    split = MessagePanes(outer)
     split.pack(fill="both", expand=True)
     notebook = ttk.Notebook(split)
-    split.add(notebook, weight=3)
+    split.add(notebook, minsize=180, stretch="always")
     firmware_page, page = scrollable_tab(notebook)
     notebook.add(firmware_page, text="Firmware")
     adapter_boxes = []
@@ -967,7 +984,7 @@ def gui(smoke_test=False):
     board.trace_add("write", board_changed)
     board_changed()
     messages = ttk.Frame(split, padding=(0, 4))
-    split.add(messages, weight=1)
+    split.add(messages, minsize=80, stretch="always")
     message_grip = tk.Frame(
         messages, height=12, borderwidth=1, relief="raised", cursor="sb_v_double_arrow"
     )
@@ -980,7 +997,7 @@ def gui(smoke_test=False):
     def resize_messages(event):
         if message_drag:
             position = message_drag["position"] + event.y_root - message_drag["y"]
-            split.sashpos(0, max(100, min(split.winfo_height() - 80, position)))
+            split.sashpos(0, max(180, min(split.winfo_height() - 80, position)))
 
     for event in ("<ButtonPress-1>", "<<MessageResizeStart>>"):
         message_grip.bind(event, begin_message_resize)
@@ -1088,7 +1105,23 @@ def gui(smoke_test=False):
         redraw_selected()
 
     zoom_box.bind("<<ComboboxSelected>>", resize_ui)
-    root.after_idle(lambda: split.sashpos(0, max(200, split.winfo_height() - 160)))
+    initial_layout = {"ready": False}
+
+    def initialize_panes(unused=None):
+        if initial_layout["ready"] or not split.winfo_ismapped():
+            return
+        height = split.winfo_height()
+        if height < 300:
+            return
+        split.sashpos(0, max(180, height - max(140, height // 4)))
+        initial_layout["ready"] = True
+
+    def schedule_initial_layout(unused=None):
+        root.after_idle(initialize_panes)
+
+    split.bind("<Map>", schedule_initial_layout, add="+")
+    split.bind("<Configure>", schedule_initial_layout, add="+")
+    root.after_idle(initialize_panes)
 
     def poll():
         nonlocal mutation, found_cables, catalog_rows, adapters, lease, closing
@@ -1198,6 +1231,11 @@ def gui(smoke_test=False):
     root.protocol("WM_DELETE_WINDOW", close)
     poll()
     if smoke_test:
+        root.update()
+        assert initial_layout["ready"]
+        assert notebook.winfo_ismapped() and notebook.winfo_height() >= 180
+        assert messages.winfo_height() >= 80
+        assert split.sashpos(0) >= 180
         assert [notebook.tab(tab, "text") for tab in notebook.tabs()] == [
             "Firmware",
             "Jitter Cleaner",
@@ -1275,9 +1313,9 @@ def gui(smoke_test=False):
         # Virtual navigation avoids depending on macOS application activation.
         network_tabs.file_entry.event_generate("<<PathEnd>>", state=0)
         root.update()
-        assert network_tabs.file_entry.index("insert") == len(network_tabs.file.get()), (
-            network_tabs.file_entry.index("insert"), root.focus_get()
-        )
+        assert network_tabs.file_entry.index("insert") == len(
+            network_tabs.file.get()
+        ), (network_tabs.file_entry.index("insert"), root.focus_get())
         assert network_tabs.file_entry.xview()[0] > 0
         network_tabs.file_entry.event_generate("<<PathHome>>", state=0)
         root.update()
@@ -1326,18 +1364,39 @@ def gui(smoke_test=False):
         original_sash = split.sashpos(0)
         original_log_height = log.winfo_height()
         drag_y = message_grip.winfo_rooty() + 5
-        message_grip.event_generate("<<MessageResizeStart>>", x=20, y=5, rooty=drag_y, state=0)
-        message_grip.event_generate("<<MessageResizeMove>>", x=20, y=-75, rooty=drag_y - 80, state=0)
-        message_grip.event_generate("<<MessageResizeEnd>>", x=20, y=-75, rooty=drag_y - 80, state=0)
+        message_grip.event_generate(
+            "<<MessageResizeStart>>", x=20, y=5, rooty=drag_y, state=0
+        )
+        message_grip.event_generate(
+            "<<MessageResizeMove>>", x=20, y=-75, rooty=drag_y - 80, state=0
+        )
+        message_grip.event_generate(
+            "<<MessageResizeEnd>>", x=20, y=-75, rooty=drag_y - 80, state=0
+        )
         root.update()
         assert message_grip.bind("<ButtonPress-1>")
         assert message_grip.bind("<B1-Motion>")
         assert split.sashpos(0) < original_sash, (
-            original_sash, split.sashpos(0), split.winfo_height(),
-            message_grip.winfo_ismapped(), message_drag
+            original_sash,
+            split.sashpos(0),
+            split.winfo_height(),
+            message_grip.winfo_ismapped(),
+            message_drag,
         )
         assert log.winfo_height() > original_log_height
+        split.sashpos(0, 0)
+        root.update()
+        assert notebook.winfo_height() >= 180
+        split.sashpos(0, split.winfo_height())
+        root.update()
+        assert messages.winfo_height() >= 80
         split.sashpos(0, original_sash)
+        root.geometry("720x480")
+        root.update()
+        assert notebook.winfo_height() >= 180
+        assert messages.winfo_height() >= 80
+        root.geometry("1000x740")
+        root.update()
         zoom.set("125%")
         resize_ui()
         zoom.set("100%")

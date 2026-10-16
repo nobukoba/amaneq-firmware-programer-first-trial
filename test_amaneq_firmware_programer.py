@@ -236,11 +236,113 @@ class ProgrammerTests(unittest.TestCase):
                 side_effect=[
                     argparse.Namespace(stdout="digilent_hs3 supported"),
                     argparse.Namespace(stdout=b"invalid"),
+                    OSError("system_profiler unavailable"),
                 ],
             ),
             self.assertRaisesRegex(app.UserError, "enumeration failed"),
         ):
             app.scan_cables(argparse.Namespace(cable="auto"))
+
+    def test_macos_ioreg_accepts_bom_and_empty_valid_inventory(self):
+        for archive in (
+            b"\xef\xbb\xbf  \n" + app.plistlib.dumps([]),
+            app.plistlib.dumps([]),
+        ):
+            with patch.object(
+                app.subprocess, "run", return_value=argparse.Namespace(stdout=archive)
+            ) as run:
+                self.assertEqual(app.macos_usb_records(), [])
+                self.assertIn("IOUSB", run.call_args.args[0])
+                self.assertEqual(run.call_count, 1)
+
+    def test_macos_profiler_fallback_discovers_supported_runtime_datatype(self):
+        for datatype in ("SPUSBDataType", "SPUSBHostDataType"):
+            for invalid in (b"", b"invalid"):
+                inventory = {
+                    datatype: [
+                        {
+                            "_name": "USB bus",
+                            "_items": [
+                                {
+                                    "_name": "Digilent JTAG-HS3",
+                                    "vendor_id": "0x0403 (FTDI)",
+                                    "product_id": "0x6014",
+                                    "serial_num": "SYNTHETIC-MAC",
+                                }
+                            ],
+                        }
+                    ]
+                }
+                with patch.object(
+                    app.subprocess,
+                    "run",
+                    side_effect=[
+                        argparse.Namespace(stdout=invalid),
+                        argparse.Namespace(
+                            stdout=("Available data types:\n    " + datatype).encode()
+                        ),
+                        argparse.Namespace(stdout=json.dumps(inventory).encode()),
+                    ],
+                ) as run:
+                    devices = app.macos_usb_records()
+                self.assertEqual(len(devices), 1)
+                self.assertTrue(devices[0]["id"].endswith("SYNTHETIC-MAC"))
+                self.assertIn(datatype, run.call_args.args[0])
+                self.assertIn("system_profiler", devices[0]["driver"])
+
+    def test_macos_profiler_does_not_guess_model_or_hide_multiple_cables(self):
+        inventory = {
+            "SPUSBHostDataType": [
+                {
+                    "_items": [
+                        {
+                            "_name": "FT232H",
+                            "vendor_id": "0x0403",
+                            "product_id": "0x6014",
+                            "serial_num": serial,
+                        }
+                        for serial in ("SYNTHETIC-A", "SYNTHETIC-B")
+                    ]
+                }
+            ]
+        }
+        args = argparse.Namespace(cable="auto", serial=None, yes=True)
+        with (
+            patch.object(app.sys, "platform", "darwin"),
+            patch.object(app, "loader_path", return_value="loader"),
+            patch.object(
+                app.subprocess,
+                "run",
+                side_effect=[
+                    argparse.Namespace(stdout="digilent_hs3 supported"),
+                    argparse.Namespace(stdout=b""),
+                    argparse.Namespace(stdout=b"SPUSBHostDataType"),
+                    argparse.Namespace(stdout=json.dumps(inventory).encode()),
+                ],
+            ),
+        ):
+            devices = app.scan_cables(args)
+        self.assertEqual(len(devices), 2)
+        self.assertTrue(all(device["cable"] is None for device in devices))
+        with (
+            patch.object(app, "scan_cables", return_value=devices),
+            self.assertRaisesRegex(app.UserError, "[Mm]ultiple"),
+        ):
+            app.select_cable(args)
+
+    def test_macos_profiler_unknown_datatype_is_not_reported_as_no_devices(self):
+        with (
+            patch.object(
+                app.subprocess,
+                "run",
+                side_effect=[
+                    argparse.Namespace(stdout=b""),
+                    argparse.Namespace(stdout=b"SPOtherDataType"),
+                ],
+            ),
+            self.assertRaisesRegex(app.UserError, "no supported USB data type"),
+        ):
+            app.macos_usb_records()
 
     def test_multiple_cables_always_list_and_stop(self):
         for unattended in (True, False):

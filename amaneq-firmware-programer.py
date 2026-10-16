@@ -9,6 +9,7 @@ import socket
 import ssl
 import json
 import plistlib
+from xml.parsers.expat import ExpatError
 import os
 import re
 import shutil
@@ -642,6 +643,125 @@ def run_loader(loader, arguments, env=None):
     return "".join(output)
 
 
+def macos_usb_records():
+    records = []
+
+    def append(vid, pid, serial, description, source):
+        if (vid, pid) == (0x0403, 0x6014) or (
+            vid == 0x03FD and pid in (0x0007, 0x0008, 0x0009, 0x000D, 0x0013)
+        ):
+            records.append(
+                {
+                    "id": f"USB\\VID_{vid:04X}&PID_{pid:04X}\\{serial}",
+                    "description": str(description),
+                    "driver": f"macOS USB ({source}; access checked at JTAG)",
+                    "status": "OK",
+                }
+            )
+
+    def visit_ioreg(nodes):
+        if not isinstance(nodes, list):
+            raise ValueError("ioreg returned an invalid USB tree")
+        for node in nodes:
+            if not isinstance(node, dict):
+                continue
+            vid, pid = node.get("idVendor"), node.get("idProduct")
+            if isinstance(vid, int) and isinstance(pid, int):
+                append(
+                    vid,
+                    pid,
+                    str(node.get("USB Serial Number") or ""),
+                    node.get("USB Product Name", ""),
+                    "ioreg",
+                )
+            visit_ioreg(node.get("IORegistryEntryChildren", []))
+
+    try:
+        result = subprocess.run(
+            ["/usr/sbin/ioreg", "-a", "-l", "-p", "IOUSB"],
+            capture_output=True,
+            timeout=30,
+            check=True,
+        )
+        raw = result.stdout
+        if isinstance(raw, str):
+            raw = raw.encode("utf-8")
+        raw = raw.removeprefix(b"\xef\xbb\xbf").lstrip()
+        if not raw:
+            raise ValueError("ioreg returned an empty USB archive")
+        visit_ioreg(plistlib.loads(raw))
+        return records
+    except (
+        OSError,
+        subprocess.SubprocessError,
+        plistlib.InvalidFileException,
+        ValueError,
+        ExpatError,
+    ) as error:
+        first_error = str(error) or "ioreg returned an invalid property list"
+        records.clear()
+
+    def text_output(result):
+        return (
+            result.stdout.decode("utf-8")
+            if isinstance(result.stdout, bytes)
+            else result.stdout
+        )
+
+    def hex_id(value):
+        if isinstance(value, int):
+            return value
+        match = re.match(r"0x([0-9a-fA-F]+)", str(value))
+        return int(match[1], 16) if match else None
+
+    def visit_profiler(nodes):
+        if not isinstance(nodes, list):
+            raise ValueError("system_profiler returned an invalid USB tree")
+        for node in nodes:
+            if not isinstance(node, dict):
+                continue
+            vid, pid = hex_id(node.get("vendor_id")), hex_id(node.get("product_id"))
+            if vid is not None and pid is not None:
+                append(
+                    vid,
+                    pid,
+                    str(node.get("serial_num") or ""),
+                    node.get("_name", ""),
+                    "system_profiler",
+                )
+            visit_profiler(node.get("_items", []))
+
+    try:
+        available = subprocess.run(
+            ["/usr/sbin/system_profiler", "-listDataTypes"],
+            capture_output=True,
+            timeout=30,
+            check=True,
+        )
+        types = set(text_output(available).split())
+        datatype = next(
+            (name for name in ("SPUSBHostDataType", "SPUSBDataType") if name in types),
+            None,
+        )
+        if datatype is None:
+            raise ValueError("system_profiler provides no supported USB data type")
+        result = subprocess.run(
+            ["/usr/sbin/system_profiler", "-json", datatype],
+            capture_output=True,
+            timeout=30,
+            check=True,
+        )
+        tree = json.loads(text_output(result))
+        if not isinstance(tree, dict) or datatype not in tree:
+            raise ValueError("system_profiler returned no USB inventory")
+        visit_profiler(tree[datatype])
+        return records
+    except (OSError, subprocess.SubprocessError, ValueError, UnicodeError) as error:
+        raise UserError(
+            f"macOS USB enumeration failed. ioreg: {first_error}. system_profiler: {error}"
+        ) from error
+
+
 def scan_cables(args):
     loader = loader_path(args)
     supported = subprocess.run(
@@ -649,52 +769,7 @@ def scan_cables(args):
     ).stdout
     devices = []
     if sys.platform == "darwin":
-        try:
-            result = subprocess.run(
-                ["/usr/sbin/ioreg", "-a", "-r", "-c", "IOUSBHostDevice"],
-                capture_output=True,
-                timeout=30,
-                check=True,
-            )
-            roots = plistlib.loads(result.stdout)
-        except (
-            OSError,
-            subprocess.SubprocessError,
-            plistlib.InvalidFileException,
-            ValueError,
-        ) as error:
-            raise UserError(f"macOS USB enumeration failed: {error}") from error
-        records = []
-
-        def visit(nodes):
-            for node in nodes:
-                if not isinstance(node, dict):
-                    continue
-                vid = node.get("idVendor")
-                pid = node.get("idProduct")
-                if (
-                    isinstance(vid, int)
-                    and isinstance(pid, int)
-                    and (
-                        (vid, pid) == (0x0403, 0x6014)
-                        or vid == 0x03FD
-                        and pid in (0x0007, 0x0008, 0x0009, 0x000D, 0x0013)
-                    )
-                ):
-                    serial = str(node.get("USB Serial Number", ""))
-                    records.append(
-                        {
-                            "id": f"USB\\VID_{vid:04X}&PID_{pid:04X}\\{serial}",
-                            "description": str(node.get("USB Product Name", "")),
-                            "driver": "macOS USB (access checked at JTAG)",
-                            "status": "OK",
-                        }
-                    )
-                visit(node.get("IORegistryEntryChildren", []))
-
-        if not isinstance(roots, list):
-            raise UserError("macOS USB enumeration returned an invalid device tree.")
-        visit(roots)
+        records = macos_usb_records()
 
     elif os.name == "nt":
         # Fixed read-only PowerShell query. User input is never inserted in shell code.
