@@ -766,37 +766,6 @@ def gui(smoke_test=False):
     ttk.Button(repository_box, text="Refresh list", command=refresh_catalog).pack(
         side="left", padx=6
     )
-    token_row = ttk.Frame(online)
-    token_row.pack(fill="x", pady=4)
-    ttk.Label(token_row, text="GitHub token (optional, session only):").pack(
-        side="left", padx=(0, 8)
-    )
-    token_value = tk.StringVar()
-    ttk.Entry(token_row, textvariable=token_value, show="*", width=30).pack(side="left")
-
-    def apply_github_token():
-        try:
-            services.set_github_token(token_value.get())
-        except ValueError as error:
-            messagebox.showerror("GitHub access", str(error))
-            return
-        refresh_catalog(force=True, quiet=True)
-
-    ttk.Button(token_row, text="Apply", command=apply_github_token).pack(
-        side="left", padx=6
-    )
-
-    def open_repository():
-        import webbrowser
-
-        try:
-            repository = services.core.GitHub(repository_url.get().strip()).repo
-        except Exception as error:
-            messagebox.showerror("GitHub URL", str(error))
-            return
-        webbrowser.open("https://github.com/" + repository)
-
-    ttk.Button(token_row, text="Open GitHub", command=open_repository).pack(side="left")
     history_controls = ttk.Frame(online)
     history_controls.pack(fill="x", pady=4)
     ttk.Label(history_controls, text="History limit:").pack(side="left")

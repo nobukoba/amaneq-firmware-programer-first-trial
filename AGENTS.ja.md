@@ -140,10 +140,12 @@ Desktop 0.14.6ではFirmwareの先頭をImage sourceにします。GitHub list�
 
 Desktop 0.14.7ではLocal fileのTarget欄を削除し、ファイル選択だけにします。対象・種類は既知の公式ファイル名、形式は検証済みの内容から判定します。不明な名前や選択基板と矛盾する名前では書き込み前に停止します。DAQマニュアルで共通とされるAMANEQ Skeltonはv1/v4互換プロファイルを使い、JTAGから基板版を確定したとは扱いません。GitHub用設定は維持し、ケーブルの表記をCable (automatically detected):にします。
 
-Desktop 0.15ではCDCE62002の選択欄を20文字幅に短縮し、Files are validatedの説明文を削除します。IPタブ名はIP addr.に変更し、EEPROM IP / Current IPのラジオボタンを使い、EEPROMを既定にします。項目ラベルに:を付けます（ボタンやタブ名は除く）。一覧取得は1件ずつ実行し、重複タイマーと古い応答のエラー表示を抑制します。GitHubのAPI情報は設定間で共有し、通常5分・固定コミット情報24時間のキャッシュを使います。明示更新は通常情報を再取得します。HTTP 403/429ではRetry-After・リセット時刻、最低60秒まで再送を止めます。任意のGitHubトークン欄はマスク表示・起動中のみとし、保存・ログ・コマンド引数には含めず、APIとファームウェア子プロセスの環境にだけ渡します。空欄へ戻すと既存GITHUB_TOKENまたは未認証へ戻ります。Open GitHubでブラウザーから取得しLocal fileを使う経路も用意します。403は権限拒否でも発生し、模擬試験だけで利用者の回線の復旧を確認したとは扱いません。公式資料: https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api。
+Desktop 0.15ではCDCE62002の選択欄を20文字幅に短縮し、Files are validatedの説明文を削除します。IPタブ名はIP addr.に変更し、EEPROM IP / Current IPのラジオボタンを使い、EEPROMを既定にします。項目ラベルに:を付けます（ボタンやタブ名は除く）。一覧取得は1件ずつ実行し、重複タイマーと古い応答のエラー表示を抑制します。GitHubのAPI情報は設定間で共有し、通常5分・固定コミット情報24時間のキャッシュを使います。明示更新は通常情報を再取得します。HTTP 403/429ではRetry-After・リセット時刻、最低60秒まで再送を止めます。アクセス制限中は表示された時刻まで待つか、リポジトリをブラウザーで開いて取得し、Local fileを使います。403は権限拒否でも発生し、模擬試験だけで利用者の回線の復旧を確認したとは扱いません。公式資料: https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api。
 
 Firmwareにも縦スクロールを設け、狭いウィンドウや拡大表示でも接続欄・Cable・Program imageへ移動できるようにします。「:」は項目ラベルだけに付け、タブ名には付けません。
 
 Desktop 0.15.1では初期表示のChoose Ethernetの説明行を削除します。一時ネットワークの状態行は空欄なら表示せず、操作結果やエラーがあるときだけ表示します。
 
 Desktop 0.15.2では、Messagesが画面全体を占める表示とmacOS USBのInvalid fileを修正します。tk.PanedWindowでタブ180ピクセル・Messages 80ピクセルの下限を設け、Map/Configure後に表示済みの高さが確定してから境界を一度だけ初期化します。利用者のサイズ変更は戻しません。起動確認ではテストが境界を動かす前に両領域の表示を検査し、境界の両端と最小ウィンドウでも確認します。USB検出はioreg -a -l -p IOUSBで行い、BOM・先頭空白・有効な空配列を扱います。空・不正・失敗時はsystem_profilerへ切り替え、-listDataTypesからSPUSBHostDataType / SPUSBDataTypeを選びます。JSONを検証し、シリアル・機種が曖昧なら停止する制約を維持します。両方失敗した場合は双方のエラーを表示します。読み取り成功を実機書き込み成功とは扱いません。同梱版の読み取り専用scanはビルド必須確認のままとし、代替取得分を含む上限を120秒とします。
+
+Desktop 0.15.3では、GitHub tokenの行全体（入力欄、Apply、Open GitHub）を削除します。編集可能なGitHub URL、Refresh list、キャッシュ、アクセス制限時の待機処理は維持します。

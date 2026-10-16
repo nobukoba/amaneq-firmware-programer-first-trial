@@ -83,6 +83,6 @@ class GitHubMetadata:
         )
         raise RuntimeError(
             f"GitHub API access paused until {resume} after HTTP 403/429. "
-            "No request was retried. Use an optional GitHub token for a separate authenticated limit, "
-            "or Open GitHub to download an image and choose Local file."
+            "No request was retried. Wait until this time, or download an image "
+            "from the repository in your browser and choose Local file."
         ) from cause
