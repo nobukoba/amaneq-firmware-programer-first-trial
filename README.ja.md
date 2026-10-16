@@ -22,7 +22,7 @@ cd amaneq-firmware-programer-first-trial
 
 [Releases](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases)の最新macOS desktop previewでAssetsを開き、Apple Silicon（arm64）用かIntel（x86_64）用のZIPを取得してください。ZIPを展開し、amaneq-firmware-programer.appをApplicationsへ移します。macOS 15以降が対象です。Python・Tk・openFPGALoader・HTTPS用CA証明書を同梱し、利用時のHomebrew導入は不要です。
 
-0.15.2版はAMANEQ / CIRASAME / STAG選択の下に、左からFirmware、Jitter Cleaner、MPC / MPCX、IP addr.の4タブを配置します。Firmwareはケーブルを自動検出し、TargetとFirmwareに一致するGitHub一覧を新しい順で表示し、先頭を自動選択します。GitHub listかLocal fileを選び、通常サイズで太字のProgram imageボタンひとつで書き込みます。GitHubリポジトリURLは編集でき、セッション中は対象ごとの編集値を保持します。現在のファイルに加え、タグとファームウェアディレクトリのコミットから過去版を表示します。History limitは合計10件が初期値で、1～1000件へ変更し、EnterかRefresh listで再取得できます。同じパス・同じ内容の重複はまとめ、同名でも内容が異なるファイルは残します。Tag / commit欄で版を区別し、現在のブランチを先頭として最新版を自動選択します。履歴の探索範囲には上限があり、件数を増やすと探索を広げます。API制限などで途中までしか取得できない場合は明示します。Loader欄と別のlatest-MCSボタンは廃止しました。既知のケーブルが1本なら自動選択し、複数ならシリアル選択、機種不明のFT232Hなら実物がHS3であることの確認が必要です。キャッシュ・通信失敗を明示し、表示したコミットとパスを固定して取得します。対応する各種類でBIT / MCSを選べます。
+0.15.2版はAMANEQ / CIRASAME / STAG選択の下に、左からFirmware、Jitter Cleaner、MPC / MPCX、IP addr.の4タブを配置します。Firmwareはケーブルを自動検出し、TargetとFirmwareに一致するGitHub一覧を新しい順で表示し、先頭を自動選択します。GitHub listかLocal fileを選び、通常サイズで太字のProgram imageボタンひとつで書き込みます。GitHubリポジトリURLは編集でき、セッション中は対象ごとの編集値を保持します。現在のファイルに加え、タグとファームウェアディレクトリのコミットから過去版を表示します。History limitは合計5件が初期値で、1～1000件へ変更し、EnterかRefresh listで再取得できます。同じパス・同じ内容の重複はまとめ、同名でも内容が異なるファイルは残します。Tag / commit欄で版を区別し、現在のブランチを先頭として最新版を自動選択します。履歴の探索範囲には上限があり、件数を増やすと探索を広げます。API制限などで途中までしか取得できない場合は明示します。Loader欄と別のlatest-MCSボタンは廃止しました。既知のケーブルが1本なら自動選択し、複数ならシリアル選択、機種不明のFT232Hなら実物がHS3であることの確認が必要です。キャッシュ・通信失敗を明示し、表示したコミットとパスを固定して取得します。対応する各種類でBIT / MCSを選べます。
 
 必要に応じてEthernetアダプターを選び、Mac側のIPv4アドレスとマスクを入力してApply temporarilyを押します。DHCP・DNS・ゲートウェイの設定を保持し、固定IPを一時追加します。基板側のIP変更ではなく、USB/JTAG書き込みにも不要です。macOSの管理者許可が必要です。Restore networkか通常終了で追加IPだけを解除し、別プロセスも終了・クラッシュを監視します。既存IPの流用や他インターフェースとのサブネット重複は拒否します。解除に失敗したらエラーと記録を残し、追加IPは再起動でも消えます。起動時にネットワーク設定は変更しません。PC側の一時IPは192.168.10.20/24を初期値とし、編集できます。
 
@@ -160,7 +160,7 @@ v1基板ではPythonコマンドに`--target amaneq-v1`を指定します。Skel
 
 ## 過去版・別のURLを選ぶ
 
-履歴は既定で現在のブランチを含む合計10件です。同じリビジョンのタグ・コミットをまとめ、過去のリビジョンをコミット日時の新しい順に表示します。合計件数は`--history-limit`で増やせます（最大1000）。タグ・コミットが分かっている場合は`--ref`で直接指定できます。
+履歴は既定で現在のブランチを含む合計5件です。同じリビジョンのタグ・コミットをまとめ、過去のリビジョンをコミット日時の新しい順に表示します。合計件数は`--history-limit`で増やせます（最大1000）。タグ・コミットが分かっている場合は`--ref`で直接指定できます。
 
 GitHubリポジトリURLは`--repo`、HTTP(S)のファイル直接URLは`--url`で指定します。GitHubの`blob`閲覧ページは直接ファイルではありません。直接URLでも内容を検査し、`--sha256`で既知の期待ハッシュも照合できます。`--url`は`--repo`・`--latest`・`--ref`と併用しません。
 
@@ -220,7 +220,7 @@ LinuxコンテナではホストのUSBアクセス権限が必要です。Docker
 
 ## 既定値・保存先・エラー
 
-既定値は、種類`lrtdc`、基板`amaneq-v4`、取得形式`mcs`、ケーブル`auto`、フラッシュ`auto`、通信タイムアウト45秒、履歴合計10件です。各コマンドの`--help`にも表示します。
+既定値は、種類`lrtdc`、基板`amaneq-v4`、取得形式`mcs`、ケーブル`auto`、フラッシュ`auto`、通信タイムアウト45秒、履歴合計5件です。各コマンドの`--help`にも表示します。
 
 - 取得ファイルと出典情報：`firmware/downloads/`。
 - SPIブリッジの生成キャッシュ：`firmware/cache/`。
@@ -289,3 +289,5 @@ Desktop 0.15.1では初期表示のChoose Ethernetの説明行を削除します
 Desktop 0.15.2では、Messagesが画面全体を占める表示とmacOS USBのInvalid fileを修正します。tk.PanedWindowでタブ180ピクセル・Messages 80ピクセルの下限を設け、Map/Configure後に表示済みの高さが確定してから境界を一度だけ初期化します。利用者のサイズ変更は戻しません。起動確認ではテストが境界を動かす前に両領域の表示を検査し、境界の両端と最小ウィンドウでも確認します。USB検出はioreg -a -l -p IOUSBで行い、BOM・先頭空白・有効な空配列を扱います。空・不正・失敗時はsystem_profilerへ切り替え、-listDataTypesからSPUSBHostDataType / SPUSBDataTypeを選びます。JSONを検証し、シリアル・機種が曖昧なら停止する制約を維持します。両方失敗した場合は双方のエラーを表示します。読み取り成功を実機書き込み成功とは扱いません。同梱版の読み取り専用scanはビルド必須確認のままとし、代替取得分を含む上限を120秒とします。
 
 Desktop 0.15.3では、GitHub tokenの行全体（入力欄、Apply、Open GitHub）を削除します。編集可能なGitHub URL、Refresh list、キャッシュ、アクセス制限時の待機処理は維持します。
+
+Desktop 0.15.4: GUIとCLIの履歴既定件数を5件へ減らします。History limit / --history-limitで1～1000件に変更できる仕様と、キャッシュ・重複排除・アクセス制限時の待機処理を維持します。表示件数の削減で通信回数が必ず半分になるとは扱いません。

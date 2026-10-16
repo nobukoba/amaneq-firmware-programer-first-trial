@@ -1326,7 +1326,7 @@ def add_common(parser):
     parser.add_argument(
         "--history-limit",
         type=int,
-        default=10,
+        default=5,
         help="Maximum total history choices, including the current branch; newest revisions first",
     )
     parser.add_argument(

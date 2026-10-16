@@ -195,7 +195,7 @@ def gui(smoke_test=False):
     image_format = tk.StringVar(value=format_labels["mcs"])
     filename = tk.StringVar()
     source_mode = tk.StringVar(value="GitHub")
-    history_limit = tk.StringVar(value="10")
+    history_limit = tk.StringVar(value="5")
     repository_url = tk.StringVar()
     repository_overrides = {}
     active_profile = None
@@ -782,7 +782,7 @@ def gui(smoke_test=False):
         "<Return>", lambda unused: refresh_catalog(force=False, quiet=True)
     )
     ttk.Label(
-        history_controls, text="Default 10 images; includes tags and firmware commits"
+        history_controls, text="Default 5 images; includes tags and firmware commits"
     ).pack(side="left")
     ttk.Label(online, textvariable=catalog_status, wraplength=930).pack(anchor="w")
     table_frame = ttk.Frame(online)

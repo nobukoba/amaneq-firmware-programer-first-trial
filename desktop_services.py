@@ -166,7 +166,7 @@ class DesktopServices:
         firmware,
         force=False,
         include_history=False,
-        history_limit=10,
+        history_limit=5,
         image_format=None,
     ):
         import hashlib
