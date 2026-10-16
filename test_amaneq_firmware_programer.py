@@ -593,7 +593,7 @@ class HistoryLimitTests(unittest.TestCase):
     def test_cli_default_and_override(self):
         with patch.object(app.GitHub, "refs", return_value=[]) as refs:
             app.main(["versions"])
-            refs.assert_called_once_with(10)
+            refs.assert_called_once_with(5)
         with patch.object(app.GitHub, "refs", return_value=[]) as refs:
             app.main(["versions", "--history-limit", "30"])
             refs.assert_called_once_with(30)

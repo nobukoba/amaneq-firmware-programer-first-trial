@@ -115,7 +115,7 @@ class DesktopTests(unittest.TestCase):
                 rows, status, errors = service.image_list(
                     github.repo, "amaneq-v4", "lrtdc"
                 )
-                self.assertEqual(len(rows), 10)
+                self.assertEqual(len(rows), 5)
                 self.assertEqual(rows[0]["name"], "amaneq-4-strlrtdc-v2.B.mcs")
                 self.assertTrue(
                     all(
