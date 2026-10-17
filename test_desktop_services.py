@@ -494,3 +494,25 @@ class CategoryCooldownTests(unittest.TestCase):
         now[0] = 30
         self.assertEqual(guard.observe((3,)), 30)
         self.assertEqual(guard.changes, 4)
+
+
+class InterfaceLanguageTests(unittest.TestCase):
+    def test_translation_preserves_identifiers_and_changes_only_presentation(self):
+        from ui_language import translate
+
+        self.assertEqual(translate("JTAG cable:", "ja"), "JTAGケーブル:")
+        self.assertEqual(translate("JTAG cable:", "en"), "JTAG cable:")
+        self.assertEqual(translate("amaneq-v4", "ja"), "amaneq-v4")
+        self.assertEqual(translate("192.168.10.10", "ja"), "192.168.10.10")
+        self.assertEqual(translate("Cooldown: 12 s", "ja"), "待機: あと12秒")
+        self.assertEqual(
+            translate("Changes: 4 | No-wait changes left: 0", "ja"),
+            "変更回数: 4 | 待機なし残り: 0",
+        )
+
+    def test_every_help_topic_has_a_japanese_version(self):
+        from ui_language import HELP_JAPANESE
+        from network_tabs import HELP_TOPICS
+
+        self.assertEqual(set(HELP_JAPANESE), set(HELP_TOPICS))
+        self.assertTrue(all(title and body for title, body in HELP_JAPANESE.values()))

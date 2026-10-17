@@ -14,6 +14,7 @@ import threading
 import uuid
 import windows_usb as usb
 import macos_network as network
+from ui_language import LanguageManager
 from network_tabs import NetworkTabs, bind_horizontal_scroll, scrollable_tab, help_link
 from desktop_services import CategoryCooldown, DesktopServices, cable_arguments
 
@@ -229,6 +230,24 @@ def gui(smoke_test=False):
         state="readonly",
         width=18,
     ).pack(side="left", padx=8)
+    language_choice = tk.StringVar(value="English")
+    language_controls = ttk.Frame(header)
+    language_controls.pack(side="right")
+    ttk.Label(language_controls, text="Language:").pack(side="left", padx=4)
+    language_box = ttk.Combobox(
+        language_controls,
+        textvariable=language_choice,
+        values=("English", "日本語"),
+        state="readonly",
+        width=9,
+    )
+    language_box.pack(side="left")
+    language_box.bind(
+        "<<ComboboxSelected>>",
+        lambda unused: languages.set_language(
+            "ja" if language_choice.get() == "日本語" else "en"
+        ),
+    )
     board_status = tk.StringVar()
     ttk.Label(header, textvariable=board_status).pack(side="left")
 
@@ -1253,6 +1272,7 @@ def gui(smoke_test=False):
 
     root.protocol("WM_DELETE_WINDOW", close)
     poll()
+    languages = LanguageManager(root)
     if smoke_test:
         root.update()
         assert initial_layout["ready"]
@@ -1463,6 +1483,27 @@ def gui(smoke_test=False):
                 show_help(root, topic)
             assert popup.call_count == len(HELP_TOPICS)
             assert jobs == jobs_before_cooldown
+        before_language = (
+            target.get(), firmware.get(), image_format.get(), repository_url.get(),
+            category_cooldown.changes, set(jobs),
+        )
+        languages.set_language("ja")
+        assert notebook.tab(0, "text") == "ファームウェア"
+        assert category_count_status.get().startswith("Changes:")
+        assert any(
+            widget.cget("text") == "JTAGケーブル:"
+            for widget, original in languages.widgets if original == "JTAG cable:"
+        )
+        from ui_language import HELP_JAPANESE
+        with patch("network_tabs.messagebox.showinfo") as popup:
+            show_help(root, "ip")
+            assert popup.call_args.args[:2] == tuple(HELP_JAPANESE["ip"])
+        languages.set_language("en")
+        assert notebook.tab(0, "text") == "Firmware"
+        assert before_language == (
+            target.get(), firmware.get(), image_format.get(), repository_url.get(),
+            category_cooldown.changes, set(jobs),
+        )
         root.after(300, root.destroy)
     else:
         root.after(50, lambda: scan(quiet=True))

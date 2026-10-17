@@ -46,8 +46,13 @@ HELP_TOPICS = {
 
 
 def show_help(parent, topic):
-    title, explanation = HELP_TOPICS[topic]
-    messagebox.showinfo(title, explanation, parent=parent.winfo_toplevel())
+    from ui_language import HELP_JAPANESE
+
+    root = parent.winfo_toplevel()
+    manager = getattr(root, "ui_language", None)
+    topics = HELP_JAPANESE if manager and manager.language == "ja" else HELP_TOPICS
+    title, explanation = topics[topic]
+    messagebox.showinfo(title, explanation, parent=root)
 
 
 def help_link(parent, topic, text="Help"):
