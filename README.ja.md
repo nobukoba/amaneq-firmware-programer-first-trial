@@ -301,3 +301,6 @@ Desktop 0.15.7: メッセージ欄の区切りは、追加したドラッグバ�
 Desktop 0.15.8: ケーブルのラベルをJTAG cable:へ短縮し、同じ行のHelpでJTAGの意味、自動検出、Rescan、複数ケーブルのシリアル選択、FT232HだけではHS3と断定できないことを説明します。Ethernetアダプターとの違いを明記し、自動選択の安全ガードや書き込み動作は維持します。
 
 Desktop 0.15.9: 上部のLanguage / 言語でEnglish / 日本語を切り替えます。既定はEnglishで、項目・ボタン・タブ・待機回数と秒数・Help/Why?の説明を切り替えます。ファームウェア名、リポジトリ、ファイルパス、IP、診断ログとバックエンドのエラーは英語のまま維持します。翻訳は表示専用で、言語変更は選択値や通信、クールタイム回数を変更しません。ソースのコメント・識別子は英語を維持し、日本語の翻訳文字列のみui_language.pyへ分離します（以前のUIも英語のみとする規則に対する明示的な変更）。各言語のHelp項目をそろえ、表示用StringVarと操作用StringVarを分離します。言語設定は起動中のみで、CLIは従来どおり英語です。
+
+
+Mac公証は所属機関のApple Developer Program利用可否と署名情報の設定待ちです。手動のSign and notarize macOS releaseワークフローとmacos_notarization.pyを用意していますが、実際にAppleのAccepted・チケット検証・Gatekeeper確認を通るまでは公証済みと扱いません。必要なSecretsと機関への確認内容は[開発者向け資料](FOR_DEVELOPERS.ja.md)を参照してください。秘密鍵・パスワードをチャットやGitへ出さないでください。

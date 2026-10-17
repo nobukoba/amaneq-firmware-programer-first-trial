@@ -1,0 +1,115 @@
+name: Sign and notarize macOS release
+on:
+  workflow_dispatch:
+    inputs:
+      source_release:
+        description: Existing tested macOS preview release tag
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  notarize:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            architecture: arm64
+          - runner: macos-15-intel
+            architecture: x86_64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare ephemeral signing keychain and notary credentials
+        env:
+          CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          API_KEY: ${{ secrets.APPLE_API_KEY_P8 }}
+          API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          API_ISSUER: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: |
+          python3 - <<'PY'
+          import base64, os, pathlib, secrets, subprocess
+          required = ("CERTIFICATE", "CERTIFICATE_PASSWORD", "SIGNING_IDENTITY",
+                      "API_KEY", "API_KEY_ID", "API_ISSUER")
+          missing = [name for name in required if not os.environ.get(name)]
+          if missing:
+              raise SystemExit("Missing signing secrets: " + ", ".join(missing))
+          root = pathlib.Path(os.environ["RUNNER_TEMP"])
+          certificate = root / "amaneq-signing.p12"
+          key = root / "amaneq-notary.p8"
+          keychain = root / "amaneq-signing.keychain-db"
+          password = secrets.token_urlsafe(32)
+          certificate.write_bytes(base64.b64decode("".join(os.environ["CERTIFICATE"].split()), validate=True))
+          key.write_text(os.environ["API_KEY"], encoding="utf-8")
+          certificate.chmod(0o600)
+          key.chmod(0o600)
+          def run(*args):
+              subprocess.run(args, check=True, stdout=subprocess.DEVNULL)
+          run("security", "create-keychain", "-p", password, str(keychain))
+          run("security", "set-keychain-settings", "-lut", "21600", str(keychain))
+          run("security", "unlock-keychain", "-p", password, str(keychain))
+          run("security", "import", str(certificate), "-P", os.environ["CERTIFICATE_PASSWORD"],
+              "-k", str(keychain), "-T", "/usr/bin/codesign")
+          run("security", "set-key-partition-list", "-S", "apple-tool:,apple:,codesign:",
+              "-s", "-k", password, str(keychain))
+          run("security", "list-keychains", "-d", "user", "-s", str(keychain))
+          run("xcrun", "notarytool", "store-credentials", "amaneq-notary",
+              "--keychain", str(keychain), "--key", str(key),
+              "--key-id", os.environ["API_KEY_ID"], "--issuer", os.environ["API_ISSUER"])
+          certificate.unlink()
+          key.unlink()
+          PY
+      - name: Download the tested application archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RELEASE: ${{ inputs.source_release }}
+          REPOSITORY: ${{ github.repository }}
+          ARCHITECTURE: ${{ matrix.architecture }}
+        run: |
+          gh release download "$SOURCE_RELEASE" --repo "$REPOSITORY" --dir incoming --pattern "amaneq-firmware-programer-macos-$ARCHITECTURE.zip" --pattern "amaneq-firmware-programer-macos-$ARCHITECTURE.zip.sha256"
+          cd incoming
+          shasum -a 256 -c "amaneq-firmware-programer-macos-$ARCHITECTURE.zip.sha256"
+          ditto -x -k "amaneq-firmware-programer-macos-$ARCHITECTURE.zip" extracted
+      - name: Sign, submit, staple and assess Gatekeeper
+        env:
+          SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+        run: |
+          python3 macos_notarization.py incoming/extracted/amaneq-firmware-programer.app --identity "$SIGNING_IDENTITY" --profile amaneq-notary --keychain "$RUNNER_TEMP/amaneq-signing.keychain-db" --output notarized
+      - name: Smoke-test the notarized application
+        run: |
+          incoming/extracted/amaneq-firmware-programer.app/Contents/MacOS/amaneq-firmware-programer --smoke-test
+          codesign --verify --deep --strict incoming/extracted/amaneq-firmware-programer.app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: notarized-${{ matrix.architecture }}
+          path: |
+            notarized/*-notarized.zip
+            notarized/*.sha256
+            notarized/notary-result.json
+          if-no-files-found: error
+      - name: Remove ephemeral credentials
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/amaneq-signing.keychain-db" || true
+          rm -f "$RUNNER_TEMP/amaneq-signing.p12" "$RUNNER_TEMP/amaneq-notary.p8"
+  publish:
+    needs: notarize
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: notarized-*
+          path: archives
+      - name: Publish only validated notarized archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          SOURCE_RELEASE: ${{ inputs.source_release }}
+        run: |
+          tag="notarized-${SOURCE_RELEASE}-${GITHUB_RUN_ID}"
+          gh release create "$tag" --repo "$REPOSITORY" --target "$GITHUB_SHA" --title "Notarized macOS: $SOURCE_RELEASE" --notes "Developer ID signed. Apple notarization Accepted, ticket stapled and validated, Gatekeeper assessment and GUI smoke tests passed on Apple Silicon and Intel. Source application: $SOURCE_RELEASE." archives/*/*-notarized.zip archives/*/*.sha256

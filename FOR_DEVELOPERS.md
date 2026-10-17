@@ -170,3 +170,19 @@ Desktop 0.15.7: show only the custom Messages drag bar. Hide the native PanedWin
 Desktop 0.15.8: label the cable row JTAG cable: and place Help on the same row. Explain JTAG, automatic startup detection, Rescan, explicit serial selection with multiple cables, and FT232H/HS3 ambiguity in the popup. Distinguish the programmer from an Ethernet adapter; preserve selection guards and programming behavior.
 
 Desktop 0.15.9: use the top Language selector to switch English / Japanese during the session (English default). Translate labels, buttons, tabs, cooldown counters and Help/Why? explanations. Keep firmware names, repositories, paths, IPs, diagnostic logs and backend errors unchanged. Presentation-only language changes must not change selections, start requests or alter the cooldown count. Keep source identifiers/comments English and isolate Japanese translation strings in ui_language.py; this explicitly supersedes English-only GUI text. Keep help topics synchronized and use display-only StringVar proxies rather than changing backend variables. Language preference is session-only; CLI remains English.
+
+
+Mac signing and notarization preparation (not yet certified): the manual **Sign and notarize macOS release** workflow takes a tested preview release tag. It re-signs both architectures with Developer ID, submits to Apple, requires Accepted, staples and validates the ticket, checks Gatekeeper, smoke-tests, and publishes a separate notarized release only if both architectures succeed. Existing preview downloads remain ad-hoc signed until this workflow actually succeeds. Institutional Apple Developer Program access is awaiting confirmation.
+
+Ask the institution whether it can provide a Developer ID Application signing identity with permission to export its certificate/private key, and an App Store Connect team API key authorized for notarization (key ID and issuer ID). Do not post keys or passwords in issues/chat or commit them. Configure repository Actions secrets at Settings → Secrets and variables → Actions:
+
+- MACOS_CERTIFICATE_P12_BASE64: base64-encoded .p12 containing the Developer ID certificate and private key.
+- MACOS_CERTIFICATE_PASSWORD: password protecting that .p12.
+- MACOS_SIGNING_IDENTITY: the Developer ID Application identity name or fingerprint.
+- APPLE_API_KEY_P8: the private .p8 key text.
+- APPLE_API_KEY_ID: its key ID.
+- APPLE_API_ISSUER_ID: its team issuer ID.
+
+Use only a key approved by the institution; its administrator may prefer signing on an institutional Mac rather than exporting the private key. The signing helper also supports a locally installed identity and notarytool profile. The app is signed in place, so use a separate copy of the source app. No Developer ID/private key is bundled. Credentials exist only in the hosted runner's temporary files/keychain and are cleaned up; secret values are never printed by the scripts. Do not describe setup or mocked tests as successful Apple notarization. Notarization does not remove administrator confirmation for host network changes.
+
+References: [Apple notarization](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution), [Developer ID certificates](https://developer.apple.com/help/account/certificates/create-developer-id-certificates/).

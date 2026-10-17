@@ -86,3 +86,87 @@ class MacBundleTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NotarizationTests(unittest.TestCase):
+    def test_signing_order_signs_macho_before_containing_bundles(self):
+        signer = load("macos_notarizer", "macos_notarization.py")
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = Path(tmp) / "Example.app"
+            framework = bundle / "Contents/Frameworks/Python.framework"
+            framework.mkdir(parents=True)
+            binary = framework / "Python"
+            binary.write_bytes(bytes.fromhex("feedfacf") + b"fixture")
+            (bundle / "notes.txt").write_text("not executable", encoding="utf-8")
+            self.assertEqual(signer.signing_order(bundle), [binary, framework, bundle])
+
+    def exercise_submission(self, status):
+        import json
+        from types import SimpleNamespace
+
+        signer = load("macos_notarizer", "macos_notarization.py")
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = Path(tmp) / "Example.app"
+            bundle.mkdir()
+            output = Path(tmp) / "output"
+            calls = []
+
+            def fake_run(*args, capture=False):
+                calls.append(args)
+                if args[0] == "ditto":
+                    Path(args[-1]).write_bytes(b"synthetic archive")
+                if args[:3] == ("xcrun", "notarytool", "submit"):
+                    return json.dumps({"id": "test-submission", "status": status})
+                if args[:2] == ("uname", "-m"):
+                    return "arm64\n"
+                return ""
+
+            signature = SimpleNamespace(stderr=(
+                "Authority=Developer ID Application: Example\n"
+                "TeamIdentifier=ABCDE12345\n"
+            ))
+            with (
+                patch.object(signer.sys, "platform", "darwin"),
+                patch.object(signer, "run", side_effect=fake_run),
+                patch.object(signer.subprocess, "run", return_value=signature),
+            ):
+                if status == "Accepted":
+                    signer.notarize(bundle, "Developer ID Application: Example",
+                                    "test-profile", output, Path(tmp) / "test.keychain")
+                else:
+                    with self.assertRaises(RuntimeError):
+                        signer.notarize(bundle, "Developer ID Application: Example",
+                                        "test-profile", output)
+            archives = list(output.glob("*-notarized.zip"))
+            if status == "Accepted":
+                self.assertEqual(len(archives), 1)
+                self.assertIn(("xcrun", "stapler", "validate", bundle.resolve()), calls)
+                self.assertIn(
+                    ("spctl", "--assess", "--type", "execute", "--verbose=4",
+                     bundle.resolve()), calls,
+                )
+                submission = next(call for call in calls if call[:3] ==
+                                  ("xcrun", "notarytool", "submit"))
+                self.assertIn("--keychain", submission)
+            else:
+                self.assertFalse(archives)
+                self.assertFalse(any(call[:2] == ("xcrun", "stapler") for call in calls))
+
+    def test_only_accepted_submission_is_stapled_and_packaged(self):
+        self.exercise_submission("Accepted")
+
+    def test_rejected_submission_never_produces_a_notarized_archive(self):
+        self.exercise_submission("Invalid")
+
+    def test_adhoc_identity_is_rejected_before_any_commands(self):
+        signer = load("macos_notarizer", "macos_notarization.py")
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = Path(tmp) / "Example.app"
+            bundle.mkdir()
+            with (
+                patch.object(signer.sys, "platform", "darwin"),
+                patch.object(signer, "run") as command,
+            ):
+                with self.assertRaises(ValueError):
+                    signer.notarize(bundle, "-", "profile", Path(tmp) / "output")
+                command.assert_not_called()

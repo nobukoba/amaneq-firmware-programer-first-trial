@@ -170,3 +170,19 @@ Desktop 0.15.7: メッセージ欄の区切りは、追加したドラッグバ�
 Desktop 0.15.8: ケーブルのラベルをJTAG cable:へ短縮し、同じ行のHelpでJTAGの意味、自動検出、Rescan、複数ケーブルのシリアル選択、FT232HだけではHS3と断定できないことを説明します。Ethernetアダプターとの違いを明記し、自動選択の安全ガードや書き込み動作は維持します。
 
 Desktop 0.15.9: 上部のLanguage / 言語でEnglish / 日本語を切り替えます。既定はEnglishで、項目・ボタン・タブ・待機回数と秒数・Help/Why?の説明を切り替えます。ファームウェア名、リポジトリ、ファイルパス、IP、診断ログとバックエンドのエラーは英語のまま維持します。翻訳は表示専用で、言語変更は選択値や通信、クールタイム回数を変更しません。ソースのコメント・識別子は英語を維持し、日本語の翻訳文字列のみui_language.pyへ分離します（以前のUIも英語のみとする規則に対する明示的な変更）。各言語のHelp項目をそろえ、表示用StringVarと操作用StringVarを分離します。言語設定は起動中のみで、CLIは従来どおり英語です。
+
+
+Mac署名・公証の準備（公証はまだ未実施）: 手動の **Sign and notarize macOS release** ワークフローに、テスト済みプレビュー版のリリースタグを指定します。両アーキテクチャをDeveloper IDで署名し、Appleへ提出してAcceptedを確認後、チケットの添付・検証、Gatekeeper確認、起動テストを行います。両方成功した場合だけ、別の公証済みリリースを公開します。成功するまでは従来のダウンロードは簡易署名版のままです。現在、所属機関のApple Developer Program利用可否を確認待ちです。
+
+機関には、Developer ID Application証明書と秘密鍵の書き出し許可、および公証に使えるApp Store ConnectのチームAPIキー（Key ID・Issuer ID付き）を利用できるか確認してください。秘密鍵やパスワードをチャット・Issueへ投稿したり、Gitへコミットしたりしないでください。リポジトリのSettings → Secrets and variables → Actionsへ次を登録します。
+
+- MACOS_CERTIFICATE_P12_BASE64: Developer ID証明書と秘密鍵を含む.p12をbase64化したもの。
+- MACOS_CERTIFICATE_PASSWORD: .p12の保護パスワード。
+- MACOS_SIGNING_IDENTITY: Developer ID Applicationの識別名またはフィンガープリント。
+- APPLE_API_KEY_P8: .p8秘密鍵の内容。
+- APPLE_API_KEY_ID: キーID。
+- APPLE_API_ISSUER_ID: チームのIssuer ID。
+
+機関が許可した鍵だけを使います。秘密鍵を外へ出さず、機関のMacで署名する運用も可能です。ヘルパーはMacへ登録済みの署名IDとnotarytoolプロファイルにも対応します。アプリを直接署名するため、元のアプリのコピーを使ってください。秘密鍵はアプリに同梱しません。GitHub実行時は一時ファイル・一時キーチェーンを使って後始末し、スクリプトから秘密値を表示しません。準備や模擬試験を、Apple公証の成功と表現してはいけません。公証後も、一時IP設定などの管理者確認は必要です。
+
+公式資料: [Appleの公証](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)、[Developer ID証明書](https://developer.apple.com/help/account/certificates/create-developer-id-certificates/)。
