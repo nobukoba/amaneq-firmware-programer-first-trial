@@ -1,0 +1,112 @@
+name: Check existing Apple notarization status
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/macos-notary-status.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  status:
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - name: Prepare ephemeral signing keychain and notary credentials
+        env:
+          CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          API_KEY: ${{ secrets.APPLE_API_KEY_P8 }}
+          API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          API_ISSUER: ${{ secrets.APPLE_API_ISSUER_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          python3 - <<'PY'
+          import base64, os, pathlib, secrets, subprocess
+          api_names = ("API_KEY", "API_KEY_ID", "API_ISSUER")
+          account_names = ("APPLE_ID", "APPLE_APP_SPECIFIC_PASSWORD", "APPLE_TEAM_ID")
+          # Never silently fall back from an incomplete API-key configuration.
+          auth_names = api_names if any(os.environ.get(name) for name in api_names) else account_names
+          required = ("CERTIFICATE", "CERTIFICATE_PASSWORD", "SIGNING_IDENTITY", *auth_names)
+          missing = [name for name in required if not os.environ.get(name)]
+          if missing:
+              raise SystemExit("Missing signing secrets: " + ", ".join(missing))
+          root = pathlib.Path(os.environ["RUNNER_TEMP"])
+          certificate = root / "amaneq-signing.p12"
+          key = root / "amaneq-notary.p8"
+          keychain = root / "amaneq-signing.keychain-db"
+          password = secrets.token_urlsafe(32)
+          certificate.touch(mode=0o600)
+          certificate.write_bytes(base64.b64decode("".join(os.environ["CERTIFICATE"].split()), validate=True))
+          certificate.chmod(0o600)
+          def run(*args):
+              result = subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+              if result.returncode:
+                  raise SystemExit(f"Credential setup failed ({args[0]}, exit {result.returncode}); secret arguments are hidden.")
+          run("security", "create-keychain", "-p", password, str(keychain))
+          run("security", "set-keychain-settings", "-lut", "21600", str(keychain))
+          run("security", "unlock-keychain", "-p", password, str(keychain))
+          run("security", "import", str(certificate), "-P", os.environ["CERTIFICATE_PASSWORD"],
+              "-k", str(keychain), "-T", "/usr/bin/codesign")
+          run("security", "set-key-partition-list", "-S", "apple-tool:,apple:,codesign:",
+              "-s", "-k", password, str(keychain))
+          run("security", "list-keychains", "-d", "user", "-s", str(keychain))
+          if auth_names == api_names:
+              key.touch(mode=0o600)
+              key.write_text(os.environ["API_KEY"], encoding="utf-8")
+              auth = ("--key", str(key), "--key-id", os.environ["API_KEY_ID"],
+                      "--issuer", os.environ["API_ISSUER"])
+          else:
+              auth = ("--apple-id", os.environ["APPLE_ID"],
+                      "--password", os.environ["APPLE_APP_SPECIFIC_PASSWORD"],
+                      "--team-id", os.environ["APPLE_TEAM_ID"])
+          run("xcrun", "notarytool", "store-credentials", "amaneq-notary",
+              "--keychain", str(keychain), *auth)
+          # Check chain validity and the imported private key before downloading apps.
+          identities = subprocess.check_output(
+              ["security", "find-identity", "-v", "-p", "codesigning", str(keychain)],
+              text=True)
+          if os.environ["SIGNING_IDENTITY"] not in identities:
+              raise SystemExit("Signing identity is missing or invalid; include the Apple intermediate certificate in the P12.")
+          certificate.unlink()
+          key.unlink(missing_ok=True)
+          PY
+      - name: Query existing submissions without uploading
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, subprocess
+          submissions = {
+              "arm64": "a4ecb7b1-bf68-468a-8d66-a30bd7b5a09f",
+              "x86_64": "977107cb-9695-4ac0-92e3-c05481f7c61c",
+          }
+          summary = pathlib.Path(os.environ["GITHUB_STEP_SUMMARY"])
+          rows = ["## Existing Apple submissions", "", "Source run: 39028280298", "",
+                  "| Architecture | Submission | Apple status |", "| --- | --- | --- |"]
+          for architecture, submission in submissions.items():
+              result = subprocess.run(
+                  ["xcrun", "notarytool", "info", submission,
+                   "--keychain-profile", "amaneq-notary",
+                   "--keychain", os.path.join(os.environ["RUNNER_TEMP"], "amaneq-signing.keychain-db"),
+                   "--output-format", "json"],
+                  capture_output=True, text=True, timeout=120, check=True)
+              info = json.loads(result.stdout)
+              status = info.get("status", "Unknown")
+              print(f"{architecture}: {submission}: {status}", flush=True)
+              pathlib.Path(f"notary-status-{architecture}.json").write_text(
+                  json.dumps(info, indent=2) + "\n", encoding="utf-8")
+              rows.append(f"| {architecture} | {submission} | {status} |")
+          summary.write_text("\n".join(rows) + "\n", encoding="utf-8")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: apple-notary-status
+          path: notary-status-*.json
+          if-no-files-found: warn
+      - name: Remove ephemeral credentials
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/amaneq-signing.keychain-db" || true
+          rm -f "$RUNNER_TEMP/amaneq-signing.p12" "$RUNNER_TEMP/amaneq-notary.p8"
