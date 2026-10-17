@@ -10,6 +10,10 @@ import network_operations as operations
 
 
 HELP_TOPICS = {
+    "jtag": [
+        "JTAG cable and automatic detection",
+        "JTAG is the hardware programming connection used to load the FPGA or write its flash. The JTAG cable is the USB programmer, not the Ethernet network adapter.\n\nConnected cables are automatically detected when the app starts. Press Rescan after connecting or disconnecting a cable. A single identified cable is selected automatically. If several cables are connected, choose the intended cable by its serial number; the app will not silently choose the first one.\n\nSome FT232H devices share the same USB identifier. That identifier alone does not prove the cable is an HS3. Confirm that an unidentified FT232H is physically an HS3 only when you have checked the hardware.\n\nScanning and opening this help do not program the board or change USB drivers. Program image starts firmware programming after the existing checks. USB access permissions or host-side setup may still be required."
+    ],
     "cooldown": [
         "Why wait?",
         "Changing Board, Target, Firmware or Format can require several GitHub API requests to find current and historical images. Unauthenticated REST API access normally allows 60 requests per hour for a shared public IP, so computers on the same network may share that allowance.\n\nThe first three category changes in this app session do not require an app cooldown. Starting with change 4, every new category selection waits 60 seconds. A change during the wait restarts the 60 seconds for the new selection. The counter is not reset after waiting. Opening the app and refreshing the same selection do not count. 'No-wait changes left' is the app allowance, not GitHub requests remaining.\n\nAfter the countdown the final selection loads automatically. Local files remain available. This pause reduces request frequency; it cannot guarantee avoiding GitHub limits. A server-imposed wait can be longer.\n\nReference: https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api"

@@ -732,13 +732,14 @@ def gui(smoke_test=False):
     cable_box = ttk.Frame(page, padding=(0, 8))
     cable_box.pack(fill="x")
     cable_box.columnconfigure(1, weight=1)
-    ttk.Label(cable_box, text="Cable (automatically detected):").grid(
+    ttk.Label(cable_box, text="JTAG cable:").grid(
         row=0, column=0, padx=(0, 8), sticky="w"
     )
     cable = ttk.Combobox(cable_box, textvariable=serial, state="readonly", width=28)
     cable.grid(row=0, column=1, sticky="ew")
     cable.bind("<<ComboboxSelected>>", lambda unused: update_cable_model())
     ttk.Button(cable_box, text="Rescan", command=scan).grid(row=0, column=2, padx=6)
+    help_link(cable_box, "jtag").grid(row=0, column=3, padx=(0, 4))
     hs3_confirmation = ttk.Checkbutton(
         cable_box,
         variable=confirmed_hs3,
