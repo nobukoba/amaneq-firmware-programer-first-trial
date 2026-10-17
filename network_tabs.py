@@ -156,28 +156,53 @@ class TargetAddress:
         self.custom = tk.StringVar(value="192.168.10.10")
         box = ttk.Frame(parent)
         box.pack(fill="x", pady=6)
-        ttk.Label(box, text="Target IP:").pack(side="left", padx=(0, 8))
+        self.address_box = ttk.Frame(box)
+        self.address_box.grid(row=0, column=0, sticky="w")
+        self.actions_box = ttk.Frame(box)
+        self.actions_box.grid(row=0, column=1, sticky="w", padx=(8, 0))
+        ttk.Label(self.address_box, text="Target IP:").pack(side="left", padx=(0, 6))
         selector = ttk.Combobox(
-            box,
+            self.address_box,
             textvariable=self.choice,
             values=tuple(TARGET_IP_PRESETS) + ("Custom",),
             state="readonly",
-            width=35,
+            width=28,
         )
         selector.pack(side="left")
-        self.entry = ttk.Entry(box, textvariable=self.custom, width=20)
-        help_link(box, "target").pack(side="right", padx=4)
-        self.ping_button = ttk.Button(box, text="Ping", command=self.ping)
-        self.ping_button.pack(side="left", padx=8)
+        self.entry = ttk.Entry(self.address_box, textvariable=self.custom, width=15)
+        self.ping_button = ttk.Button(self.actions_box, text="Ping", command=self.ping)
+        self.ping_button.pack(side="left", padx=(0, 4))
         self.ping_status = tk.StringVar()
-        ttk.Label(box, textvariable=self.ping_status).pack(side="left", padx=(0, 8))
-        self.version_button = ttk.Button(box, text="get_version", command=self.get_version)
-        self.version_button.pack(side="left", padx=(0, 8))
+        ttk.Label(self.actions_box, textvariable=self.ping_status).pack(side="left", padx=(0, 6))
+        self.version_button = ttk.Button(self.actions_box, text="get_version", command=self.get_version)
+        self.version_button.pack(side="left", padx=(0, 4))
         self.version_status = tk.StringVar()
-        ttk.Label(box, textvariable=self.version_status).pack(side="left")
+        ttk.Label(self.actions_box, textvariable=self.version_status).pack(side="left", padx=(0, 6))
+        help_link(self.actions_box, "target").pack(side="left")
+        self.target_box = box
+        self.actions_wrapped = None
+        box.bind("<Configure>", lambda unused: self.layout_target())
+        for frame in (self.address_box, self.actions_box):
+            frame.bind("<Configure>", lambda unused: box.after_idle(self.layout_target))
         self.choice.trace_add("write", lambda *unused: self.show_custom())
         self.custom.trace_add("write", lambda *unused: self.ping_status.set(""))
         self.custom.trace_add("write", lambda *unused: self.version_status.set(""))
+
+    def layout_target(self):
+        # Keep actions visible by wrapping them together in a narrow window.
+        available = self.target_box.winfo_width()
+        if available <= 1:
+            return
+        required = self.address_box.winfo_reqwidth() + self.actions_box.winfo_reqwidth() + 8
+        wrapped = available < required
+        if wrapped == self.actions_wrapped:
+            return
+        self.actions_wrapped = wrapped
+        self.actions_box.grid_configure(
+            row=1 if wrapped else 0, column=0 if wrapped else 1,
+            padx=(0, 0) if wrapped else (8, 0),
+            pady=(4, 0) if wrapped else (0, 0),
+        )
 
     def ping(self):
         try:
@@ -245,7 +270,7 @@ class TargetAddress:
         self.ping_status.set("")
         self.version_status.set("")
         if self.choice.get() == "Custom":
-            self.entry.pack(side="left", padx=8, before=self.ping_button)
+            self.entry.pack(side="left", padx=(6, 0))
         else:
             self.entry.pack_forget()
 
