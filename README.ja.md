@@ -304,3 +304,5 @@ Desktop 0.15.9: 上部のLanguage / 言語でEnglish / 日本語を切り替え�
 
 
 Macの署名・公証はGitHubのmacOSランナーで実行し、管理者のMacでのビルド・署名作業は不要です。手動のSign and notarize macOS releaseワークフローとmacos_notarization.pyは、App Store ConnectのチームAPIキーまたはApple Accountのアプリ用パスワードに対応します。Actions Secretsの初期登録は必要です。実際にAppleのAccepted・チケット検証・Gatekeeper確認を通るまでは公証済みと扱いません。初回のSecrets登録とブラウザーだけで実行する手順は[開発者向け資料](FOR_DEVELOPERS.ja.md)を参照してください。秘密鍵・パスワードをチャットやGitへ出さないでください。
+
+公証処理は申請IDと提出ZIPを保存します。待機時間切れは却下とは区別し、Actionsのnotary-stateアーティファクトを使って同じ申請を再開できます。手順と制限は[開発者向け資料](FOR_DEVELOPERS.ja.md)を参照してください。

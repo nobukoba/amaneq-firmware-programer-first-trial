@@ -190,3 +190,5 @@ Mac署名・公証の準備（公証はまだ未実施）: 手動の **Sign and 
 アカウント所有者が許可した鍵だけを使い、機関のチームでは機関の許可も得ます。Secretsを使うワークフローはそのDeveloper IDで署名できるため、実行前に変更内容を確認してください。秘密鍵はアプリに同梱しません。GitHub実行時は一時ファイル・一時キーチェーンを使い、失敗時も後始末して秘密値を表示しません。ヘルパーはMacへ登録済みの署名IDとnotarytoolプロファイルにも対応しますが、ローカル署名は任意です。準備や模擬試験を、Apple公証の成功と表現してはいけません。公証後も、一時IP設定などの管理者確認は必要です。
 
 公式資料: [Appleの公証](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)、[Developer ID証明書](https://developer.apple.com/help/account/certificates/create-developer-id-certificates/)。
+
+公証タイムアウトの復旧: 実行39025172325は両アーキテクチャの署名後、notarytool submit --wait --timeout 30mが終了コード124になりました。待機時間切れであり、Appleの却下を示すものではありません。提出は待機と分け、UUID・提出した署名済みsubmission.zipのSHA256を直ちに保存し、状態取得と待機（既定90分）を行います。保留・最終状態、標準出力・エラー、Appleのログを保存します。notary-stateアーティファクトにはアーキテクチャ別の提出ZIPと元リリース名を必ず保存し、証明書・秘密鍵・キーチェーンを含めません。再開時は同じ元リリースと前回の実行IDを指定します。保存ZIPのハッシュを照合し、再署名・再提出せず同じ申請を確認し、Acceptedの後だけチケットを添付します。署名やタイムスタンプを変えたアプリへ古い申請IDを流用してはいけません。公証済み配布は両版のチケット検証・Gatekeeper・画面テスト完了後に限ります。main上の公証ヘルパー・ワークフロー変更では最新のテスト済みプレビューを対象に実行します。手動実行では元リリースとresume_runを指定できます。旧実行では提出済みZIP・IDを保存していないため、新しいアーティファクト再開機能で直接再開できません。

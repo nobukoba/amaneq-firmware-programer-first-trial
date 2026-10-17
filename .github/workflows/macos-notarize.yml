@@ -1,15 +1,42 @@
 name: Sign and notarize macOS release
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'macos_notarization.py'
+      - '.github/workflows/macos-notarize.yml'
   workflow_dispatch:
     inputs:
       source_release:
         description: Existing tested macOS preview release tag
         required: true
         type: string
+      resume_run:
+        description: Previous run ID containing saved notary-state artifacts (blank for new submission)
+        required: false
+        default: ''
+        type: string
+concurrency:
+  group: macos-notarization-${{ inputs.source_release || 'latest' }}
+  cancel-in-progress: false
 permissions:
   contents: read
+  actions: read
 jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install PyYAML==6.0.2
+      - name: Validate helper and workflow before using signing credentials
+        run: |
+          python -m unittest test_macos_app -v
+          python -c "import pathlib,yaml; yaml.safe_load(pathlib.Path('.github/workflows/macos-notarize.yml').read_text())"
   notarize:
+    needs: checks
     strategy:
       fail-fast: false
       matrix:
@@ -19,9 +46,39 @@ jobs:
           - runner: macos-15-intel
             architecture: x86_64
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 55
+    timeout-minutes: 115
+    outputs:
+      source_release: ${{ steps.source.outputs.release }}
     steps:
       - uses: actions/checkout@v4
+      - name: Select tested source release
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          SOURCE_RELEASE: ${{ inputs.source_release }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, subprocess
+          release = os.environ.get("SOURCE_RELEASE", "").strip()
+          if not release:
+              releases = json.loads(subprocess.check_output(
+                  ["gh", "api", f"repos/{os.environ['REPOSITORY']}/releases?per_page=100"],
+                  text=True))
+              expected = {f"amaneq-firmware-programer-macos-{arch}.zip"
+                          for arch in ("arm64", "x86_64")}
+              choices = [item for item in releases
+                         if item["tag_name"].startswith("macos-preview-")
+                         and expected <= {asset["name"] for asset in item["assets"]}]
+              if not choices:
+                  raise SystemExit("No tested macOS preview with both architectures found.")
+              release = choices[0]["tag_name"]
+          if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/-]{0,199}", release):
+              raise SystemExit("Invalid source release tag.")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write("release=" + release + "\n")
+          print("Source release: " + release)
+          PY
       - name: Prepare ephemeral signing keychain and notary credentials
         env:
           CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
@@ -87,7 +144,7 @@ jobs:
       - name: Download the tested application archive
         env:
           GH_TOKEN: ${{ github.token }}
-          SOURCE_RELEASE: ${{ inputs.source_release }}
+          SOURCE_RELEASE: ${{ steps.source.outputs.release }}
           REPOSITORY: ${{ github.repository }}
           ARCHITECTURE: ${{ matrix.architecture }}
         run: |
@@ -95,17 +152,52 @@ jobs:
           cd incoming
           shasum -a 256 -c "amaneq-firmware-programer-macos-$ARCHITECTURE.zip.sha256"
           ditto -x -k "amaneq-firmware-programer-macos-$ARCHITECTURE.zip" extracted
+      - name: Restore saved submission without re-uploading
+        if: ${{ inputs.resume_run != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: notary-state-${{ matrix.architecture }}
+          run-id: ${{ inputs.resume_run }}
+          github-token: ${{ github.token }}
+          path: notarized
       - name: Sign, submit, staple and assess Gatekeeper
         env:
           SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          RESUME_RUN: ${{ inputs.resume_run }}
+          SOURCE_RELEASE: ${{ steps.source.outputs.release }}
         run: |
-          python3 macos_notarization.py incoming/extracted/amaneq-firmware-programer.app --identity "$SIGNING_IDENTITY" --profile amaneq-notary --keychain "$RUNNER_TEMP/amaneq-signing.keychain-db" --output notarized
+          extra=()
+          if [ -n "$RESUME_RUN" ]; then
+            test "$(cat notarized/source-release.txt)" = "$SOURCE_RELEASE"
+            extra+=(--resume)
+          fi
+          python3 macos_notarization.py incoming/extracted/amaneq-firmware-programer.app --identity "$SIGNING_IDENTITY" --profile amaneq-notary --keychain "$RUNNER_TEMP/amaneq-signing.keychain-db" --output notarized "${extra[@]}"
+      - name: Preserve submission state and Apple diagnostics
+        if: always()
+        env:
+          SOURCE_RELEASE: ${{ steps.source.outputs.release }}
+        run: |
+          if [ -d notarized ]; then
+            printf '%s\n' "$SOURCE_RELEASE" > notarized/source-release.txt
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: notary-state-${{ matrix.architecture }}
+          path: |
+            notarized/submission.zip
+            notarized/source-release.txt
+            notarized/notary-*.json
+            notarized/notary-*.txt
+          if-no-files-found: warn
+          retention-days: 30
       - name: Smoke-test the notarized application
         run: |
-          incoming/extracted/amaneq-firmware-programer.app/Contents/MacOS/amaneq-firmware-programer --smoke-test
-          codesign --verify --deep --strict incoming/extracted/amaneq-firmware-programer.app
-          xcrun stapler validate incoming/extracted/amaneq-firmware-programer.app
-          spctl --assess --type execute --verbose=2 incoming/extracted/amaneq-firmware-programer.app
+          app="$(cat notarized/validated-app-path.txt)"
+          "$app/Contents/MacOS/amaneq-firmware-programer" --smoke-test
+          codesign --verify --deep --strict "$app"
+          xcrun stapler validate "$app"
+          spctl --assess --type execute --verbose=2 "$app"
       - uses: actions/upload-artifact@v4
         with:
           name: notarized-${{ matrix.architecture }}
@@ -133,7 +225,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
-          SOURCE_RELEASE: ${{ inputs.source_release }}
+          SOURCE_RELEASE: ${{ needs.notarize.outputs.source_release }}
         run: |
           tag="notarized-${SOURCE_RELEASE}-${GITHUB_RUN_ID}"
           gh release create "$tag" --repo "$REPOSITORY" --target "$GITHUB_SHA" --title "Notarized macOS: $SOURCE_RELEASE" --notes "Developer ID signed. Apple notarization Accepted, ticket stapled and validated, Gatekeeper assessment and GUI smoke tests passed on Apple Silicon and Intel. Source application: $SOURCE_RELEASE." archives/*/*-notarized.zip archives/*/*.sha256
