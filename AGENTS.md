@@ -159,3 +159,5 @@ Desktop 0.15.2 fixes the user screenshot with Messages filling the window and ma
 Desktop 0.15.3 removes the entire GitHub token row, including its input, Apply and Open GitHub buttons. Keep the editable GitHub URL, Refresh list, caching and rate-limit backoff.
 
 Desktop 0.15.4: default to 5 history choices in GUI and CLI. Preserve History limit / --history-limit overrides (1..1000), caching, deduplication and rate-limit backoff. A smaller list does not guarantee halving API requests.
+
+Desktop 0.15.5: after initial selection, the fourth GitHub category change (Board / Target / Firmware / Format) enforces a 60-second cooldown with a warning and remaining seconds. Block additional list acquisition, including Refresh list, URL and history-limit refreshes, during the pause. Further selection changes do not extend it; acquire the final selection on expiry and reset the change count. Repeated refresh of the same category and Local file do not count. Already running requests finish with stale results ignored. This does not guarantee recovery from GitHub 403/429 limits.

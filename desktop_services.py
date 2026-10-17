@@ -25,6 +25,37 @@ def load_core(root, data_root):
     return core
 
 
+class CategoryCooldown:
+    """Pause catalog acquisition after four category changes per cycle."""
+
+    def __init__(self, clock=time.monotonic):
+        self.clock = clock
+        self.category = None
+        self.changes = 0
+        self.until = 0.0
+
+    def remaining(self):
+        import math
+
+        seconds = max(0, math.ceil(self.until - self.clock()))
+        if self.until and not seconds:
+            self.until = 0.0
+            self.changes = 0
+        return seconds
+
+    def observe(self, category):
+        remaining = self.remaining()
+        if self.category is None:
+            self.category = category
+        elif category != self.category:
+            self.category = category
+            if not remaining:
+                self.changes += 1
+                if self.changes >= 4:
+                    self.until = self.clock() + 60
+        return self.remaining()
+
+
 class DesktopServices:
     def __init__(self, root, data_root):
         self.data_root = data_root

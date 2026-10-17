@@ -15,7 +15,7 @@ import uuid
 import windows_usb as usb
 import macos_network as network
 from network_tabs import NetworkTabs, bind_horizontal_scroll, scrollable_tab
-from desktop_services import DesktopServices, cable_arguments
+from desktop_services import CategoryCooldown, DesktopServices, cable_arguments
 
 ROOT = Path(__file__).resolve().parent
 
@@ -201,6 +201,9 @@ def gui(smoke_test=False):
     active_profile = None
     catalog_request = 0
     refresh_after = None
+    cooldown_after = None
+    category_cooldown = CategoryCooldown()
+    cooldown_status = tk.StringVar()
     changing_repository = False
     last_cable_serial = None
     temporary_enabled = tk.BooleanVar(value=False)
@@ -308,11 +311,43 @@ def gui(smoke_test=False):
             quiet=quiet,
         )
 
+    def update_cooldown():
+        nonlocal cooldown_after
+        cooldown_after = None
+        remaining = category_cooldown.remaining()
+        if remaining:
+            cooldown_status.set(
+                f"Frequent category changes: GitHub list acquisition is paused. "
+                f"Please wait {remaining} seconds."
+            )
+            cooldown_after = root.after(250, update_cooldown)
+        else:
+            cooldown_status.set("")
+            if not smoke_test and source_mode.get() == "GitHub":
+                refresh_catalog(force=False, quiet=True)
+
     def refresh_catalog(force=True, quiet=False):
-        nonlocal catalog_request, refresh_after
+        nonlocal catalog_request, refresh_after, cooldown_after
         if refresh_after:
             root.after_cancel(refresh_after)
             refresh_after = None
+        if source_mode.get() == "GitHub":
+            remaining = category_cooldown.observe(
+                (board.get(), target.get(), firmware.get(), image_format.get())
+            )
+            if remaining:
+                catalog_request += 1
+                images.delete(*images.get_children())
+                catalog_status.set("List acquisition will resume with the selected category after cooldown.")
+                if cooldown_after is None:
+                    events.put(
+                        (
+                            "log",
+                            "WARNING: Four category changes triggered a 60-second GitHub list cooldown.",
+                        )
+                    )
+                    update_cooldown()
+                return
         if any(name.startswith("Firmware list #") for name in jobs):
             refresh_after = root.after(250, lambda: refresh_catalog(force, quiet))
             return
@@ -784,6 +819,7 @@ def gui(smoke_test=False):
     ttk.Label(
         history_controls, text="Default 5 images; includes tags and firmware commits"
     ).pack(side="left")
+    ttk.Label(online, textvariable=cooldown_status, wraplength=930).pack(anchor="w")
     ttk.Label(online, textvariable=catalog_status, wraplength=930).pack(anchor="w")
     table_frame = ttk.Frame(online)
     table_frame.pack(fill="both", expand=True, pady=4)
