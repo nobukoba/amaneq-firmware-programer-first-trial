@@ -1417,6 +1417,25 @@ def gui(smoke_test=False):
         assert log.yview()[0] == position
         latest_messages()
         assert follow_messages.get()
+        cooldown_clock = [100.0]
+        category_cooldown.clock = lambda: cooldown_clock[0]
+        category_cooldown.category = None
+        category_cooldown.observe(("initial",))
+        for index in range(4):
+            category_cooldown.observe((index,))
+        jobs_before_cooldown = set(jobs)
+        refresh_catalog()
+        assert jobs == jobs_before_cooldown
+        assert "60 seconds" in cooldown_status.get()
+        cooldown_clock[0] += 59.1
+        root.after_cancel(cooldown_after)
+        update_cooldown()
+        assert "1 seconds" in cooldown_status.get()
+        cooldown_clock[0] += 0.9
+        root.after_cancel(cooldown_after)
+        update_cooldown()
+        assert cooldown_status.get() == ""
+        assert category_cooldown.changes == 0
         root.after(300, root.destroy)
     else:
         root.after(50, lambda: scan(quiet=True))
