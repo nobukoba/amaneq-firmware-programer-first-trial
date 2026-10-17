@@ -28,7 +28,7 @@ HELP_TOPICS = {
     ],
     "target": [
         "Target IP and Ping",
-        "Target IP is the board's current Ethernet address. SiTCP commonly defaults to 192.168.10.16; SiTCP-XG commonly defaults to 192.168.10.10. Your board may have a different saved or running address; use Custom when needed.\n\nPing checks for an ICMP response. No response does not prove the board is absent or that its register protocol is unavailable. Network settings on the computer must also permit reaching the board.\n\nNetwork controls communicate over Ethernet (RBCP register access). Firmware programming uses USB/JTAG instead and does not require temporary Ethernet settings."
+        "Target IP is the board's current Ethernet address. SiTCP commonly defaults to 192.168.10.16; SiTCP-XG commonly defaults to 192.168.10.10. Your board may have a different saved or running address; use Custom when needed.\n\nPing checks for an ICMP response. No response does not prove the board is absent or that its register protocol is unavailable. Network settings on the computer must also permit reaching the board.\n\nget_version reads the common BCT firmware version register over RBCP and prints the FW ID, version and known firmware name in Messages. It does not write registers. Unknown firmware IDs are displayed without guessing the board type. A timeout or bus error is reported in Messages.\n\nNetwork controls communicate over Ethernet (RBCP register access). Firmware programming uses USB/JTAG instead and does not require temporary Ethernet settings."
     ],
     "host": [
         "Temporary host IP",
@@ -169,6 +169,8 @@ class TargetAddress:
         help_link(box, "target").pack(side="right", padx=4)
         self.ping_button = ttk.Button(box, text="Ping", command=self.ping)
         self.ping_button.pack(side="left", padx=8)
+        self.version_button = ttk.Button(box, text="get_version", command=self.get_version)
+        self.version_button.pack(side="left", padx=(0, 8))
         self.ping_status = tk.StringVar()
         ttk.Label(box, textvariable=self.ping_status).pack(side="left")
         self.choice.trace_add("write", lambda *unused: self.show_custom())
@@ -195,6 +197,26 @@ class TargetAddress:
             return "ping", (self, host, status)
 
         self.task(f"Ping {id(self)} {host}", operation)
+
+    def get_version(self):
+        try:
+            host = self.value()
+        except ValueError as error:
+            self.events.put(("log", f"ERROR [get_version]: {error}"))
+            return
+        if self.version_button.instate(["disabled"]):
+            return
+        self.version_button.state(["disabled"])
+
+        def operation():
+            try:
+                output = operations.get_version(host)
+            except Exception as error:
+                output = f"ERROR [get_version {host}]: {error}"
+            self.events.put(("log", output))
+            return "version_done", self
+
+        self.task(f"get_version {id(self)} {host}", operation)
 
     def ping_result(self, host, status):
         self.ping_button.state(["!disabled"])

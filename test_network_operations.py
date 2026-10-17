@@ -243,3 +243,44 @@ class NetworkPathInputTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FirmwareVersionTests(unittest.TestCase):
+    def test_common_version_register_byte_lanes_and_decimal_version(self):
+        client = MagicMock()
+        client.read.side_effect = [0x0A, 0x02, 0xC4, 0x60]
+        result = ops.get_version("192.168.10.10", lambda host: client)
+        self.assertEqual([call.args[0] for call in client.read.call_args_list],
+                         [0xE0100000, 0xE0110000, 0xE0120000, 0xE0130000])
+        self.assertIn("FW ID      : 0x60c4", result)
+        self.assertIn("FW version : 2.10", result)
+        self.assertIn("AMANEQ StrLrTdc", result)
+        client.write.assert_not_called()
+
+    def test_unknown_id_is_reported_and_read_errors_propagate(self):
+        client = MagicMock()
+        client.read.side_effect = [0, 0, 0x34, 0x12]
+        self.assertIn("Unknown firmware", ops.get_version("192.168.10.16", lambda host: client))
+        client.read.side_effect = RuntimeError("RBCP timeout")
+        with self.assertRaisesRegex(RuntimeError, "RBCP timeout"):
+            ops.get_version("192.168.10.16", lambda host: client)
+        client.write.assert_not_called()
+
+    def test_button_results_and_errors_use_message_event(self):
+        from queue import Queue
+        from types import SimpleNamespace
+        from network_tabs import TargetAddress
+        for failure in (False, True):
+            events = Queue()
+            button = MagicMock()
+            button.instate.return_value = False
+            field = SimpleNamespace(value=lambda: "192.168.10.10",
+                                    version_button=button, events=events)
+            field.task = lambda name, operation: events.put(operation())
+            with patch("network_operations.get_version", return_value="FW version : 2.10",
+                       side_effect=RuntimeError("RBCP timeout") if failure else None):
+                TargetAddress.get_version(field)
+            kind, message = events.get_nowait()
+            self.assertEqual(kind, "log")
+            self.assertIn("RBCP timeout" if failure else "FW version", message)
+            self.assertEqual(events.get_nowait(), ("version_done", field))

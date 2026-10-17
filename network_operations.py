@@ -224,3 +224,28 @@ def utility_command(
     if new_ip.strip():
         command += ["--set-current-ip" if current else "--set-eeprom-ip", ipv4(new_ip)]
     return command
+
+
+def get_version(host, client_factory=Rbcp):
+    """Read the HUL common BCT version register without writing hardware."""
+    host = ipv4(host)
+    client = client_factory(host)
+    # hul-common-lib RegisterMapCommon.hh / FPGAModule::ReadModule.
+    value = sum(client.read(0xE0100000 + (lane << 16)) << (8 * lane)
+                for lane in range(4))
+    firmware_id = (value >> 16) & 0xFFFF
+    names = {
+        0xF000: "MikumariClock-Root", 0xF100: "MikumariClock-Hub",
+        0x60C4: "AMANEQ StrLrTdc", 0x61C4: "AMANEQ StrLrTdc-10G",
+        0xC480: "AMANEQ StrHrTdc Base", 0xA000: "AMANEQ Skeleton",
+        0x390A: "MikumariPrim-Ex", 0x390B: "MikumariSecond-Ex",
+        0x413E: "CIRASAME Skeleton", 0x6041: "CIRASAME StrTdc",
+        0x7041: "CIRASAME StrTdc-10G",
+    }
+    return (
+        f"get_version {host}:\n"
+        f"FW ID      : 0x{firmware_id:04x}\n"
+        f"FW version : {(value >> 8) & 255}.{value & 255}\n"
+        f"Firmware   : {names.get(firmware_id, 'Unknown firmware')}\n"
+        f"Raw BCT    : 0x{value:08x}"
+    )

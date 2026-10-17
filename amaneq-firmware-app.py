@@ -1213,6 +1213,8 @@ def gui(smoke_test=False):
             elif kind == "ping":
                 field, host, status = value
                 field.ping_result(host, status)
+            elif kind == "version_done":
+                value.version_button.state(["!disabled"])
             elif kind == "endpoint":
                 network_tabs.ip_target.set(value)
             elif kind == "lease":

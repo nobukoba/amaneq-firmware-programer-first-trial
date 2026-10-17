@@ -306,3 +306,5 @@ Desktop 0.15.9: use the top Language selector to switch English / Japanese durin
 Mac signing and notarization run on GitHub-hosted macOS runners; maintainers do not need to build or sign on their own Mac. The manual Sign and notarize macOS release workflow and macos_notarization.py support an App Store Connect team API key or Apple Account app-specific password; Actions secrets still need to be configured; do not claim certification until Apple Accepted, ticket validation and Gatekeeper assessment actually succeed. See [developer notes](FOR_DEVELOPERS.md) for the initial secret setup and browser-only release steps. Never post or commit private keys/passwords.
 
 Notarization preserves the submission ID and signed ZIP. A wait timeout is distinguished from rejection; use the saved notary-state Actions artifacts to resume the same submission. See [developer notes](FOR_DEVELOPERS.md) for steps and limitations.
+
+The network tabs provide `get_version` next to Ping. It reads the target's common BCT firmware ID/version over RBCP and shows the result or communication error in Messages; no device settings are written.
