@@ -83,7 +83,7 @@ build-windows-app.py --helpに従い、UCRT64・libwdi DLLと対応ソース・C
 
 build-macos-app.pyはMac上で実行し、Apple Silicon arm64とIntel x86_64を対応するPythonで別々に作ります。macos-app.ymlはmacos-15とmacos-15-intelを使います。openFPGALoaderをPyInstallerのbinaryとして扱い、dylibを回収・再配置して、システム外への絶対リンクが残れば失敗させます。XC7K160T SPIブリッジは非圧縮で同梱します。openFPGALoader・libftdi・libusbの対応ソース・表示・Homebrewレシピを入れ、版やチェックサムの不一致を無視しません。
 
-.app内へ書き込みや__pycache__生成をしません。GUIのCLI子プロセスは利用者のデータ用ROOTを使い、windowed起動で標準出力がNoneなら復旧します。Macの保存先は~/Library/Application Support/AMANEQです。HS3の機種確認欄は全タブ共通で、Windows用ドライバー変更は無効です。署名・起動・ローダー・機器未接続の検出・依存関係の検査と、実機書き込みを区別します。Developer ID署名・Apple公証は設定していません。dittoでシンボリックリンク・権限・資源を保つZIPを作ります。Artifact保存は30日で、恒久的なRelease配布ではありません。
+.app内へ書き込みや__pycache__生成をしません。GUIのCLI子プロセスは利用者のデータ用ROOTを使い、windowed起動で標準出力がNoneなら復旧します。Macの保存先は~/Library/Application Support/AMANEQです。HS3の機種確認欄は全タブ共通で、Windows用ドライバー変更は無効です。署名・起動・ローダー・機器未接続の検出・依存関係の検査と、実機書き込みを区別します。Actions Secretsの登録後は手動ワークフローでGitHub上のDeveloper ID署名・Apple公証を実行できます。プレビューは引き続き簡易署名版です。dittoでシンボリックリンク・権限・資源を保つZIPを作ります。Artifact保存は30日で、恒久的なRelease配布ではありません。
 
 2026-10-15、Actions実行38740982476でarm64・x86_64の両方のビルド・署名検査・GUI起動・同梱ローダー・機器未接続でのscanが成功しました。47件の模擬テストと通常CIの6構成も成功しました。これはHS3実機書き込みの検証ではありません。
 
@@ -172,17 +172,21 @@ Desktop 0.15.8: ケーブルのラベルをJTAG cable:へ短縮し、同じ行�
 Desktop 0.15.9: 上部のLanguage / 言語でEnglish / 日本語を切り替えます。既定はEnglishで、項目・ボタン・タブ・待機回数と秒数・Help/Why?の説明を切り替えます。ファームウェア名、リポジトリ、ファイルパス、IP、診断ログとバックエンドのエラーは英語のまま維持します。翻訳は表示専用で、言語変更は選択値や通信、クールタイム回数を変更しません。ソースのコメント・識別子は英語を維持し、日本語の翻訳文字列のみui_language.pyへ分離します（以前のUIも英語のみとする規則に対する明示的な変更）。各言語のHelp項目をそろえ、表示用StringVarと操作用StringVarを分離します。言語設定は起動中のみで、CLIは従来どおり英語です。
 
 
-Mac署名・公証の準備（公証はまだ未実施）: 手動の **Sign and notarize macOS release** ワークフローに、テスト済みプレビュー版のリリースタグを指定します。両アーキテクチャをDeveloper IDで署名し、Appleへ提出してAcceptedを確認後、チケットの添付・検証、Gatekeeper確認、起動テストを行います。両方成功した場合だけ、別の公証済みリリースを公開します。成功するまでは従来のダウンロードは簡易署名版のままです。現在、所属機関のApple Developer Program利用可否を確認待ちです。
+Mac署名・公証の準備（公証はまだ未実施）: 手動の **Sign and notarize macOS release** ワークフローに、テスト済みプレビュー版のリリースタグを指定します。両アーキテクチャをDeveloper IDで署名し、Appleへ提出してAcceptedを確認後、チケットの添付・検証、Gatekeeper確認、起動テストを行います。両方成功した場合だけ、別の公証済みリリースを公開します。成功するまでは従来のダウンロードは簡易署名版のままです。管理者は、このMacでの作業ではなくGitHub上での署名・公証を希望しています。個人のDeveloper ID Application証明書は発行済みですが、GitHub実行には認証情報の登録が必要です。証明書の発行だけではApple公証になりません。
 
-機関には、Developer ID Application証明書と秘密鍵の書き出し許可、および公証に使えるApp Store ConnectのチームAPIキー（Key ID・Issuer ID付き）を利用できるか確認してください。秘密鍵やパスワードをチャット・Issueへ投稿したり、Gitへコミットしたりしないでください。リポジトリのSettings → Secrets and variables → Actionsへ次を登録します。
+リポジトリのSettings → Secrets and variables → Actionsへ登録します。秘密鍵やパスワードをチャット・Issueへ投稿したり、Gitへコミットしたりしないでください。署名用のSecrets:
 
-- MACOS_CERTIFICATE_P12_BASE64: Developer ID証明書と秘密鍵を含む.p12をbase64化したもの。
+- MACOS_CERTIFICATE_P12_BASE64: Developer ID証明書・秘密鍵・Appleの中間証明書（現在の署名IDはG2）を含む、パスワード保護した.p12をbase64化したもの。
 - MACOS_CERTIFICATE_PASSWORD: .p12の保護パスワード。
 - MACOS_SIGNING_IDENTITY: Developer ID Applicationの識別名またはフィンガープリント。
-- APPLE_API_KEY_P8: .p8秘密鍵の内容。
-- APPLE_API_KEY_ID: キーID。
-- APPLE_API_ISSUER_ID: チームのIssuer ID。
 
-機関が許可した鍵だけを使います。秘密鍵を外へ出さず、機関のMacで署名する運用も可能です。ヘルパーはMacへ登録済みの署名IDとnotarytoolプロファイルにも対応します。アプリを直接署名するため、元のアプリのコピーを使ってください。秘密鍵はアプリに同梱しません。GitHub実行時は一時ファイル・一時キーチェーンを使って後始末し、スクリプトから秘密値を表示しません。準備や模擬試験を、Apple公証の成功と表現してはいけません。公証後も、一時IP設定などの管理者確認は必要です。
+公証の認証方法は次のどちらかを使います。
+
+- Apple Account: APPLE_ID・APPLE_APP_SPECIFIC_PASSWORD・APPLE_TEAM_ID。https://account.apple.com/ の「サインインとセキュリティ」→「アプリ用パスワード」で発行し、GitHub Actions Secretsへ直接登録します。通常のApple Accountパスワードは使いません。現在の証明書のTeam IDはG66V6JZ9ZRです。APPLE_IDはそのチームに所属するアカウントを指定します。
+- App Store ConnectのチームAPIキー: APPLE_API_KEY_P8・APPLE_API_KEY_ID・APPLE_API_ISSUER_ID。いずれかを登録した場合は3つすべてが必要です。不完全なAPIキー設定からApple Account方式へ自動で切り替えません。
+
+初回登録後はGitHubのブラウザーだけで操作します。Actions → Sign and notarize macOS release → Run workflowで既定ブランチを選び、テスト済みプレビューのタグ（例: macos-preview-v0.15.9-bd163d8）を指定します。Apple Silicon・Intel両方のジョブがReleaseを取得し、SHA256確認、GitHubのMac上での署名、Appleへの提出、チケットの添付・検証、Gatekeeper確認、GUI起動テストを行います。両方成功したらReleasesから別の公証済みZIPを取得します。管理者のMacは電源を切っていても構いません。検証前にプレビューを公証済みと扱ったり、既存の配布物を上書きしたりしません。
+
+アカウント所有者が許可した鍵だけを使い、機関のチームでは機関の許可も得ます。Secretsを使うワークフローはそのDeveloper IDで署名できるため、実行前に変更内容を確認してください。秘密鍵はアプリに同梱しません。GitHub実行時は一時ファイル・一時キーチェーンを使い、失敗時も後始末して秘密値を表示しません。ヘルパーはMacへ登録済みの署名IDとnotarytoolプロファイルにも対応しますが、ローカル署名は任意です。準備や模擬試験を、Apple公証の成功と表現してはいけません。公証後も、一時IP設定などの管理者確認は必要です。
 
 公式資料: [Appleの公証](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)、[Developer ID証明書](https://developer.apple.com/help/account/certificates/create-developer-id-certificates/)。
