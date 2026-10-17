@@ -26,7 +26,7 @@ def load_core(root, data_root):
 
 
 class CategoryCooldown:
-    """Pause catalog acquisition after four category changes per cycle."""
+    """Pause every category change from the fourth onward for this session."""
 
     def __init__(self, clock=time.monotonic):
         self.clock = clock
@@ -40,19 +40,21 @@ class CategoryCooldown:
         seconds = max(0, math.ceil(self.until - self.clock()))
         if self.until and not seconds:
             self.until = 0.0
-            self.changes = 0
         return seconds
 
+    @property
+    def free_changes_left(self):
+        return max(0, 3 - self.changes)
+
     def observe(self, category):
-        remaining = self.remaining()
+        self.remaining()
         if self.category is None:
             self.category = category
         elif category != self.category:
             self.category = category
-            if not remaining:
-                self.changes += 1
-                if self.changes >= 4:
-                    self.until = self.clock() + 60
+            self.changes += 1
+            if self.changes >= 4:
+                self.until = self.clock() + 60
         return self.remaining()
 
 

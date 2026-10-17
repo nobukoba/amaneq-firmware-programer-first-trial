@@ -459,28 +459,38 @@ if __name__ == "__main__":
 
 
 class CategoryCooldownTests(unittest.TestCase):
-    def test_fourth_change_blocks_for_sixty_seconds_without_extension(self):
+    def test_every_change_from_fourth_waits_and_count_never_resets(self):
         now = [100.0]
         guard = desktop.CategoryCooldown(clock=lambda: now[0])
-        self.assertEqual(guard.observe(("v4", "lrtdc", "MCS")), 0)
+        self.assertEqual(guard.observe(("initial",)), 0)
+        self.assertEqual(guard.free_changes_left, 3)
         for index in range(1, 4):
-            self.assertEqual(guard.observe(("v4", str(index), "MCS")), 0)
-        self.assertEqual(guard.observe(("v4", "hrtdc", "BIT")), 60)
-        now[0] += 10.2
-        self.assertEqual(guard.observe(("v1", "skeleton", "BIT")), 50)
-        now[0] = 159.9
-        self.assertEqual(guard.remaining(), 1)
+            self.assertEqual(guard.observe((index,)), 0)
+            self.assertEqual(guard.free_changes_left, 3 - index)
+        self.assertEqual(guard.observe(("fourth",)), 60)
         now[0] = 160.0
         self.assertEqual(guard.remaining(), 0)
-        self.assertEqual(guard.changes, 0)
-        self.assertEqual(guard.observe(("v1", "skeleton", "BIT")), 0)
-        self.assertEqual(guard.changes, 0)
-        for index in range(3):
-            self.assertEqual(guard.observe(("v1", str(index), "MCS")), 0)
-        self.assertEqual(guard.observe(("v4", "lrtdc", "MCS")), 60)
+        self.assertEqual(guard.changes, 4)
+        self.assertEqual(guard.free_changes_left, 0)
+        self.assertEqual(guard.observe(("fifth",)), 60)
+        now[0] = 170.0
+        self.assertEqual(guard.observe(("sixth",)), 60)
+        now[0] = 229.1
+        self.assertEqual(guard.remaining(), 1)
+        now[0] = 230.0
+        self.assertEqual(guard.remaining(), 0)
+        self.assertEqual(guard.changes, 6)
+        self.assertEqual(guard.observe(("sixth",)), 0)
+        self.assertEqual(guard.observe(("seventh",)), 60)
 
-    def test_refreshing_same_category_does_not_count(self):
-        guard = desktop.CategoryCooldown(clock=lambda: 0)
+    def test_refreshing_same_category_does_not_count_or_extend(self):
+        now = [0.0]
+        guard = desktop.CategoryCooldown(clock=lambda: now[0])
         for unused in range(20):
-            self.assertEqual(guard.observe(("v4", "lrtdc", "MCS")), 0)
+            self.assertEqual(guard.observe(("initial",)), 0)
         self.assertEqual(guard.changes, 0)
+        for index in range(4):
+            guard.observe((index,))
+        now[0] = 30
+        self.assertEqual(guard.observe((3,)), 30)
+        self.assertEqual(guard.changes, 4)

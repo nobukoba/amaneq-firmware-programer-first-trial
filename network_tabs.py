@@ -8,6 +8,52 @@ import tkinter as tk
 import network_operations as operations
 
 
+
+HELP_TOPICS = {
+    "cooldown": [
+        "Why wait?",
+        "Changing Board, Target, Firmware or Format can require several GitHub API requests to find current and historical images. Unauthenticated REST API access normally allows 60 requests per hour for a shared public IP, so computers on the same network may share that allowance.\n\nThe first three category changes in this app session do not require an app cooldown. Starting with change 4, every new category selection waits 60 seconds. A change during the wait restarts the 60 seconds for the new selection. The counter is not reset after waiting. Opening the app and refreshing the same selection do not count. 'No-wait changes left' is the app allowance, not GitHub requests remaining.\n\nAfter the countdown the final selection loads automatically. Local files remain available. This pause reduces request frequency; it cannot guarantee avoiding GitHub limits. A server-imposed wait can be longer.\n\nReference: https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api"
+    ],
+    "firmware": [
+        "Firmware, format and cable",
+        "Target identifies the physical board/revision; Firmware selects its application. Choose the matching hardware and intended function. The FPGA chip ID alone cannot distinguish all supported boards.\n\nBIT loads the FPGA's working memory (SRAM) temporarily. It is lost when power is removed; the previous flash image is retained. MCS programs persistent flash for later startup. Both change the running application during programming.\n\nGitHub list downloads a selected revision; Local file uses a file already on your computer. The app validates contents, not just the extension. History limit is the number of image choices, not the number of network requests. Latest refers to the newest matching image name in the repository's default branch.\n\nThe cable is the USB/JTAG programmer, not the Ethernet adapter. With multiple cables, select the correct serial number; an FT232H ID alone does not prove the device is an HS3. Reading a list does not program a board. Program image starts programming after the existing checks."
+    ],
+    "ip": [
+        "EEPROM IP and Current IP",
+        "Target IP is the board's address used to contact it now. New device IP is the address you want to write; it is not your computer's address.\n\nEEPROM IP saves the address in nonvolatile memory for later startup. The address used now may stay unchanged until the device reloads its saved settings. EEPROM is memory that retains data without power.\n\nCurrent IP changes the running device's address without saving that change to EEPROM. It can be lost when the device restarts or reloads its settings. After a verified runtime write the app switches Target IP to the new address.\n\nThese choices apply when you press Write IP. Selecting a radio button alone changes nothing. Read IP reads settings without writing them. Plan for reconnecting at the new address and make sure it is not already used on your network."
+    ],
+    "target": [
+        "Target IP and Ping",
+        "Target IP is the board's current Ethernet address. SiTCP commonly defaults to 192.168.10.16; SiTCP-XG commonly defaults to 192.168.10.10. Your board may have a different saved or running address; use Custom when needed.\n\nPing checks for an ICMP response. No response does not prove the board is absent or that its register protocol is unavailable. Network settings on the computer must also permit reaching the board.\n\nNetwork controls communicate over Ethernet (RBCP register access). Firmware programming uses USB/JTAG instead and does not require temporary Ethernet settings."
+    ],
+    "host": [
+        "Temporary host IP",
+        "Host means this computer; Target means the board. NIC means the computer's Ethernet network adapter. Choose the adapter physically connected to the board.\n\nA temporary host IP such as 192.168.10.20 with mask 255.255.255.0 places the computer on the board's 192.168.10.x network. Use different, unused host and board addresses. The mask describes which addresses belong to the same local network.\n\nOn macOS, enabling the checkbox only reveals controls. Apply temporarily adds an address to the selected adapter after administrator approval, preserving DHCP, DNS and gateway settings. DHCP is automatic network configuration. Restore network or normal app exit removes the app's temporary address. Cleanup failures are reported.\n\nThis does not change the board's IP. It is optional for Ethernet operations and unnecessary for USB/JTAG firmware programming."
+    ],
+    "license": [
+        "MPC / MPCX files",
+        "MPC and MPCX are SiTCP/SiTCP-XG configuration or license files supplied for the intended device. They are not FPGA BIT/MCS firmware images. Use the file issued for your board; this app does not generate a license.\n\nChoose or paste a file path. Type is determined from the contents rather than its extension: MPC normally selects Target IP 192.168.10.16, MPCX selects 192.168.10.10. These are presets, not proof of your board's current address.\n\nRead retrieves device information. Check validates the selected data against the device without programming it. Write MPC/MPCX writes the selected data after confirmation. Initialize XG EEPROM copies current XG settings before license programming; leave it off unless this setup step is intended."
+    ],
+    "clock": [
+        "Jitter Cleaner",
+        "The CDCE62002 conditions the board's clock signal. Input frequency must match the clock supplied to the chip; output frequencies must match the intended board/firmware setup. MHz means millions of clock cycles per second.\n\nApply changes the running clock registers. With Save clock settings for the next power-on enabled, verified settings are also copied into the chip's nonvolatile EEPROM. Without it, the register changes are temporary. Selecting a frequency alone does not write anything.\n\nAn unsuitable clock can interrupt data acquisition or communication. Follow your experiment's clock plan; the app cannot infer the correct frequencies just from the network address. STAG clock writes remain unavailable until its register map is verified."
+    ]
+}
+
+
+def show_help(parent, topic):
+    title, explanation = HELP_TOPICS[topic]
+    messagebox.showinfo(title, explanation, parent=parent.winfo_toplevel())
+
+
+def help_link(parent, topic, text="Help"):
+    link = ttk.Label(parent, text=text, foreground="#1769aa", cursor="hand2", takefocus=True)
+    link.bind("<Button-1>", lambda unused: show_help(link, topic))
+    link.bind("<Return>", lambda unused: show_help(link, topic))
+    link.bind("<space>", lambda unused: show_help(link, topic))
+    return link
+
+
 def bind_horizontal_scroll(entry, explicit_navigation=False):
     def scroll(event):
         delta = getattr(event, "delta", 0)
@@ -111,6 +157,7 @@ class TargetAddress:
         )
         selector.pack(side="left")
         self.entry = ttk.Entry(box, textvariable=self.custom, width=20)
+        help_link(box, "target").pack(side="right", padx=4)
         self.ping_button = ttk.Button(box, text="Ping", command=self.ping)
         self.ping_button.pack(side="left", padx=8)
         self.ping_status = tk.StringVar()
@@ -203,6 +250,7 @@ class NetworkTabs:
         ttk.Button(file_box, text="Choose file", command=self.choose_file).pack(
             side="left", padx=6
         )
+        help_link(file_box, "license").pack(side="left", padx=4)
         self.file_status = tk.StringVar(
             value="No file selected. Choose an MPC/MPCX file to detect its type."
         )
@@ -236,6 +284,7 @@ class NetworkTabs:
             state="readonly",
             width=20,
         ).pack(side="left")
+        help_link(frequencies, "clock").pack(side="left", padx=6)
         ttk.Checkbutton(
             self.clock,
             text="Save clock settings for the next power-on",
@@ -256,6 +305,7 @@ class NetworkTabs:
         ip_box.pack(fill="x", pady=8)
         ttk.Label(ip_box, text="New device IP:").pack(side="left", padx=(0, 8))
         ttk.Entry(ip_box, textvariable=self.new_ip, width=20).pack(side="left")
+        help_link(ip_box, "ip").pack(side="right", padx=4)
         self.ip_mode_buttons = []
         for text, value in (("EEPROM IP", False), ("Current IP", True)):
             button = ttk.Radiobutton(

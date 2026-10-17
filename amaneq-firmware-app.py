@@ -14,7 +14,7 @@ import threading
 import uuid
 import windows_usb as usb
 import macos_network as network
-from network_tabs import NetworkTabs, bind_horizontal_scroll, scrollable_tab
+from network_tabs import NetworkTabs, bind_horizontal_scroll, scrollable_tab, help_link
 from desktop_services import CategoryCooldown, DesktopServices, cable_arguments
 
 ROOT = Path(__file__).resolve().parent
@@ -204,6 +204,7 @@ def gui(smoke_test=False):
     cooldown_after = None
     category_cooldown = CategoryCooldown()
     cooldown_status = tk.StringVar()
+    category_count_status = tk.StringVar(value="Changes: 0 | No-wait changes left: 3")
     changing_repository = False
     last_cable_serial = None
     temporary_enabled = tk.BooleanVar(value=False)
@@ -315,10 +316,13 @@ def gui(smoke_test=False):
         nonlocal cooldown_after
         cooldown_after = None
         remaining = category_cooldown.remaining()
+        category_count_status.set(
+            f"Changes: {category_cooldown.changes} | "
+            f"No-wait changes left: {category_cooldown.free_changes_left}"
+        )
         if remaining:
             cooldown_status.set(
-                f"Frequent category changes: GitHub list acquisition is paused. "
-                f"Please wait {remaining} seconds."
+                f"Cooldown: {remaining} s"
             )
             cooldown_after = root.after(250, update_cooldown)
         else:
@@ -335,7 +339,12 @@ def gui(smoke_test=False):
             remaining = category_cooldown.observe(
                 (board.get(), target.get(), firmware.get(), image_format.get())
             )
+            category_count_status.set(
+                f"Changes: {category_cooldown.changes} | "
+                f"No-wait changes left: {category_cooldown.free_changes_left}"
+            )
             if remaining:
+                cooldown_status.set(f"Cooldown: {remaining} s")
                 catalog_request += 1
                 images.delete(*images.get_children())
                 catalog_status.set("List acquisition will resume with the selected category after cooldown.")
@@ -343,7 +352,7 @@ def gui(smoke_test=False):
                     events.put(
                         (
                             "log",
-                            "WARNING: Four category changes triggered a 60-second GitHub list cooldown.",
+                            "WARNING: Category changes from the fourth onward require a 60-second GitHub list cooldown.",
                         )
                     )
                     update_cooldown()
@@ -819,7 +828,11 @@ def gui(smoke_test=False):
     ttk.Label(
         history_controls, text="Default 5 images; includes tags and firmware commits"
     ).pack(side="left")
-    ttk.Label(online, textvariable=cooldown_status, wraplength=930).pack(anchor="w")
+    cooldown_row = ttk.Frame(online)
+    cooldown_row.pack(fill="x")
+    ttk.Label(cooldown_row, textvariable=category_count_status).pack(side="left")
+    ttk.Label(cooldown_row, textvariable=cooldown_status).pack(side="left", padx=8)
+    help_link(cooldown_row, "cooldown", text="Why?").pack(side="left", padx=4)
     ttk.Label(online, textvariable=catalog_status, wraplength=930).pack(anchor="w")
     table_frame = ttk.Frame(online)
     table_frame.pack(fill="both", expand=True, pady=4)
@@ -873,6 +886,7 @@ def gui(smoke_test=False):
     ttk.Button(
         program_area, text="Program image", style="Action.TButton", command=program
     ).pack(anchor="w")
+    help_link(program_area, "firmware").pack(anchor="w", pady=4)
     repository_url.trace_add("write", schedule_refresh)
     if os.name == "nt":
         controls = ttk.Frame(page)
@@ -910,6 +924,7 @@ def gui(smoke_test=False):
             variable=temporary_enabled,
             command=toggle_temporary,
         ).pack(anchor="w")
+        help_link(holder, "host").pack(anchor="w")
         panel = ttk.Frame(holder)
         temporary_panels.append(panel)
         if sys.platform != "darwin":
@@ -1426,16 +1441,25 @@ def gui(smoke_test=False):
         jobs_before_cooldown = set(jobs)
         refresh_catalog()
         assert jobs == jobs_before_cooldown
-        assert "60 seconds" in cooldown_status.get()
+        assert "60 s" in cooldown_status.get()
         cooldown_clock[0] += 59.1
         root.after_cancel(cooldown_after)
         update_cooldown()
-        assert "1 seconds" in cooldown_status.get()
+        assert "1 s" in cooldown_status.get()
         cooldown_clock[0] += 0.9
         root.after_cancel(cooldown_after)
         update_cooldown()
         assert cooldown_status.get() == ""
-        assert category_cooldown.changes == 0
+        assert category_cooldown.changes == 5
+        assert category_cooldown.free_changes_left == 0
+        from unittest.mock import patch
+        from network_tabs import HELP_TOPICS, show_help
+
+        with patch("network_tabs.messagebox.showinfo") as popup:
+            for topic in HELP_TOPICS:
+                show_help(root, topic)
+            assert popup.call_count == len(HELP_TOPICS)
+            assert jobs == jobs_before_cooldown
         root.after(300, root.destroy)
     else:
         root.after(50, lambda: scan(quiet=True))
