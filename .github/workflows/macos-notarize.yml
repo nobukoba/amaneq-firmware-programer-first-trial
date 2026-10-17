@@ -19,6 +19,7 @@ jobs:
           - runner: macos-15-intel
             architecture: x86_64
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
       - name: Prepare ephemeral signing keychain and notary credentials
@@ -29,11 +30,17 @@ jobs:
           API_KEY: ${{ secrets.APPLE_API_KEY_P8 }}
           API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           API_ISSUER: ${{ secrets.APPLE_API_ISSUER_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           python3 - <<'PY'
           import base64, os, pathlib, secrets, subprocess
-          required = ("CERTIFICATE", "CERTIFICATE_PASSWORD", "SIGNING_IDENTITY",
-                      "API_KEY", "API_KEY_ID", "API_ISSUER")
+          api_names = ("API_KEY", "API_KEY_ID", "API_ISSUER")
+          account_names = ("APPLE_ID", "APPLE_APP_SPECIFIC_PASSWORD", "APPLE_TEAM_ID")
+          # Never silently fall back from an incomplete API-key configuration.
+          auth_names = api_names if any(os.environ.get(name) for name in api_names) else account_names
+          required = ("CERTIFICATE", "CERTIFICATE_PASSWORD", "SIGNING_IDENTITY", *auth_names)
           missing = [name for name in required if not os.environ.get(name)]
           if missing:
               raise SystemExit("Missing signing secrets: " + ", ".join(missing))
@@ -42,12 +49,13 @@ jobs:
           key = root / "amaneq-notary.p8"
           keychain = root / "amaneq-signing.keychain-db"
           password = secrets.token_urlsafe(32)
+          certificate.touch(mode=0o600)
           certificate.write_bytes(base64.b64decode("".join(os.environ["CERTIFICATE"].split()), validate=True))
-          key.write_text(os.environ["API_KEY"], encoding="utf-8")
           certificate.chmod(0o600)
-          key.chmod(0o600)
           def run(*args):
-              subprocess.run(args, check=True, stdout=subprocess.DEVNULL)
+              result = subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+              if result.returncode:
+                  raise SystemExit(f"Credential setup failed ({args[0]}, exit {result.returncode}); secret arguments are hidden.")
           run("security", "create-keychain", "-p", password, str(keychain))
           run("security", "set-keychain-settings", "-lut", "21600", str(keychain))
           run("security", "unlock-keychain", "-p", password, str(keychain))
@@ -56,11 +64,25 @@ jobs:
           run("security", "set-key-partition-list", "-S", "apple-tool:,apple:,codesign:",
               "-s", "-k", password, str(keychain))
           run("security", "list-keychains", "-d", "user", "-s", str(keychain))
+          if auth_names == api_names:
+              key.touch(mode=0o600)
+              key.write_text(os.environ["API_KEY"], encoding="utf-8")
+              auth = ("--key", str(key), "--key-id", os.environ["API_KEY_ID"],
+                      "--issuer", os.environ["API_ISSUER"])
+          else:
+              auth = ("--apple-id", os.environ["APPLE_ID"],
+                      "--password", os.environ["APPLE_APP_SPECIFIC_PASSWORD"],
+                      "--team-id", os.environ["APPLE_TEAM_ID"])
           run("xcrun", "notarytool", "store-credentials", "amaneq-notary",
-              "--keychain", str(keychain), "--key", str(key),
-              "--key-id", os.environ["API_KEY_ID"], "--issuer", os.environ["API_ISSUER"])
+              "--keychain", str(keychain), *auth)
+          # Check chain validity and the imported private key before downloading apps.
+          identities = subprocess.check_output(
+              ["security", "find-identity", "-v", "-p", "codesigning", str(keychain)],
+              text=True)
+          if os.environ["SIGNING_IDENTITY"] not in identities:
+              raise SystemExit("Signing identity is missing or invalid; include the Apple intermediate certificate in the P12.")
           certificate.unlink()
-          key.unlink()
+          key.unlink(missing_ok=True)
           PY
       - name: Download the tested application archive
         env:
@@ -82,6 +104,8 @@ jobs:
         run: |
           incoming/extracted/amaneq-firmware-programer.app/Contents/MacOS/amaneq-firmware-programer --smoke-test
           codesign --verify --deep --strict incoming/extracted/amaneq-firmware-programer.app
+          xcrun stapler validate incoming/extracted/amaneq-firmware-programer.app
+          spctl --assess --type execute --verbose=2 incoming/extracted/amaneq-firmware-programer.app
       - uses: actions/upload-artifact@v4
         with:
           name: notarized-${{ matrix.architecture }}
