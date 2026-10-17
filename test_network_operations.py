@@ -302,14 +302,14 @@ class FirmwareVersionStatusTests(unittest.TestCase):
 
 
 class ClockFrequencySelectionTests(unittest.TestCase):
-    def test_default_and_editable_supported_frequency_triplets(self):
-        self.assertEqual(ops.DEFAULT_CLOCK_PRESET, "in_100_out_500_100")
-        for label, preset in ops.CLOCK_CHOICES.items():
-            self.assertEqual(ops.resolve_clock_preset(label), preset)
+    def test_default_and_original_command_argument_choices(self):
+        self.assertEqual(ops.DEFAULT_CLOCK_PRESET, "in_125_out_500_125")
+        self.assertEqual(tuple(ops.CLOCK_CHOICES), tuple(ops.PRESETS))
+        for preset in ops.CLOCK_CHOICES:
             self.assertEqual(ops.resolve_clock_preset(preset), preset)
-        self.assertEqual(ops.resolve_clock_preset("125.0 / 500 / 125"), "in_125_out_500_125")
+        self.assertEqual(ops.resolve_clock_preset(" in_125_out_500_125 "), "in_125_out_500_125")
 
-    def test_unsupported_or_malformed_frequencies_are_rejected(self):
-        for value in ("100 / 501 / 100", "", "nan / 500 / 100", "100 / 500", "abc"):
-            with self.assertRaisesRegex(ValueError, "Unsupported clock frequencies"):
+    def test_unsupported_or_malformed_presets_are_rejected(self):
+        for value in ("100 / 501 / 100", "", "125 / 500 / 125", "in_125_out_501_125", "abc"):
+            with self.assertRaisesRegex(ValueError, "Unsupported clock preset"):
                 ops.resolve_clock_preset(value)

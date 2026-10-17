@@ -309,4 +309,4 @@ Notarization preserves the submission ID and signed ZIP. A wait timeout is disti
 
 The network tabs provide `get_version` next to Ping. It reads the target's common BCT firmware ID/version over RBCP and shows the result or communication error in Messages; no device settings are written.
 
-Jitter Cleaner starts in Default mode (input 100 MHz, outputs 500 / 100 MHz). Select Custom to choose a supported combination or type `input / output1 / output2` in MHz. Unsupported combinations stop before register writes. Apply remains required.
+Jitter Cleaner starts in Default mode (`in_125_out_500_125`: input 125 MHz, outputs 500 / 125 MHz). Select Custom to choose or type an original command argument such as `in_100_out_500_100`. Unsupported combinations stop before register writes. Apply remains required.

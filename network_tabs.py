@@ -40,7 +40,7 @@ HELP_TOPICS = {
     ],
     "clock": [
         "Jitter Cleaner",
-        "The CDCE62002 conditions the board's clock signal. Default uses 100 / 500 / 100 MHz (input / output1 / output2). Custom reveals an editable list: choose a supported combination or type its three MHz values separated by /. Unsupported combinations are rejected before hardware access; arbitrary frequency synthesis is not implemented.\n\nInput frequency must match the clock supplied to the chip; output frequencies must match the intended board/firmware setup. MHz means millions of clock cycles per second.\n\nApply changes the running clock registers. With Save clock settings for the next power-on enabled, verified settings are also copied into the chip's nonvolatile EEPROM. Without it, the register changes are temporary. Selecting a frequency alone does not write anything.\n\nAn unsuitable clock can interrupt data acquisition or communication. Follow your experiment's clock plan; the app cannot infer the correct frequencies just from the network address. STAG clock writes remain unavailable until its register map is verified."
+        "The CDCE62002 conditions the board's clock signal. Default uses in_125_out_500_125 (input 125 MHz, outputs 500 / 125 MHz). Custom reveals an editable list using the original command arguments, such as in_100_out_500_100. Choose or type a listed preset name. Unsupported combinations are rejected before hardware access; arbitrary frequency synthesis is not implemented.\n\nInput frequency must match the clock supplied to the chip; output frequencies must match the intended board/firmware setup. MHz means millions of clock cycles per second.\n\nApply changes the running clock registers. With Save clock settings for the next power-on enabled, verified settings are also copied into the chip's nonvolatile EEPROM. Without it, the register changes are temporary. Selecting a frequency alone does not write anything.\n\nAn unsuitable clock can interrupt data acquisition or communication. Follow your experiment's clock plan; the app cannot infer the correct frequencies just from the network address. STAG clock writes remain unavailable until its register map is verified."
     ]
 }
 
@@ -302,7 +302,7 @@ class NetworkTabs:
         self.events = events
         self.preset = tk.StringVar(value=operations.DEFAULT_CLOCK_PRESET)
         self.clock_mode = tk.StringVar(value="default")
-        self.clock_custom = tk.StringVar(value=next(iter(operations.CLOCK_CHOICES)))
+        self.clock_custom = tk.StringVar(value=operations.DEFAULT_CLOCK_PRESET)
         self.persist = tk.BooleanVar(value=True)
         self.file = tk.StringVar()
         self.new_ip = tk.StringVar()
@@ -352,7 +352,7 @@ class NetworkTabs:
             text="CDCE62002 frequencies (MHz):",
         ).pack(side="left", padx=(0, 8))
         ttk.Radiobutton(
-            frequencies, text="Default (100 / 500 / 100)", variable=self.clock_mode,
+            frequencies, text="Default (in_125_out_500_125)", variable=self.clock_mode,
             value="default", command=self.show_clock_custom,
         ).pack(side="left")
         ttk.Radiobutton(
@@ -361,7 +361,7 @@ class NetworkTabs:
         ).pack(side="left", padx=6)
         help_link(frequencies, "clock").pack(side="left", padx=6)
         self.clock_custom_row = ttk.Frame(self.clock)
-        ttk.Label(self.clock_custom_row, text="Input / output1 / output2 (MHz):").pack(
+        ttk.Label(self.clock_custom_row, text="Clock preset:").pack(
             side="left", padx=(0, 8)
         )
         ttk.Combobox(
