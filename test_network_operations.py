@@ -299,3 +299,17 @@ class FirmwareVersionStatusTests(unittest.TestCase):
             field.version_button.state.assert_called_with(["!disabled"])
         TargetAddress.version_result(field, "192.168.10.16", "Success")
         field.version_status.set.assert_called_with("")
+
+
+class ClockFrequencySelectionTests(unittest.TestCase):
+    def test_default_and_editable_supported_frequency_triplets(self):
+        self.assertEqual(ops.DEFAULT_CLOCK_PRESET, "in_100_out_500_100")
+        for label, preset in ops.CLOCK_CHOICES.items():
+            self.assertEqual(ops.resolve_clock_preset(label), preset)
+            self.assertEqual(ops.resolve_clock_preset(preset), preset)
+        self.assertEqual(ops.resolve_clock_preset("125.0 / 500 / 125"), "in_125_out_500_125")
+
+    def test_unsupported_or_malformed_frequencies_are_rejected(self):
+        for value in ("100 / 501 / 100", "", "nan / 500 / 100", "100 / 500", "abc"):
+            with self.assertRaisesRegex(ValueError, "Unsupported clock frequencies"):
+                ops.resolve_clock_preset(value)

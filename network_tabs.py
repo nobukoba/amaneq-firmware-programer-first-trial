@@ -40,7 +40,7 @@ HELP_TOPICS = {
     ],
     "clock": [
         "Jitter Cleaner",
-        "The CDCE62002 conditions the board's clock signal. Input frequency must match the clock supplied to the chip; output frequencies must match the intended board/firmware setup. MHz means millions of clock cycles per second.\n\nApply changes the running clock registers. With Save clock settings for the next power-on enabled, verified settings are also copied into the chip's nonvolatile EEPROM. Without it, the register changes are temporary. Selecting a frequency alone does not write anything.\n\nAn unsuitable clock can interrupt data acquisition or communication. Follow your experiment's clock plan; the app cannot infer the correct frequencies just from the network address. STAG clock writes remain unavailable until its register map is verified."
+        "The CDCE62002 conditions the board's clock signal. Default uses 100 / 500 / 100 MHz (input / output1 / output2). Custom reveals an editable list: choose a supported combination or type its three MHz values separated by /. Unsupported combinations are rejected before hardware access; arbitrary frequency synthesis is not implemented.\n\nInput frequency must match the clock supplied to the chip; output frequencies must match the intended board/firmware setup. MHz means millions of clock cycles per second.\n\nApply changes the running clock registers. With Save clock settings for the next power-on enabled, verified settings are also copied into the chip's nonvolatile EEPROM. Without it, the register changes are temporary. Selecting a frequency alone does not write anything.\n\nAn unsuitable clock can interrupt data acquisition or communication. Follow your experiment's clock plan; the app cannot infer the correct frequencies just from the network address. STAG clock writes remain unavailable until its register map is verified."
     ]
 }
 
@@ -300,7 +300,9 @@ class NetworkTabs:
         self.root_path = root_path
         self.task = task
         self.events = events
-        self.preset = tk.StringVar(value=next(iter(operations.PRESETS)))
+        self.preset = tk.StringVar(value=operations.DEFAULT_CLOCK_PRESET)
+        self.clock_mode = tk.StringVar(value="default")
+        self.clock_custom = tk.StringVar(value=next(iter(operations.CLOCK_CHOICES)))
         self.persist = tk.BooleanVar(value=True)
         self.file = tk.StringVar()
         self.new_ip = tk.StringVar()
@@ -347,16 +349,27 @@ class NetworkTabs:
         frequencies.pack(fill="x", pady=8)
         ttk.Label(
             frequencies,
-            text="Select input / output frequencies of CDCE62002 chip (MHz):",
+            text="CDCE62002 frequencies (MHz):",
         ).pack(side="left", padx=(0, 8))
-        ttk.Combobox(
-            frequencies,
-            textvariable=self.preset,
-            values=tuple(operations.PRESETS),
-            state="readonly",
-            width=20,
+        ttk.Radiobutton(
+            frequencies, text="Default (100 / 500 / 100)", variable=self.clock_mode,
+            value="default", command=self.show_clock_custom,
         ).pack(side="left")
+        ttk.Radiobutton(
+            frequencies, text="Custom", variable=self.clock_mode,
+            value="custom", command=self.show_clock_custom,
+        ).pack(side="left", padx=6)
         help_link(frequencies, "clock").pack(side="left", padx=6)
+        self.clock_custom_row = ttk.Frame(self.clock)
+        ttk.Label(self.clock_custom_row, text="Input / output1 / output2 (MHz):").pack(
+            side="left", padx=(0, 8)
+        )
+        ttk.Combobox(
+            self.clock_custom_row, textvariable=self.clock_custom,
+            values=tuple(operations.CLOCK_CHOICES), state="normal", width=20,
+        ).pack(side="left")
+        self.clock_options_anchor = ttk.Frame(self.clock)
+        self.clock_options_anchor.pack(fill="x")
         ttk.Checkbutton(
             self.clock,
             text="Save clock settings for the next power-on",
@@ -469,6 +482,12 @@ class NetworkTabs:
         else:
             self.status_label.pack_forget()
 
+    def show_clock_custom(self):
+        if self.clock_mode.get() == "custom":
+            self.clock_custom_row.pack(fill="x", pady=(0, 8), before=self.clock_options_anchor)
+        else:
+            self.clock_custom_row.pack_forget()
+
     def configure_clock(self):
         if self.board.get() == "STAG":
             messagebox.showerror("Unsupported clock map", self.status.get())
@@ -478,7 +497,17 @@ class NetworkTabs:
         except ValueError as error:
             messagebox.showerror("Target IP", str(error))
             return
-        preset, persist = self.preset.get(), self.persist.get()
+        try:
+            preset = (
+                operations.DEFAULT_CLOCK_PRESET
+                if self.clock_mode.get() == "default"
+                else operations.resolve_clock_preset(self.clock_custom.get())
+            )
+        except ValueError as error:
+            self.events.put(("log", f"ERROR [Clock configuration]: {error}"))
+            messagebox.showerror("Clock frequencies", str(error))
+            return
+        persist = self.persist.get()
         description = (
             "Registers and persistent CDCE62002 EEPROM"
             if persist

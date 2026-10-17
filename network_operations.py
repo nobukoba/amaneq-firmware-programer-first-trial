@@ -19,6 +19,31 @@ PRESETS = {
 }
 
 
+DEFAULT_CLOCK_PRESET = "in_100_out_500_100"
+CLOCK_CHOICES = {
+    " / ".join((name.split("_")[1], name.split("_")[3], name.split("_")[4])): name
+    for name in PRESETS
+}
+
+
+def resolve_clock_preset(value):
+    """Accept a known preset name or input/output1/output2 MHz triplet."""
+    value = value.strip()
+    if value in PRESETS:
+        return value
+    try:
+        frequencies = tuple(float(part.strip()) for part in value.split("/"))
+    except ValueError:
+        frequencies = ()
+    for label, preset in CLOCK_CHOICES.items():
+        if frequencies == tuple(float(part) for part in label.split("/")):
+            return preset
+    raise ValueError(
+        "Unsupported clock frequencies. Choose a listed input / output1 / output2 "
+        "MHz combination; arbitrary CDCE62002 frequency synthesis is not supported."
+    )
+
+
 def ipv4(value):
     address = ipaddress.IPv4Address(value.strip())
     if (
