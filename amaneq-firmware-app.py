@@ -1214,7 +1214,8 @@ def gui(smoke_test=False):
                 field, host, status = value
                 field.ping_result(host, status)
             elif kind == "version_done":
-                value.version_button.state(["!disabled"])
+                field, host, status = value
+                field.version_result(host, status)
             elif kind == "endpoint":
                 network_tabs.ip_target.set(value)
             elif kind == "lease":

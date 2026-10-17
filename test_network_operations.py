@@ -275,7 +275,7 @@ class FirmwareVersionTests(unittest.TestCase):
             button = MagicMock()
             button.instate.return_value = False
             field = SimpleNamespace(value=lambda: "192.168.10.10",
-                                    version_button=button, events=events)
+                                    version_button=button, version_status=MagicMock(), events=events)
             field.task = lambda name, operation: events.put(operation())
             with patch("network_operations.get_version", return_value="FW version : 2.10",
                        side_effect=RuntimeError("RBCP timeout") if failure else None):
@@ -283,4 +283,19 @@ class FirmwareVersionTests(unittest.TestCase):
             kind, message = events.get_nowait()
             self.assertEqual(kind, "log")
             self.assertIn("RBCP timeout" if failure else "FW version", message)
-            self.assertEqual(events.get_nowait(), ("version_done", field))
+            self.assertEqual(events.get_nowait(), ("version_done", (field, "192.168.10.10", "Failed" if failure else "Success")))
+            field.version_status.set.assert_called_with("Reading...")
+
+
+class FirmwareVersionStatusTests(unittest.TestCase):
+    def test_status_is_shown_only_for_the_queried_target(self):
+        from types import SimpleNamespace
+        from network_tabs import TargetAddress
+        field = SimpleNamespace(value=lambda: "192.168.10.10",
+                                version_button=MagicMock(), version_status=MagicMock())
+        for status in ("Success", "Failed"):
+            TargetAddress.version_result(field, "192.168.10.10", status)
+            field.version_status.set.assert_called_with(status)
+            field.version_button.state.assert_called_with(["!disabled"])
+        TargetAddress.version_result(field, "192.168.10.16", "Success")
+        field.version_status.set.assert_called_with("")

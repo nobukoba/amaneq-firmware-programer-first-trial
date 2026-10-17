@@ -169,12 +169,15 @@ class TargetAddress:
         help_link(box, "target").pack(side="right", padx=4)
         self.ping_button = ttk.Button(box, text="Ping", command=self.ping)
         self.ping_button.pack(side="left", padx=8)
+        self.ping_status = tk.StringVar()
+        ttk.Label(box, textvariable=self.ping_status).pack(side="left", padx=(0, 8))
         self.version_button = ttk.Button(box, text="get_version", command=self.get_version)
         self.version_button.pack(side="left", padx=(0, 8))
-        self.ping_status = tk.StringVar()
-        ttk.Label(box, textvariable=self.ping_status).pack(side="left")
+        self.version_status = tk.StringVar()
+        ttk.Label(box, textvariable=self.version_status).pack(side="left")
         self.choice.trace_add("write", lambda *unused: self.show_custom())
         self.custom.trace_add("write", lambda *unused: self.ping_status.set(""))
+        self.custom.trace_add("write", lambda *unused: self.version_status.set(""))
 
     def ping(self):
         try:
@@ -202,21 +205,33 @@ class TargetAddress:
         try:
             host = self.value()
         except ValueError as error:
+            self.version_status.set("Failed")
             self.events.put(("log", f"ERROR [get_version]: {error}"))
             return
         if self.version_button.instate(["disabled"]):
             return
         self.version_button.state(["disabled"])
+        self.version_status.set("Reading...")
 
         def operation():
             try:
                 output = operations.get_version(host)
+                status = "Success"
             except Exception as error:
                 output = f"ERROR [get_version {host}]: {error}"
+                status = "Failed"
             self.events.put(("log", output))
-            return "version_done", self
+            return "version_done", (self, host, status)
 
         self.task(f"get_version {id(self)} {host}", operation)
+
+    def version_result(self, host, status):
+        self.version_button.state(["!disabled"])
+        try:
+            current = self.value()
+        except ValueError:
+            current = ""
+        self.version_status.set(status if current == host else "")
 
     def ping_result(self, host, status):
         self.ping_button.state(["!disabled"])
@@ -228,6 +243,7 @@ class TargetAddress:
 
     def show_custom(self):
         self.ping_status.set("")
+        self.version_status.set("")
         if self.choice.get() == "Custom":
             self.entry.pack(side="left", padx=8, before=self.ping_button)
         else:
