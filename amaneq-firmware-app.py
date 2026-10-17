@@ -237,8 +237,10 @@ def gui(smoke_test=False):
             super().__init__(
                 parent,
                 orient="vertical",
-                sashwidth=8,
-                sashrelief="raised",
+                sashwidth=0,
+                sashpad=0,
+                sashrelief="flat",
+                showhandle=False,
                 opaqueresize=True,
                 borderwidth=0,
             )
