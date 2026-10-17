@@ -13,7 +13,7 @@ class HostedSigningCredentialsTests(unittest.TestCase):
         from types import SimpleNamespace
 
         workflow = Path(__file__).with_name('.github') / 'workflows/macos-notarize.yml'
-        script = workflow.read_text(encoding='utf-8').split("Create temporary keychain and notary credentials", 1)[1].split("python3 - <<'PY'\n", 1)[1]
+        script = workflow.read_text(encoding='utf-8').split("Prepare ephemeral signing keychain and notary credentials", 1)[1].split("python3 - <<'PY'\n", 1)[1]
         script = '\n'.join(line[10:] for line in script.split('\n          PY', 1)[0].splitlines())
         calls = []
 
