@@ -62,7 +62,7 @@ def stage_cygwin(cygwin, notices):
         env=environment,
         timeout=30,
     )
-    metadata_bytes, _ = download_cygwin("x86_64/setup.ini", 20_000_000)
+    metadata_bytes, _ = download_cygwin("x86_64/setup.ini", 100_000_000)
     metadata = metadata_bytes.decode("utf-8")
     sources = []
     for package in ("cygwin", "libiconv2", "libintl8"):
