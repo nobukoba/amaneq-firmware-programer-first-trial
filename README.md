@@ -10,12 +10,12 @@ Download and program AMANEQ firmware through openFPGALoader: persistent MCS and 
 | --- | --- |
 | macOS 15+: Apple Silicon (M1/M2/M3/M4, etc.) | [Download Mac app (arm64 ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-7287552/amaneq-firmware-programer-macos-arm64.zip) |
 | macOS 15+: Intel | [Download Mac app (x86_64 ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-7287552/amaneq-firmware-programer-macos-x86_64.zip) |
-| Windows x64 | **Public download pending**. The current [automated build](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39461876888) failed; no distribution file is available yet. |
-| Linux x86_64 | **Public download pending**. The same automated build failed; no distribution file is available yet. |
+| Windows x64 | **No download: GitHub Windows build failed** during [Cygwin installation](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39461876888/job/118763140186). No distribution ZIP was produced. The local PC build and physical MCS programming succeeded. |
+| Linux x86_64 | **Build succeeded; download available**: [download Linux package (Actions artifact)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39461876888/artifacts/12282508208). GitHub sign-in required. Not published in Releases yet. |
 
 On Mac, extract the ZIP, move `amaneq-firmware-programer.app` into Applications, and open it. No Python installation is required. The links above point to a verified preview release. For other versions, open **Assets** on the [releases page](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases). **Source code (zip)** contains source code, not the app.
 
-Until Windows/Linux downloads are published, see the instructions below and the [developer build guide](FOR_DEVELOPERS.md#windows-and-linux-desktop-packaging). Locally built packages on the development PC are separate from publicly downloadable GitHub packages.
+For Linux, download the artifact ZIP above, extract the `amaneq-firmware-programer-linux-x86_64.tar.gz` inside, then use the Linux launch command below. Artifact retention is 30 days. The overall run is red because Windows failed; the Linux job and artifact succeeded. To build Windows yourself, see the [developer build guide](FOR_DEVELOPERS.md#windows-and-linux-desktop-packaging).
 
 ## Run from source
 
@@ -33,7 +33,7 @@ cd amaneq-firmware-programer-first-trial
 
 ## Windows and Linux desktop builds
 
-The `Build Windows and Linux desktop apps` Actions workflow builds a Windows x64 ZIP and a Linux x86_64 tar.gz, with SHA256 files. Open a successful run in the [workflow list](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/workflows/desktop-app.yml), then select `amaneq-firmware-programer-windows-x64` or `amaneq-firmware-programer-linux-x86_64` under **Artifacts** at the bottom (GitHub sign-in required). A download exists only when a successful run contains that artifact. Extract the outer artifact ZIP, then extract the whole archive inside and keep `_internal` beside the executable. Artifacts are retained for 30 days. Windows starts with `amaneq-firmware-programer.exe`. Linux starts with:
+The `Build Windows and Linux desktop apps` Actions workflow builds a Windows x64 ZIP and a Linux x86_64 tar.gz, with SHA256 files. Open a run whose target OS job succeeded in the [workflow list](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/workflows/desktop-app.yml), then select `amaneq-firmware-programer-windows-x64` or `amaneq-firmware-programer-linux-x86_64` under **Artifacts** at the bottom (GitHub sign-in required). A download exists only when the target OS job succeeded and the run contains that artifact. Extract the outer artifact ZIP, then extract the whole archive inside and keep `_internal` beside the executable. Artifacts are retained for 30 days. Windows starts with `amaneq-firmware-programer.exe`. Linux starts with:
 
 ```bash
 tar -xzf amaneq-firmware-programer-linux-x86_64.tar.gz
