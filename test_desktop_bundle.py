@@ -26,6 +26,19 @@ app = load("amaneq-firmware-app.py")
 
 
 class BundleTests(unittest.TestCase):
+    def test_cygwin_mirror_fallback_and_exhaustion(self):
+        failure = builder.urllib.error.URLError("synthetic timeout")
+        with patch.object(
+            builder.urllib.request, "urlopen", side_effect=[failure, io.BytesIO(b"source")]
+        ) as request:
+            data, url = builder.download_cygwin("source.tar.xz", 6)
+        self.assertEqual(data, b"source")
+        self.assertEqual(url, builder.CYGWIN_MIRRORS[1] + "source.tar.xz")
+        self.assertEqual(request.call_count, 2)
+        with patch.object(builder.urllib.request, "urlopen", side_effect=failure):
+            with self.assertRaisesRegex(RuntimeError, "All Cygwin mirrors failed"):
+                builder.download_cygwin("source.tar.xz", 6)
+
     def test_cygwin_source_matches_installed_version_and_checksum(self):
         data = b"synthetic source archive"
         for valid in (True, False):

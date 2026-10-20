@@ -16,6 +16,7 @@ import shutil
 import struct
 import subprocess
 import sys
+import urllib.error
 import urllib.request
 
 NAME = "amaneq-firmware-programer"
@@ -23,6 +24,31 @@ LOADER_REPOSITORY = "https://github.com/nobukoba/openFPGALoader"
 LOADER_COMMIT = "bf2b52916e7b6216ba1cc0b30933827d7735b05d"
 WINDOWS_LOADER_COMMIT = "3e5727bc1126307a0838d62f21971a2fa8f6a12f"
 BRIDGE = "spiOverJtag_xc7k160tffg676.bit"
+
+
+CYGWIN_MIRRORS = (
+    "https://mirrors.dotsrc.org/cygwin/",
+    "https://cygwin.osuosl.org/",
+    "https://mirrors.kernel.org/sourceware/cygwin/",
+)
+
+
+def download_cygwin(path, size_limit):
+    """Try official HTTPS mirrors on transport failure; keep content checks separate."""
+    errors = []
+    for base in CYGWIN_MIRRORS:
+        url = base + path
+        try:
+            with urllib.request.urlopen(url, timeout=30) as response:
+                data = response.read(size_limit + 1)
+        except (urllib.error.URLError, OSError) as error:
+            errors.append(f"{url}: {error}")
+            print(f"Cygwin mirror unavailable: {url}: {error}", flush=True)
+            continue
+        if len(data) > size_limit:
+            raise ValueError(f"Cygwin download exceeds size limit: {url}")
+        return data, url
+    raise RuntimeError("All Cygwin mirrors failed: " + "; ".join(errors))
 
 
 def stage_cygwin(cygwin, notices):
@@ -36,9 +62,8 @@ def stage_cygwin(cygwin, notices):
         env=environment,
         timeout=30,
     )
-    base = "https://mirrors.kernel.org/sourceware/cygwin/"
-    with urllib.request.urlopen(base + "x86_64/setup.ini", timeout=60) as response:
-        metadata = response.read().decode("utf-8")
+    metadata_bytes, _ = download_cygwin("x86_64/setup.ini", 20_000_000)
+    metadata = metadata_bytes.decode("utf-8")
     sources = []
     for package in ("cygwin", "libiconv2", "libintl8"):
         match = re.search(r"(?m)^" + package + r"\s+(\S+)\s+OK", packages)
@@ -66,8 +91,7 @@ def stage_cygwin(cygwin, notices):
             or int(size) > 100_000_000
         ):
             raise ValueError("Unexpected Cygwin source location or size.")
-        with urllib.request.urlopen(base + path, timeout=60) as response:
-            data = response.read(int(size) + 1)
+        data, source_url = download_cygwin(path, int(size))
         if len(data) != int(size) or hashlib.sha512(data).hexdigest() != checksum:
             raise ValueError("Cygwin source checksum/size mismatch.")
         (notices / Path(path).name).write_bytes(data)
@@ -75,7 +99,7 @@ def stage_cygwin(cygwin, notices):
             {
                 "package": package,
                 "version": version,
-                "url": base + path,
+                "url": source_url,
                 "sha512": checksum,
             }
         )
