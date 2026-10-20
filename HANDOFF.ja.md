@@ -8,7 +8,7 @@
 
 - macOSは既存のApple Silicon／Intel向けアプリビルダーを維持しています。
 - `build-desktop-app.py` でネイティブWindows x64 ZIPとLinux x86_64 tar.gzを作成します。Python/Tk、CAデータ、openFPGALoader、非圧縮XC7K160Tブリッジ、4種類のSiTCP補助コマンドを同梱します。
-- `.github/workflows/desktop-app.yml` は新しい両OS版をビルドし、30日保存のActions artifactを作成します。Releaseには公開しません。この引き継ぎ作成時にはホスト側実行が未検証なので、プッシュ後にActionsを確認してください。
+- `.github/workflows/desktop-app.yml` は新しい両OS版をビルドし、30日保存のActions artifactを作成します。Releaseには公開しません。[実行39468344602](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39468344602)、コミット `6cdc836` でWindows・Linuxともにビルド、112件のテスト、GUI起動・CLI・ローダー・補助コマンドのチェック、成果物アップロードが成功しました。READMEのリンクからGitHubログイン後に取得できます。
 - Windowsは `nobukoba/openFPGALoader` の `windows-hs3-d2xx` ブランチ、コミット `3e5727bc1126307a0838d62f21971a2fa8f6a12f` を `USE_FTDI_D2XX=ON`、`ENABLE_USB_SCAN=OFF`、`ENABLE_UDEV=OFF` で使います。同じフォークの `master` に置き換えないでください。
 - Windowsは導入済みFTDI CDM／System32の `ftd2xx.dll` を使います。WinUSBへの変更やlibwdiは不要で、通常のデスクトップ版にはドライバー切り替えボタンを表示しません。Vivadoと本アプリは、切り替える際に相手側がケーブルを解放する必要があります。
 - WindowsのMCSパス処理とSiTCP補助コマンドには引き続きCygwin/cygpathを同梱します。補助コマンドには `cygwin1.dll`、`cygiconv-2.dll`、`cygintl-8.dll` が必要です。対応ソースはパッケージのバージョン・サイズ・SHA512を検証し、ライセンスと同梱します。アプリ全体がWindows標準ライブラリだけで動くとは説明しないでください。
@@ -50,7 +50,7 @@ Tkを導入したPythonを使ってください。依存の導入・コンパイ
 
 ## 残っている作業と利用者の状況
 
-1. プッシュ後にWindows/Linuxのホスト側CI結果を確認してください。完了するまではCI成功と報告しないでください。
+1. Windows/LinuxのCIは上記実行で成功しました。Actions成果物は30日保存です。期限切れや更新時は対象OSのジョブと成果物を再確認してください。
 2. 電源再投入後の起動・DAQ・ネットワーク動作、BITロード、macOS/Linuxの実機書き込みは未検証です。
 3. FTDI/D2XXを維持する目的はVivadoとの共存です。フォークには以前の共存検証記録がありますが、今回のMCS書き込み後にVivadoを再接続する確認は行っていません。実施済みと説明しないでください。
 4. 利用者向けにWindowsアプリを起動しましたが、現在の起動画面は目視確認していません。Computer Useの説明ファイルはありますが、このセッションには必要な `node_repl` ランタイムがありませんでした。ライブ画面が見えるとは説明しないでください。利用者が送った画像は確認できます。

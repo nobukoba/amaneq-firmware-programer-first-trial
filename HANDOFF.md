@@ -8,7 +8,7 @@ Read this file and [AGENTS.md](AGENTS.md) before continuing. This is the current
 
 - macOS keeps its existing Apple Silicon/Intel application builder.
 - `build-desktop-app.py` builds native Windows x64 ZIPs and Linux x86_64 tar.gz archives, including Python/Tk, CA data, openFPGALoader, an uncompressed XC7K160T bridge and four SiTCP helpers.
-- `.github/workflows/desktop-app.yml` builds both new platforms. It uploads 30-day Actions artifacts, not Releases. Hosted execution was not yet validated when this handoff was written; check Actions after this change is pushed.
+- `.github/workflows/desktop-app.yml` builds both new platforms. It uploads 30-day Actions artifacts, not Releases. [Run 39468344602](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39468344602), commit `6cdc836`, passed Windows/Linux builds, 112 tests, GUI startup/CLI/loader/helper checks and artifact uploads. Download via README links after GitHub sign-in.
 - Windows must use `nobukoba/openFPGALoader` branch `windows-hs3-d2xx`, commit `3e5727bc1126307a0838d62f21971a2fa8f6a12f`, with `USE_FTDI_D2XX=ON`, `ENABLE_USB_SCAN=OFF`, `ENABLE_UDEV=OFF`. Do not substitute that fork's `master` branch.
 - Windows uses the installed FTDI CDM/System32 `ftd2xx.dll`. No WinUSB replacement or libwdi is required. Normal desktop bundles omit driver-switching buttons. Vivado and this application must release the cable before the other uses it.
 - Windows still bundles Cygwin/cygpath for MCS paths and Cygwin-built SiTCP helpers. Those helpers need `cygwin1.dll`, `cygiconv-2.dll`, `cygintl-8.dll`. Matching package sources are version/size/SHA512 checked and shipped with notices. Do not describe the whole application as using only Windows system libraries.
@@ -50,7 +50,7 @@ On the original development checkout, ignored local artifacts are under `dist/wi
 
 ## Remaining work and user context
 
-1. Check hosted Windows/Linux CI results after push. Do not report successful CI builds until they finish.
+1. Hosted Windows/Linux CI succeeded in the run above. Actions artifacts last 30 days; recheck the target OS job and artifact when updating or after expiration.
 2. Power-cycle boot/DAQ/network validation, BIT loading and macOS/Linux hardware writes remain unverified.
 3. Vivado compatibility is the purpose of retaining FTDI/D2XX. The fork documents earlier coexistence evidence, but reconnecting Vivado after this session's MCS write was not tested. Do not claim it was.
 4. The Windows desktop application was launched for the user. Its current startup screen has not been visually inspected. Computer Use instructions exist, but this session lacked the required `node_repl` runtime; do not claim to see the live desktop. User-provided screenshots can be inspected.
