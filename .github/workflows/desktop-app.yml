@@ -92,7 +92,7 @@ jobs:
           mkdir -p build/prefix/share/licenses
           cp -r /ucrt64/share/licenses/* build/prefix/share/licenses/
       - name: Build pinned POSIX network utilities for Windows
-        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e {0}
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -o igncr -e {0}
         run: |
           cd "$(/usr/bin/cygpath -u "$GITHUB_WORKSPACE")"
           mkdir -p build/network
