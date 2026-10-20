@@ -94,6 +94,7 @@ jobs:
       - name: Build pinned POSIX network utilities for Windows
         shell: C:\cygwin\bin\bash.exe --noprofile --norc -o igncr -e {0}
         run: |
+          export PATH="/usr/bin:/bin:$PATH"
           cd "$(/usr/bin/cygpath -u "$GITHUB_WORKSPACE")"
           mkdir -p build/network
           for name in mpc-mpcx-ip-writer mpc-mpcx-ip-reader sitcp-sitcpxg-ip-writer sitcp-sitcpxg-ip-reader; do
