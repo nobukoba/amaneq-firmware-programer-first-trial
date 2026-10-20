@@ -32,11 +32,12 @@ def app_data_directory():
 
 
 def default_loader():
-    relative = (
-        "runtime/macos/bin/openFPGALoader"
-        if sys.platform == "darwin"
-        else "runtime/ucrt64/bin/openFPGALoader.exe"
-    )
+    if sys.platform == "darwin":
+        relative = "runtime/macos/bin/openFPGALoader"
+    elif os.name == "nt":
+        relative = "runtime/ucrt64/bin/openFPGALoader.exe"
+    else:
+        relative = "runtime/linux/bin/openFPGALoader"
     candidate = ROOT / relative
     return str(candidate) if candidate.is_file() else "openFPGALoader"
 
@@ -623,6 +624,12 @@ def gui(smoke_test=False):
             task("Programming", operation, changes=True)
 
     def driver(action):
+        if action == "winusb" and not (ROOT / "runtime/libwdi.dll").is_file():
+            messagebox.showerror(
+                "USB driver change",
+                "This build does not include USB driver installation support. Use the driver required by the selected loader.",
+            )
+            return
         chosen = serial.get()
         selected_loader = loader.get()
         matches = [
@@ -910,12 +917,14 @@ def gui(smoke_test=False):
     ).pack(anchor="w")
     help_link(program_area, "firmware").pack(anchor="w", pady=4)
     repository_url.trace_add("write", schedule_refresh)
-    if os.name == "nt":
+    if os.name == "nt" and (ROOT / "runtime/libwdi.dll").is_file():
         controls = ttk.Frame(page)
         controls.pack(fill="x", pady=4)
-        ttk.Button(controls, text="Use WinUSB", command=lambda: driver("winusb")).pack(
-            side="left", padx=4
-        )
+        ttk.Button(
+            controls,
+            text="Use WinUSB",
+            command=lambda: driver("winusb"),
+        ).pack(side="left", padx=4)
         ttk.Button(
             controls, text="Restore Vivado driver", command=lambda: driver("restore")
         ).pack(side="left", padx=4)

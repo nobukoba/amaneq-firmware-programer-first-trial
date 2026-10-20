@@ -768,6 +768,8 @@ def scan_cables(args):
         [loader, "--list-cables"], capture_output=True, text=True, check=True
     ).stdout
     devices = []
+    windows_backend = "libusb"
+    d2xx_devices = {}
     if sys.platform == "darwin":
         records = macos_usb_records()
 
@@ -782,6 +784,30 @@ def scan_cables(args):
         if result.returncode:
             raise UserError("Windows USB enumeration failed: " + result.stderr.strip())
         records = json.loads(result.stdout or "[]")
+        try:
+            scan = subprocess.run(
+                [loader, "--scan-usb"], capture_output=True, text=True, timeout=15
+            )
+        except (OSError, subprocess.TimeoutExpired) as error:
+            raise UserError(
+                f"Windows loader USB enumeration failed: {error}"
+            ) from error
+        if (
+            "FTDI D2XX scan (installed CDM driver; FT232H only)" in scan.stdout
+            or "ftd2xx.dll" in scan.stderr
+        ):
+            windows_backend = "ftdi-d2xx"
+            if scan.returncode:
+                raise UserError(
+                    "Windows D2XX enumeration failed: " + scan.stderr.strip()
+                )
+            for line in scan.stdout.splitlines():
+                match = re.fullmatch(r"0403:6014 serial=(\S+) description=(.*)", line)
+                if match:
+                    found_serial, description = match.groups()
+                    d2xx_devices.setdefault(found_serial, []).append(
+                        "[busy]" not in description
+                    )
     else:
         records = []
         for directory in Path("/sys/bus/usb/devices").glob("*"):
@@ -854,9 +880,17 @@ def scan_cables(args):
                 "libusb0",
             )
         )
+        if os.name == "nt" and windows_backend == "ftdi-d2xx":
+            availability = d2xx_devices.get(serial, [])
+            driver_ok = (vid.upper(), pid.upper()) == (
+                "0403",
+                "6014",
+            ) and availability == [True]
         devices.append(
             {
                 **item,
+                "driver_ready": driver_ok,
+                "backend": windows_backend if os.name == "nt" else "native",
                 "serial": serial,
                 "vidpid": f"{vid}:{pid}",
                 "type": kind,
@@ -913,10 +947,18 @@ def select_cable(args):
         if choice != "HS3":
             raise UserError("Cancelled.")
         device["cable"] = "digilent_hs3"
-        device["ready"] = os.name != "nt" or device["driver"] in (
-            "WinUSB",
-            "libusbK",
-            "libusb0",
+        device["ready"] = (
+            device.get(
+                "driver_ready",
+                os.name != "nt"
+                or device["driver"]
+                in (
+                    "WinUSB",
+                    "libusbK",
+                    "libusb0",
+                ),
+            )
+            and device.get("status", "OK") == "OK"
         )
     if not device["cable"]:
         raise UserError(
@@ -924,7 +966,7 @@ def select_cable(args):
         )
     if not device["ready"]:
         raise UserError(
-            f"USB driver {device['driver']} is not ready for libusb. No driver changes performed."
+            f"USB driver {device['driver']} is not ready for the selected loader backend ({device.get('backend', 'libusb')}). No driver changes performed."
         )
     selector = ["-c", device["cable"]]
     if os.name != "nt" and device["cable"] == "xilinxPlatformCableUsb":
@@ -1162,7 +1204,13 @@ def program(args):
         else:
             env = environment(args)
             bridge = bridge_file(args)
-            spi = selector + ["--fpga-part", "xc7k160tffg676", "-B", str(bridge)]
+            spi = selector + [
+                "--fpga-part",
+                "xc7k160tffg676",
+                "-B",
+                str(bridge),
+                "--skip-reset",
+            ]
             with tempfile.TemporaryDirectory(prefix="amaneq-") as tmp:
                 probe = Path(tmp) / "probe.bin"
                 output = run_loader(
@@ -1207,6 +1255,18 @@ def program(args):
                 if backup.stat().st_size != capacity:
                     raise UserError("Incomplete flash backup; refusing erase.")
                 report["backup"] = str(backup)
+                report["backup_sha256"] = hashlib.sha256(
+                    backup.read_bytes()
+                ).hexdigest()
+                recheck = run_loader(
+                    loader,
+                    spi + ["--dump-flash", "--file-size", "1", str(probe)],
+                    env,
+                )
+                if flash_identity(recheck) != (identity, model, capacity):
+                    raise UserError(
+                        "Flash identity changed after backup; refusing erase."
+                    )
                 run_loader(loader, spi + ["--file-type", "mcs", "-f", str(path)], env)
                 readback = logs / f"{stamp}-readback.bin"
                 run_loader(

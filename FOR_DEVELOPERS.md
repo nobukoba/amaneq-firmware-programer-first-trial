@@ -2,6 +2,8 @@
 
 **Language: English | [日本語](FOR_DEVELOPERS.ja.md)**
 
+Current status and next steps: [development handoff](HANDOFF.md).
+
 ## Layout and runtime
 
 `amaneq-firmware-programer.py` is the only main Python entry point. The hyphenated filename is deliberate. Tests load it with importlib and register the module before executing dataclass declarations. Shortcuts are thin argument presets; shared helpers select Python and invoke the same `program` implementation. No second programming implementation exists.
@@ -101,7 +103,7 @@ Use AMANEQ/CIRASAME/STAG selection above Firmware, set_cdce62002 and MPC/MPCX/IP
 
 Clock source: spadi-alliance/hul-common-lib commit 65476509aa401aad10148ec7c2d2a50ba7d2db3e, CDCE62002RegMap.hh/CDCE62002Funcs.cc/FPGAModule.cc. Preserve reversed SPI words and little-endian byte lanes spaced 0x10000, not contiguous. TX B0000000; RX B0100000; write B1000000; read B2000000. Read back registers 0/1 before optional EEPROM copy 0x1F (on by default as upstream). No power-cycle persistence claim. CIRASAME manual hardware/cirasame/cirasame.md identifies XC7K160T/FFG676 and S25FL128S; practical/practical.md specifies in_125_out_500_125. Isolate CIRASAME firmware repositories from AMANEQ. STAG maps are unknown: stop firmware/clock writes rather than guessing.
 
-SiTCP helpers are pinned, unmodified user-repository source; vendor/sitcp-utility/UPSTREAM.json records provenance. build-network-tools.py compiles native Linux/WSL/macOS binaries; the Mac build bundles three under runtime/network/bin plus matching source. Preserve generation checks, 500 ms write settling, readback and upstream error exits. No automatic Clear/reset/write retry. Native Windows network commands are unsupported. Temporary alias automation is macOS-only; Linux/WSL host Ethernet needs manual configuration. Keep compiled vendor binaries/proprietary license files out of Git. New GUI hardware writes remain unverified.
+SiTCP helpers are pinned, unmodified user-repository source; vendor/sitcp-utility/UPSTREAM.json records provenance. build-network-tools.py compiles native Linux/WSL/macOS binaries; the Mac build bundles four under runtime/network/bin plus matching source. Preserve generation checks, 500 ms write settling, readback and upstream error exits. No automatic Clear/reset/write retry. Native Windows desktop bundles now include Cygwin-built network helpers; see the native desktop packaging section. Temporary alias automation is macOS-only; Linux/WSL host Ethernet needs manual configuration. Keep compiled vendor binaries/proprietary license files out of Git. New GUI hardware writes remain unverified.
 
 ## Desktop 0.4 simplified selection
 
@@ -192,3 +194,36 @@ Use only signing keys authorized by the account holder (and by the institution f
 References: [Apple notarization](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution), [Developer ID certificates](https://developer.apple.com/help/account/certificates/create-developer-id-certificates/).
 
 Notarization timeout recovery: run 39025172325 signed both architectures successfully, then notarytool submit --wait --timeout 30m exited 124. This is a wait timeout, not evidence of Apple rejection. Submit without --wait, immediately persist the UUID and exact signed submission.zip SHA256, then query/wait (default 90m). Save final/pending status, service stdout/stderr and the Apple log. Always retain per-architecture notary-state artifacts, including source-release provenance; never include certificates, keys or the keychain. Resume with the prior run ID and same source release: restore/checksum the exact signed archive, skip signing/uploading, recheck the same submission, and staple only after Accepted. Changing the signature/timestamp changes what was submitted; never resume an old ID against a newly signed app. Public notarized downloads still require both architectures, ticket validation, Gatekeeper and GUI smoke checks. main-branch changes to the notarization helper/workflow rerun using the latest tested preview; workflow_dispatch permits an explicit source and resume_run. The old timed-out run did not preserve its signed archives/IDs, so it cannot use this new artifact-resume path.
+
+## Windows and Linux desktop packaging
+
+Use `.github/workflows/desktop-app.yml` for the complete native dependency installation and compiler commands. It builds the loader from the user's fork at the fixed commit below; Windows does not substitute an upstream package. The clean source revision is checked, and matching source, license, commit and loader SHA256 are included in THIRD-PARTY. This records the supplied binary/source pair; the builder cannot prove an arbitrary external prefix was compiled from that source. CI compiles that prefix directly from the pinned checkout.
+
+```bash
+python -m pip install pyinstaller==6.22.3 certifi
+git clone https://github.com/nobukoba/openFPGALoader.git build/loader-source
+git -C build/loader-source checkout bf2b52916e7b6216ba1cc0b30933827d7735b05d
+```
+
+```bash
+python build-desktop-app.py --prefix build/prefix --loader-source build/loader-source
+```
+
+```powershell
+git -C build/loader-source checkout 3e5727bc1126307a0838d62f21971a2fa8f6a12f
+python build-desktop-app.py --prefix build/prefix --loader-source build/loader-source --cygwin C:/cygwin/bin --network-bin build/network
+```
+
+The first command prepares Python build dependencies and the matching source. Compile/install it into `build/prefix` using the OS-specific CMake commands in the workflow before running the builder. Linux also requires a native C++ compiler and Tk; headless CI runs the builder under `xvfb-run -a`. Windows uses native python.org x64 Python, UCRT64 for the loader and Cygwin `gcc-g++` for the four unchanged SiTCP sources. Pass the directory containing the four `.exe` helpers as `--network-bin`; use `-D_POSIX_C_SOURCE=200809L -static-libgcc -static-libstdc++` to expose POSIX declarations and link the C++ runtime statically. The helpers still need cygwin1.dll, cygiconv-2.dll and cygintl-8.dll, which are bundled beside them. cygpath has its own bundled cygwin1.dll. Matching Cygwin/libiconv/gettext sources are fetched at build time over HTTPS, checked against the installed package versions and repository SHA512/size metadata, and shipped with licenses. Builds therefore need internet access; missing source metadata or checksum failures stop the build. Linux helpers are compiled automatically. No vendored upstream C++ source is changed.
+
+Build output defaults to `dist/desktop`; it must not exist at startup. Outputs are a whole-folder Windows ZIP or Linux tar.gz and SHA256 file. Keep the whole `_internal` directory. Linux uses `runtime/linux/bin/openFPGALoader`; Windows uses `runtime/ucrt64/bin/openFPGALoader.exe`. All bundles include an uncompressed XC7K160T bridge, CA data and documentation. PyInstaller collects loader shared-library dependencies. Builds run the frozen GUI smoke check and CLI help, loader cable-capability listing and all four bundled helpers' help, without firmware acquisition or hardware mutations. Smoke checks use a system-only PATH and remove development Python/Tcl/library environment overrides; Linux helper tests use only the bundle's library directory.
+
+Windows builds `windows-hs3-d2xx` commit `3e5727bc1126307a0838d62f21971a2fa8f6a12f` with `USE_FTDI_D2XX=ON`, `ENABLE_USB_SCAN=OFF` and `ENABLE_UDEV=OFF`. It uses the installed FTDI CDM/System32 ftd2xx.dll without switching to WinUSB. The current builder omits libwdi and driver-switching UI. An existing WinUSB cable must be restored to FTDI separately by the user. The Linux commit pin is unchanged. The older `build-windows-app.py` remains available for legacy explicit UCRT64/libwdi builds. Temporary host-network automation remains macOS-only. Review dependency distribution terms and preserve required matching sources before publishing binaries; the workflow uploads 30-day Actions artifacts and does not publish a Release.
+
+Local validation during this change: 110 offline tests passed on both Linux (WSL Ubuntu, Python 3.14) and native Windows (Python 3.12). Windows and Linux archives were built, and both frozen GUIs, CLI help, bundled loader and four helpers passed with system-only PATH. Linux was also extracted into a different directory containing spaces and passed again without development Python/Tcl/library overrides. All compiler/runtime dependencies were placed in local work directories; system packages, USB drivers, flash, EEPROM and host-IP settings were not changed. The local Linux archive inherits its build host's glibc baseline, unlike the Ubuntu 24.04 CI target. Hosted Actions execution, physical JTAG programming and board network writes remain unverified.
+
+D2XX integration uses the selected loader’s read-only `--scan-usb` output to identify available FT232H serials. Busy/duplicate serials and WinUSB connections unavailable to D2XX are rejected. Physical HS3 confirmation preserves driver readiness and device status. USB enumeration does not open the cable and is not evidence of JTAG detection or BIT/MCS programming.
+
+MCS safety correction: pass `--skip-reset` to every SPI bridge dump/write operation, hash the complete capacity-sized backup, and perform a fresh one-byte probe after backup. Model/JEDEC-derived identity and capacity must equal the initial observation before the erase/write call. A changed identity stops with the backup retained. Synthetic regression coverage checks that no `-f` call occurs after an identity change.
+
+Windows D2XX hardware validation: AMANEQ v4 LR-TDC v2.A MCS from AMANEQ-official/StrLrTdc commit d1b625988b5d0d243be0e725e56dd4ded6b89d7b was programmed through a physically confirmed HS3 using the existing FTDIBUS driver. JTAG identified one XC7K160T; flash was S25FL128S, JEDEC 012018, 16 MiB. The full backup and SHA256 were saved before erase, identity was rechecked, and all 6,692,572 MCS payload bytes matched a separate flash dump. --skip-reset left the SPI bridge in SRAM. Power-cycle boot, DAQ/network operation, BIT loading and macOS/Linux hardware programming remain unverified. No driver changes, separate FPGA reset or power cycle were requested. Keep private backups/logs out of Git.

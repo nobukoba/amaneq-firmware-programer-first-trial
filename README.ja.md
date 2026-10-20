@@ -18,6 +18,19 @@ cd amaneq-firmware-programer-first-trial
 ./amaneq-firmware-programer.py --help
 ```
 
+## Windows・Linuxデスクトップ版のビルド
+
+Actionsの `Build Windows and Linux desktop apps` は、Windows x64用ZIPとLinux x86_64用tar.gz、およびSHA256ファイルを作成します。このワークフローの成功した実行から対応するartifactを取得し、アーカイブ全体を展開してください。`_internal` は実行ファイルの隣に置きます。artifactの保存期間は30日です。Windowsでは `amaneq-firmware-programer.exe` を起動します。Linuxでは次を実行します。
+
+```bash
+tar -xzf amaneq-firmware-programer-linux-x86_64.tar.gz
+./amaneq-firmware-programer/amaneq-firmware-programer
+```
+
+この作業ツリーで作成したローカルLinuxアーカイブはUbuntu 26.04向けです。LinuxのCIビルドは、GUIセッションのあるUbuntu 24.04または互換性のある新しいディストリビューションを対象にします。Python/Tk、CA証明書、openFPGALoader、4種類のSiTCP補助コマンドを同梱します。Windowsはユーザーのフォーク [nobukoba/openFPGALoader](https://github.com/nobukoba/openFPGALoader) の `windows-hs3-d2xx` ブランチ、コミット `3e5727bc1126307a0838d62f21971a2fa8f6a12f` を `USE_FTDI_D2XX=ON` で使用します。WindowsのUSB/JTAGは導入済みFTDI CDMドライバーとSystem32の `ftd2xx.dll` を利用し、HS3をWinUSBへ切り替える必要はありません。使用前にVivado/hw_serverを終了してください。Linuxは引き続き `bf2b52916e7b6216ba1cc0b30933827d7735b05d` とlibftdiを使用します。WindowsはMCSパス処理と変更していないPOSIX版SiTCP補助コマンドのためにCygwinを同梱し、WSLは不要です。WindowsのUSBドライバーとLinuxのUSBアクセス権限はホスト側の設定が必要です。標準Windowsパッケージはlibwdiとドライバー切り替えボタンを含みません。CygwinはMCSパス処理とSiTCP補助コマンド向けに引き続き同梱します。今回のUSBバックエンド変更は、これらの別の依存を除去するものではありません。ホストの一時IP自動設定は引き続きmacOS専用なので、Windows/LinuxのEthernetは手動設定してください。パッケージ検査は実機JTAG、フラッシュ起動、ネットワーク書き込みの検証を意味しません。
+
+再ビルド方法とローカル検証・CI結果の区別は [開発者向け説明](FOR_DEVELOPERS.ja.md#windowslinuxデスクトップパッケージ) を参照してください。
+
 ## macOSデスクトップ版
 
 [Releases](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases)の最新macOS desktop previewでAssetsを開き、Apple Silicon（arm64）用かIntel（x86_64）用のZIPを取得してください。ZIPを展開し、amaneq-firmware-programer.appをApplicationsへ移します。macOS 15以降が対象です。Python・Tk・openFPGALoader・HTTPS用CA証明書を同梱し、利用時のHomebrew導入は不要です。
@@ -49,9 +62,9 @@ python3 amaneq-firmware-app.py
 
 一時IPの自動設定は現時点ではmacOSのみです。Linux/WSLではホスト側Ethernetを192.168.10.20/24に設定します。WSL内のIP設定だけではWindowsのEthernetを設定できません。新GUIでのクロック・ライセンス書き込みとアダプター変更は実機未確認です。
 
-## Windowsデスクトップ版：アプリ内でUSBを設定する
+## 従来のWindowsデスクトップ版：任意のドライバー切り替え
 
-Windows x64向けの試作画面に、1画面にケーブル自動検出とUse WinUSB（切り替え）、Restore Vivado driver（元に戻す）ボタンを配置しました。ローカルのデスクトップ版にはPython・openFPGALoader・libwdi・cygpathを同梱でき、WSL・usbipdやZadigの別画面での手作業を省けます。ソース版は下記で起動します。ドライバー変更にはFOR_DEVELOPERSの手順でビルドしたx64版`runtime/libwdi.dll`が必要です。バイナリはGit管理しません。
+従来のlibusb版Windows x64向け試作画面には、1画面にケーブル自動検出とUse WinUSB（切り替え）、Restore Vivado driver（元に戻す）ボタンを配置しました。ローカルのデスクトップ版にはPython・openFPGALoader・libwdi・cygpathを同梱でき、WSL・usbipdやZadigの別画面での手作業を省けます。ソース版は下記で起動します。ドライバー変更にはFOR_DEVELOPERSの手順でビルドしたx64版`runtime/libwdi.dll`が必要です。バイナリはGit管理しません。
 
 表示されたシリアルを選び、実物がHS3であることをチェックします。ドライバー変更時はHS3/FT232Hを1本だけ接続し、Vivadoなどケーブルを使うアプリを閉じてください。変更ボタンを押して確認し、Windowsの管理者許可に応答します。切り替え前に元のFTDIBUSパッケージをエクスポートし、ハッシュ付きで保存します。復元は保存済みパッケージとWindowsのデバイス導入APIを使い、共有ドライバーパッケージは削除しません。復旧情報と処理結果を含む`%LOCALAPPDATA%/AMANEQ/usb-drivers/`を保管してください。INFはハードウェアIDで一致するため、後から接続した別のFT232Hにも影響する可能性があります。シリアル指定だけではパッケージの割り当てを分離できません。
 
@@ -190,7 +203,7 @@ sudo udevadm control --reload-rules
 
 ## Windows WSL2・Linux・macOSの準備
 
-対象はWindowsのWSL2、Linuxネイティブ、macOSネイティブです。Python 3.10以降と、それぞれのOS用openFPGALoaderを使用します。WindowsではWSL2内でLinux版と`.sh`を実行します。Windowsネイティブ用`.cmd`は従来の補助ファイルとして残しますが、今回の対象には含めません。
+ネイティブWindows D2XXデスクトップ版は前述の手順を使います。WSL2は、Linux・macOSネイティブと並ぶソース実行の代替経路として残しています。ソース実行にはPython 3.10以降と各OS用openFPGALoaderを使用し、Linux版と`.sh`はWSL2内で実行します。
 
 WSL2/Ubuntuと[usbipd-win](https://learn.microsoft.com/en-us/windows/wsl/connect-usb)を導入し、WSLの端末を開いた状態で、WindowsのPowerShellから対象ケーブルを転送します。bindは管理者権限、attachは通常権限で実行できます。転送中はWindowsのアプリからケーブルを使えません。抜き差し後はattachをやり直します。WSL内にopenFPGALoaderを導入し、上記のLinux用USBアクセス権限も設定してください。この経路ではWindows側のWinUSBへの置き換えは前提ではありません。
 
@@ -310,3 +323,9 @@ Macの署名・公証はGitHubのmacOSランナーで実行し、管理者のMac
 ネットワーク各タブのPing横にある `get_version` で、接続先の共通BCTファームウェアID・バージョンをRBCPで取得できます。結果と通信エラーはメッセージ欄に表示され、機器の設定には書き込みません。
 
 Jitter Cleanerはデフォルト (`in_125_out_500_125`: 入力125 MHz、出力500 / 125 MHz) で起動します。Customを選ぶと、元のコマンド引数の形式（例: `in_100_out_500_100`）をそのまま選択・入力できます。未対応の組み合わせは書き込み前にエラーにします。設定にはApply操作が必要です。
+
+MCS書き込みではフラッシュ全体のバックアップとSHA256を保存し、消去前にフラッシュの識別情報を再確認します。フラッシュ操作には `--skip-reset` を指定し、書き込み・照合後の起動確認は利用者が電源を入れ直して行います。アプリから電源の再投入は行いません。
+
+Windows D2XXの実機検証では、既存FTDIドライバーでAMANEQ v4 LR-TDC v2.AのMCS書き込みに成功しました。16 MiBの全フラッシュバックアップを保存し、イメージ全6,692,572バイトが読み戻しと一致しています。SPIブリッジがSRAMに残っているため、利用者が電源を入れ直して起動を確認してください。起動・DAQ動作、BITロード、macOS/Linuxでの実機書き込みは未検証です。
+
+別チャットでの開発再開は [開発引き継ぎ](HANDOFF.ja.md) と [エージェント向け指示](AGENTS.ja.md) を参照してください。

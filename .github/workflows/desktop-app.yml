@@ -1,0 +1,114 @@
+name: Build Windows and Linux desktop apps
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '*.py'
+      - 'vendor/**'
+      - '.github/workflows/desktop-app.yml'
+  pull_request:
+    paths:
+      - '*.py'
+      - 'vendor/**'
+      - '.github/workflows/desktop-app.yml'
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: nobukoba/openFPGALoader
+          ref: bf2b52916e7b6216ba1cc0b30933827d7735b05d
+          path: build/loader-source
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++ pkg-config libftdi1-dev libusb-1.0-0-dev zlib1g-dev python3-tk xvfb
+          python -m pip install pyinstaller==6.22.3 certifi
+      - name: Build pinned loader
+        run: |
+          cmake -S build/loader-source -B build/loader -G Ninja -DCMAKE_INSTALL_PREFIX="$PWD/build/prefix" -DENABLE_CABLE_ALL=OFF -DENABLE_FTDI_BASED_CABLE=ON -DENABLE_XILINX_PLATFORM_CABLE_USB=ON -DENABLE_VENDORS_ALL=OFF -DENABLE_XILINX_SUPPORT=ON
+          cmake --build build/loader --parallel 2
+          cmake --install build/loader
+          mkdir -p build/prefix/share/licenses
+          cp /usr/share/doc/libftdi1-2/copyright build/prefix/share/licenses/libftdi1.txt
+          cp /usr/share/doc/libusb-1.0-0/copyright build/prefix/share/licenses/libusb.txt
+          cp /usr/share/doc/zlib1g/copyright build/prefix/share/licenses/zlib.txt
+      - name: Offline tests
+        run: python -m unittest discover -v
+      - name: Build and test Linux desktop bundle
+        run: xvfb-run -a python build-desktop-app.py --prefix build/prefix --loader-source build/loader-source
+      - uses: actions/upload-artifact@v4
+        with:
+          name: amaneq-firmware-programer-linux-x86_64
+          path: |
+            dist/desktop/*.tar.gz
+            dist/desktop/*.sha256
+          if-no-files-found: error
+          retention-days: 30
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: nobukoba/openFPGALoader
+          ref: 3e5727bc1126307a0838d62f21971a2fa8f6a12f
+          path: build/loader-source
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-libftdi
+            mingw-w64-ucrt-x86_64-zlib
+      - uses: cygwin/cygwin-install-action@v5
+        with:
+          packages: coreutils gcc-g++
+      - name: Build the user's pinned Windows loader fork
+        shell: msys2 {0}
+        run: |
+          cmake -S build/loader-source -B build/loader -G Ninja -DCMAKE_INSTALL_PREFIX="$PWD/build/prefix" -DUSE_FTDI_D2XX=ON -DENABLE_UDEV=OFF -DENABLE_USB_SCAN=OFF -DENABLE_CABLE_ALL=OFF -DENABLE_FTDI_BASED_CABLE=ON -DENABLE_VENDORS_ALL=OFF -DENABLE_XILINX_SUPPORT=ON
+          cmake --build build/loader --parallel 2
+          cmake --install build/loader
+          cp /ucrt64/bin/*.dll build/prefix/bin/
+          mkdir -p build/prefix/share/licenses
+          cp -r /ucrt64/share/licenses/* build/prefix/share/licenses/
+      - name: Build pinned POSIX network utilities for Windows
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -e {0}
+        run: |
+          cd "$(/usr/bin/cygpath -u "$GITHUB_WORKSPACE")"
+          mkdir -p build/network
+          for name in mpc-mpcx-ip-writer mpc-mpcx-ip-reader sitcp-sitcpxg-ip-writer sitcp-sitcpxg-ip-reader; do
+            /usr/bin/g++ -std=c++11 -D_POSIX_C_SOURCE=200809L -O2 -Wall -Wextra -static-libgcc -static-libstdc++ "vendor/sitcp-utility/src/$name.cpp" -o "build/network/$name.exe"
+            "build/network/$name.exe" --help
+          done
+      - name: Install Python build dependencies
+        run: python -m pip install pyinstaller==6.22.3 certifi
+      - name: Offline tests
+        run: python -m unittest discover -v
+      - name: Build and test Windows desktop bundle
+        shell: pwsh
+        run: python build-desktop-app.py --prefix build/prefix --loader-source build/loader-source --cygwin C:/cygwin/bin --network-bin build/network
+      - uses: actions/upload-artifact@v4
+        with:
+          name: amaneq-firmware-programer-windows-x64
+          path: |
+            dist/desktop/*.zip
+            dist/desktop/*.sha256
+          if-no-files-found: error
+          retention-days: 30

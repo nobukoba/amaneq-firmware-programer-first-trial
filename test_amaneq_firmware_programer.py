@@ -385,7 +385,10 @@ class ProgrammerTests(unittest.TestCase):
             app.select_cable(args)
 
     def program_simulation(
-        self, flash_model="spansion S25FL128S 256 sectors", wrong_readback=False
+        self,
+        flash_model="spansion S25FL128S 256 sectors",
+        wrong_readback=False,
+        changed_flash=False,
     ):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
@@ -403,12 +406,15 @@ class ProgrammerTests(unittest.TestCase):
                 flash="auto",
             )
             operations = []
+            dump_count = 0
 
             def run(loader, arguments, env=None):
+                nonlocal dump_count
                 operations.append(arguments)
                 if "--detect" in arguments:
                     return "idcode 0x364c093\n"
                 if "--dump-flash" in arguments:
+                    dump_count += 1
                     count = int(arguments[arguments.index("--file-size") + 1])
                     dest = Path(arguments[-1])
                     dest.write_bytes(
@@ -416,6 +422,10 @@ class ProgrammerTests(unittest.TestCase):
                         if count == len(PAYLOAD)
                         else b"\xff" * count
                     )
+                    if changed_flash and dump_count == 3:
+                        return (
+                            "JEDEC ID: 0x20ba18\nDetected: micron N25Q128 size: 128Mb\n"
+                        )
                     return f"JEDEC ID: 0x012018\nDetected: {flash_model} size: 128Mb\n"
                 return "Done\n"
 
@@ -455,6 +465,17 @@ class ProgrammerTests(unittest.TestCase):
         write = next(i for i, operation in enumerate(operations) if "-f" in operation)
         self.assertIn("--dump-flash", operations[write - 1])
         self.assertIn("--dump-flash", operations[write + 1])
+
+    def test_changed_flash_after_backup_never_erases(self):
+        operations, result = self.program_simulation(changed_flash=True)
+        self.assertIn("identity changed after backup", result)
+        self.assertFalse(any("-f" in operation for operation in operations))
+        dumps = [operation for operation in operations if "--dump-flash" in operation]
+        self.assertEqual(len(dumps), 3)
+        self.assertEqual(
+            dumps[1][dumps[1].index("--file-size") + 1], str(16 * 1024 * 1024)
+        )
+        self.assertTrue(all("--skip-reset" in operation for operation in dumps))
 
     def test_readback_mismatch_is_failure(self):
         operations, result = self.program_simulation(wrong_readback=True)
@@ -721,6 +742,77 @@ class NetworkTests(unittest.TestCase):
             app.main(["download", "--url", "https://example.com/file.bit", "--latest"])
         with self.assertRaises(app.UserError):
             app.main(["download", "--timeout", "0"])
+
+
+class WindowsD2xxTests(unittest.TestCase):
+    def scan(self, driver, listing, cable="auto", description="Digilent HS3"):
+        records = [
+            {
+                "id": r"USB\VID_0403&PID_6014\SYNTHETIC-D2XX",
+                "description": description,
+                "driver": driver,
+                "status": "OK",
+            }
+        ]
+        args = argparse.Namespace(cable=cable, serial="SYNTHETIC-D2XX", yes=True)
+        with (
+            patch.object(app.os, "name", "nt"),
+            patch.object(app.sys, "platform", "win32"),
+            patch.object(app, "loader_path", return_value="loader"),
+            patch.object(
+                app.subprocess,
+                "run",
+                side_effect=[
+                    argparse.Namespace(stdout="digilent_hs3 supported", returncode=0),
+                    argparse.Namespace(
+                        stdout=json.dumps(records), stderr="", returncode=0
+                    ),
+                    argparse.Namespace(stdout=listing, stderr="", returncode=0),
+                ],
+            ) as run,
+        ):
+            devices = app.scan_cables(args)
+        self.assertEqual(run.call_args.args[0], ["loader", "--scan-usb"])
+        return args, devices
+
+    def test_existing_ftdi_driver_works_only_with_d2xx_scan(self):
+        header = "FTDI D2XX scan (installed CDM driver; FT232H only)\n"
+        args, devices = self.scan(
+            "FTDIBUS",
+            header + "0403:6014 serial=SYNTHETIC-D2XX description=Digilent HS3\n",
+        )
+        self.assertTrue(devices[0]["ready"])
+        self.assertEqual(devices[0]["backend"], "ftdi-d2xx")
+        with (
+            patch.object(app.os, "name", "nt"),
+            patch.object(app.sys, "platform", "win32"),
+            patch.object(app, "scan_cables", return_value=devices),
+        ):
+            self.assertEqual(
+                app.select_cable(args)[1],
+                ["-c", "digilent_hs3", "--ftdi-serial", "SYNTHETIC-D2XX"],
+            )
+        _, legacy = self.scan("FTDIBUS", "legacy libusb scan\n")
+        self.assertFalse(legacy[0]["ready"])
+
+    def test_d2xx_rejects_busy_duplicate_or_inaccessible_serial(self):
+        header = "FTDI D2XX scan (installed CDM driver; FT232H only)\n"
+        row = "0403:6014 serial=SYNTHETIC-D2XX description=Digilent HS3\n"
+        for driver, rows in (
+            ("FTDIBUS", row.rstrip() + " [busy]\n"),
+            ("FTDIBUS", row * 2),
+            ("WinUSB", ""),
+        ):
+            args, devices = self.scan(driver, header + rows, description="FT232H")
+            self.assertFalse(devices[0]["driver_ready"])
+            args.yes = False
+            with (
+                patch.object(app.os, "name", "nt"),
+                patch.object(app, "choose", return_value="HS3"),
+                patch.object(app, "scan_cables", return_value=devices),
+                self.assertRaisesRegex(app.UserError, "selected loader backend"),
+            ):
+                app.select_cable(args)
 
 
 if __name__ == "__main__":

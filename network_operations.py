@@ -195,14 +195,15 @@ def ping_target(host):
 
 
 def utility_path(root, name):
-    candidate = Path(root) / "runtime/network/bin" / name
+    executable = name + ".exe" if sys.platform == "win32" else name
+    candidate = Path(root) / "runtime/network/bin" / executable
     if candidate.is_file():
         return str(candidate)
     installed = shutil.which(name)
     if installed:
         return installed
     raise RuntimeError(
-        f"Missing {name}. Use the bundled macOS app or run build-network-tools.py on Linux/WSL/macOS."
+        f"Missing {name}. Extract the complete desktop bundle, or run build-network-tools.py on Linux/WSL/macOS."
     )
 
 

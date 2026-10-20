@@ -18,6 +18,19 @@ cd amaneq-firmware-programer-first-trial
 ./amaneq-firmware-programer.py --help
 ```
 
+## Windows and Linux desktop builds
+
+The `Build Windows and Linux desktop apps` Actions workflow builds a Windows x64 ZIP and a Linux x86_64 tar.gz, with SHA256 files. Download the matching artifact from a successful run of that workflow; extract the whole archive and keep `_internal` beside the executable. Artifacts are retained for 30 days. Windows starts with `amaneq-firmware-programer.exe`. Linux starts with:
+
+```bash
+tar -xzf amaneq-firmware-programer-linux-x86_64.tar.gz
+./amaneq-firmware-programer/amaneq-firmware-programer
+```
+
+The local Linux archive produced in this working tree targets Ubuntu 26.04. The Linux CI build targets Ubuntu 24.04 or a compatible newer distribution with a graphical session. Python/Tk, CA certificates, openFPGALoader and four SiTCP helpers are bundled. Windows uses the user's fork [nobukoba/openFPGALoader](https://github.com/nobukoba/openFPGALoader), `windows-hs3-d2xx` branch pinned to `3e5727bc1126307a0838d62f21971a2fa8f6a12f` with `USE_FTDI_D2XX=ON`. Windows USB/JTAG uses the installed FTDI CDM driver and System32 `ftd2xx.dll`; do not switch an HS3 to WinUSB. Close Vivado/hw_server before using the cable. Linux retains `bf2b52916e7b6216ba1cc0b30933827d7735b05d` and libftdi. Windows bundles Cygwin support for MCS paths and the unchanged POSIX SiTCP utilities; WSL is unnecessary. Windows USB drivers and Linux USB permissions still require host setup. The default Windows package omits libwdi and driver-switching buttons. Cygwin is still bundled for MCS path handling and SiTCP helpers; this USB backend change does not remove those separate dependencies. Temporary host-IP automation remains macOS-only; configure Ethernet manually on Windows/Linux. Packaging checks do not verify physical JTAG, flash boot or network writes.
+
+See [native build instructions](FOR_DEVELOPERS.md#windows-and-linux-desktop-packaging) for rebuilding and the distinction between local validation and CI results.
+
 ## macOS desktop app
 
 Download the Apple Silicon (arm64) or Intel (x86_64) ZIP from [Releases](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases). Expand Assets on the newest macOS desktop preview. Extract the ZIP and move amaneq-firmware-programer.app into Applications. macOS 15+ is required. Python, Tk, openFPGALoader and HTTPS CA certificates are bundled; no Homebrew setup is needed to run it.
@@ -49,9 +62,9 @@ python3 amaneq-firmware-app.py
 
 Temporary-IP automation is currently macOS-only. On Linux/WSL configure host Ethernet to 192.168.10.20/24; setting only a WSL guest IP does not configure Windows Ethernet. Actual clock/license writes and adapter changes in the new GUI remain physically unverified.
 
-## Windows desktop app: USB setup in the app
+## Legacy Windows desktop app: optional USB driver switching
 
-The native Windows x64 desktop preview adds explicit Use WinUSB and Restore Vivado driver buttons in the same window. A local desktop bundle can include Python, openFPGALoader, libwdi and cygpath, so WSL/usbipd and a separate Zadig window are unnecessary. Source users can start the window with the command below; driver switching requires the matching x64 `runtime/libwdi.dll` built as described in FOR_DEVELOPERS. Binaries are not tracked in this repository.
+The older libusb-based Windows x64 desktop preview adds explicit Use WinUSB and Restore Vivado driver buttons in the same window. A local desktop bundle can include Python, openFPGALoader, libwdi and cygpath, so WSL/usbipd and a separate Zadig window are unnecessary. Source users can start the window with the command below; driver switching requires the matching x64 `runtime/libwdi.dll` built as described in FOR_DEVELOPERS. Binaries are not tracked in this repository.
 
 Cables are scanned automatically. Select the displayed serial and confirm the physical cable is an HS3. For driver changes, connect exactly one HS3/FT232H and close Vivado/cable applications. Press the explicit driver button, confirm the operation and approve Windows UAC. The app exports the original FTDIBUS package and hashes it before switching. Restore uses that saved package with Windows' device-installation API; it does not delete a shared driver package. Preserve `%LOCALAPPDATA%/AMANEQ/usb-drivers/`, including recovery information and operation results. A driver INF matches hardware IDs, so another FT232H may be affected when reconnected; serial selection alone cannot isolate a package binding.
 
@@ -190,7 +203,7 @@ sudo udevadm control --reload-rules
 
 ## Windows WSL2, Linux and macOS setup
 
-The supported execution environments are Windows WSL2, native Linux and native macOS. Use Python 3.10+ and the matching OS build of openFPGALoader. Windows runs the Linux program and `.sh` shortcuts inside WSL2. Native Windows `.cmd` files remain legacy helpers outside this target scope.
+Native Windows D2XX desktop support is described above. WSL2 remains an alternative source-execution path alongside native Linux and macOS. For source execution use Python 3.10+ and the matching OS build of openFPGALoader; Linux programs and `.sh` shortcuts run inside WSL2.
 
 For WSL2, install WSL2/Ubuntu and [usbipd-win](https://learn.microsoft.com/en-us/windows/wsl/connect-usb), keep a WSL terminal open, then forward the selected cable from Windows PowerShell. Binding requires Administrator rights; attaching does not. While attached, the cable is unavailable to Windows applications. Repeat attach after disconnect/reconnect. Install openFPGALoader and apply the Linux USB permissions above inside WSL. A Windows WinUSB replacement is not a prerequisite of this path.
 
@@ -310,3 +323,9 @@ Notarization preserves the submission ID and signed ZIP. A wait timeout is disti
 The network tabs provide `get_version` next to Ping. It reads the target's common BCT firmware ID/version over RBCP and shows the result or communication error in Messages; no device settings are written.
 
 Jitter Cleaner starts in Default mode (`in_125_out_500_125`: input 125 MHz, outputs 500 / 125 MHz). Select Custom to choose or type an original command argument such as `in_100_out_500_100`. Unsupported combinations stop before register writes. Apply remains required.
+
+MCS programming saves a full flash backup and its SHA256, then rechecks flash identity before erasing. Flash operations use `--skip-reset`; after verified programming, power-cycle the board manually to test boot. The app does not perform that power cycle.
+
+Windows D2XX hardware test: AMANEQ v4 LR-TDC v2.A MCS programming succeeded with the existing FTDI driver. A 16 MiB full-flash backup was saved, and all 6,692,572 image bytes matched the flash readback. The SPI bridge remains in SRAM: power-cycle the board manually to check boot. Boot/DAQ operation, BIT loading and macOS/Linux hardware programming remain unverified.
+
+For continuation in another chat, read the [development handoff](HANDOFF.md) and [agent instructions](AGENTS.md).

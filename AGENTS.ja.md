@@ -4,6 +4,10 @@
 
 英語版AGENTS.mdが自動開発用の正本です。この文書は同じ制約の日本語版です。
 
+## 現在の引き継ぎ
+
+別チャットで再開する前に [HANDOFF.ja.md](HANDOFF.ja.md) を読んでください。Windows D2XXとMCS実機結果の記述は、過去のWSL／WinUSB専用という前提に優先します。
+
 ## 目的と名前
 
 Python 3.10以上・標準ライブラリのみで、openFPGALoaderを呼ぶ取得・書き込みツールを維持します。レジスタ設定やSiTCPライセンス書き込みのツールではありません。
@@ -47,7 +51,7 @@ GitHubのコミットを固定し、サイズ・Git blobハッシュを照合。
 
 本体同梱だけではWindowsドライバー、Linux USB権限、WSL転送、コンテナUSB設定は解決しません。対応ケーブルは選んだ実行ファイルのlist-cablesで判断します。確認したWindows版はXilinx純正ローダー非対応。Linux純正ローダー経路の一意選択には制約があり、1台だけ接続します。実機未確認です。
 
-対象はWindows WSL2・Linuxネイティブ・macOSネイティブです。macOSはioregのplistを解析しFTDIをシリアル指定、Linux/WSLはsysfsとbus/device指定を使います。WSLはusbipd-win転送とLinuxのUSB権限が必要です。macOS検出の模擬テストと実機書き込みの検証を区別してください。Windowsネイティブは従来の実装・実機観測として保持します。
+対象はネイティブWindows D2XXデスクトップ版・Linux・macOSで、WSL2も代替経路として残します。macOSはioregのplistを解析しFTDIをシリアル指定、Linux/WSLはsysfsとbus/device指定を使います。WSLはusbipd-win転送とLinuxのUSB権限が必要です。macOS/Linuxの実機書き込みは未検証です。Windows D2XXでのMCS書き込み・読み戻しはHANDOFF.ja.mdのとおり実機確認済みで、以前のネイティブlibusb実装は従来経路として保持します。
 
 ```bash
 python3 -m unittest test_amaneq_firmware_programer -v
@@ -90,7 +94,7 @@ Mac版はcertifiのCAとライセンスを同梱し、利用者の指定がな�
 
 クロックはhul-common-libの65476509aa401aad10148ec7c2d2a50ba7d2db3eに基づきます。SPIワード反転と0x10000間隔のリトルエンディアンのバイトレーンを保持し、TX B0000000、RX B0100000、実行B1000000/B2000000を使います。レジスタ0/1の一致後に任意の0x1F EEPROM保存を行い、上流同様初期状態は保存有効です。電源再投入後の保持は未確認です。CIRASAMEの公式hardware/cirasame/cirasame.mdはXC7K160T/FFG676とS25FL128S、practical/practical.mdはin_125_out_500_125を示します。専用ファームウェアだけを選別してください。STAGの未確認マップを推測せず書き込みを止めます。
 
-SiTCPは指定リポジトリの固定ソースを変更せず組み込み、UPSTREAM.jsonに出所を残します。build-network-tools.pyでLinux/WSL/macOS用にビルドし、Macには3コマンドと対応ソースを同梱します。上流の世代照合・500ms待機・読み戻し・エラーを保持し、自動Clear/reset/再書き込みは行いません。Windowsネイティブのネットワーク補助コマンドは未対応です。一時IP自動設定はMacのみで、Linux/WSLのホストEthernetは手動設定です。生成バイナリと実ライセンスはGitへ含めません。新GUIでの実機書き込みは未確認です。
+SiTCPは指定リポジトリの固定ソースを変更せず組み込み、UPSTREAM.jsonに出所を残します。build-network-tools.pyでLinux/WSL/macOS用にビルドし、Macには4コマンドと対応ソースを同梱します。上流の世代照合・500ms待機・読み戻し・エラーを保持し、自動Clear/reset/再書き込みは行いません。現在のWindowsデスクトップ版はCygwinでビルドしたネットワーク補助コマンドを同梱します。ネイティブ版のパッケージ説明を参照してください。一時IP自動設定はMacのみで、Linux/WSLのホストEthernetは手動設定です。生成バイナリと実ライセンスはGitへ含めません。新GUIでの実機書き込みは未確認です。
 
 ## Desktop 0.4の画面整理
 
@@ -168,3 +172,11 @@ Macの署名・公証はGitHubのmacOSランナーで実行し、管理者のMac
 公証タイムアウトの復旧: 実行39025172325は両アーキテクチャの署名後、notarytool submit --wait --timeout 30mが終了コード124になりました。待機時間切れであり、Appleの却下を示すものではありません。提出は待機と分け、UUID・提出した署名済みsubmission.zipのSHA256を直ちに保存し、状態取得と待機（既定90分）を行います。保留・最終状態、標準出力・エラー、Appleのログを保存します。notary-stateアーティファクトにはアーキテクチャ別の提出ZIPと元リリース名を必ず保存し、証明書・秘密鍵・キーチェーンを含めません。再開時は同じ元リリースと前回の実行IDを指定します。保存ZIPのハッシュを照合し、再署名・再提出せず同じ申請を確認し、Acceptedの後だけチケットを添付します。署名やタイムスタンプを変えたアプリへ古い申請IDを流用してはいけません。公証済み配布は両版のチケット検証・Gatekeeper・画面テスト完了後に限ります。main上の公証ヘルパー・ワークフロー変更では最新のテスト済みプレビューを対象に実行します。手動実行では元リリースとresume_runを指定できます。旧実行では提出済みZIP・IDを保存していないため、新しいアーティファクト再開機能で直接再開できません。
 
 全ネットワークタブのTarget IP行でPing横にget_versionを配置する。hul-common-libに合わせ、BCT 0xe0100000を0x10000間隔の4バイトレーンでリトルエンディアンとして読み、上位16ビットのFW IDと10進のmajor/minorを表示する。UIスレッド外で実行し、結果・エラーはメッセージ欄へ送る。レジスター書き込みや不明IDからの基板リビジョン推定は行わない。
+
+## ネイティブWindows・Linuxデスクトップ版
+
+今回のユーザー依頼はmacOSに加えてネイティブWindows・Linuxデスクトップ版を明示的に追加するもので、従来のWindowsはWSL優先という境界に優先します。build-desktop-app.pyとdesktop-app.ymlを使用します。Windowsはユーザーのwindows-hs3-d2xxブランチの3e5727bc1126307a0838d62f21971a2fa8f6a12fをUSE_FTDI_D2XX=ON、ENABLE_USB_SCAN=OFF、ENABLE_UDEV=OFFでビルドします。Linuxはbf2b52916e7b6216ba1cc0b30933827d7735b05dのままです。コミット・対応ソースの来歴とXC7K160Tブリッジを保持してください。Linuxローダーはruntime/linux/bin、Windowsの補助コマンドは.exe付きで探索します。固定済みPOSIX版SiTCP補助コマンドは変更せずWindowsでCygwinビルドし、必要なランタイムを同梱します。検証済みEEPROMロジックを書き換えないでください。Windows D2XXは既存FTDI CDM/System32のftd2xx.dllを使うため、WinUSBへの置き換えを要求しないでください。このパッケージではlibwdiとドライバー切り替えボタンを省きます。選択したローダーの読み取り専用--scan-usbでシリアルの接続可能性を確認し、使用中・重複シリアルを拒否し、物理HS3確認後も接続可否判定を保持します。ホストの一時IP自動設定は引き続きmacOS専用です。同梱GUI/CLI/ローダー/補助コマンドの起動検査を要求し、ローカルWindows・Linuxのビルドと起動検査は成功しています。これと未実行のホストCI・実機検証を区別してください。Cygwin/iconv/intlのランタイム依存と、バージョンを照合してSHA512を検証した対応ソースを同梱してください。フォルダー全体とSHA256付きアーカイブを保持します。Actions artifactは30日保存で自動Releaseは行いません。
+
+MCSではブリッジのdump/writeコマンドに--skip-resetを明示し、アクセス後のSRAM状態をローダーの既定動作に任せないでください。全バックアップのSHA256を保存し、バックアップ後に型番・JEDEC由来の識別情報・容量を再検出して、変化があれば-fの前で停止します。失敗時も全バックアップを保持してください。
+
+Windows D2XXの実機検証：AMANEQ-official/StrLrTdcのコミットd1b625988b5d0d243be0e725e56dd4ded6b89d7bにあるAMANEQ v4 LR-TDC v2.AのMCSを、物理確認したHS3と既存FTDIBUSドライバーで書き込みました。JTAGはXC7K160Tを1個、フラッシュはS25FL128S、JEDEC 012018、16 MiBでした。消去前に全バックアップとSHA256を保存し、識別情報を再照合してから書き込み、MCSペイロード全6,692,572バイトが別のフラッシュダンプと一致しました。--skip-resetでSPIブリッジをSRAMに残しています。電源再投入後の起動、DAQ・ネットワーク動作、BITロード、macOS/Linuxでの実機書き込みは未検証です。ドライバー変更、独立したFPGAリセット、電源の再投入は行っていません。私的なバックアップ・ログはGitへ含めないでください。

@@ -2,6 +2,8 @@
 
 **Language: [English](FOR_DEVELOPERS.md) | 日本語**
 
+現在の状態と次の作業は [開発引き継ぎ](HANDOFF.ja.md) を参照してください。
+
 ## 構造・実行環境
 
 本体はamaneq-firmware-programer.pyの1つです。ハイフンとprogramerの綴りは利用者の指定です。テストはimportlibで読み込み、dataclass宣言の前にsys.modulesへ登録します。専用スクリプトは引数を固定する薄い呼び出しで、共通ヘルパーを通して同じprogram実装を使います。
@@ -101,7 +103,7 @@ Mac版はcertifiのCAとライセンスを同梱し、利用者の指定がな�
 
 クロックはhul-common-libの65476509aa401aad10148ec7c2d2a50ba7d2db3eに基づきます。SPIワード反転と0x10000間隔のリトルエンディアンのバイトレーンを保持し、TX B0000000、RX B0100000、実行B1000000/B2000000を使います。レジスタ0/1の一致後に任意の0x1F EEPROM保存を行い、上流同様初期状態は保存有効です。電源再投入後の保持は未確認です。CIRASAMEの公式hardware/cirasame/cirasame.mdはXC7K160T/FFG676とS25FL128S、practical/practical.mdはin_125_out_500_125を示します。専用ファームウェアだけを選別してください。STAGの未確認マップを推測せず書き込みを止めます。
 
-SiTCPは指定リポジトリの固定ソースを変更せず組み込み、UPSTREAM.jsonに出所を残します。build-network-tools.pyでLinux/WSL/macOS用にビルドし、Macには3コマンドと対応ソースを同梱します。上流の世代照合・500ms待機・読み戻し・エラーを保持し、自動Clear/reset/再書き込みは行いません。Windowsネイティブのネットワーク補助コマンドは未対応です。一時IP自動設定はMacのみで、Linux/WSLのホストEthernetは手動設定です。生成バイナリと実ライセンスはGitへ含めません。新GUIでの実機書き込みは未確認です。
+SiTCPは指定リポジトリの固定ソースを変更せず組み込み、UPSTREAM.jsonに出所を残します。build-network-tools.pyでLinux/WSL/macOS用にビルドし、Macには4コマンドと対応ソースを同梱します。上流の世代照合・500ms待機・読み戻し・エラーを保持し、自動Clear/reset/再書き込みは行いません。現在のWindowsデスクトップ版はCygwinでビルドしたネットワーク補助コマンドを同梱します。ネイティブ版のパッケージ説明を参照してください。一時IP自動設定はMacのみで、Linux/WSLのホストEthernetは手動設定です。生成バイナリと実ライセンスはGitへ含めません。新GUIでの実機書き込みは未確認です。
 
 ## Desktop 0.4の画面整理
 
@@ -192,3 +194,36 @@ Mac署名・公証の準備（公証はまだ未実施）: 手動の **Sign and 
 公式資料: [Appleの公証](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)、[Developer ID証明書](https://developer.apple.com/help/account/certificates/create-developer-id-certificates/)。
 
 公証タイムアウトの復旧: 実行39025172325は両アーキテクチャの署名後、notarytool submit --wait --timeout 30mが終了コード124になりました。待機時間切れであり、Appleの却下を示すものではありません。提出は待機と分け、UUID・提出した署名済みsubmission.zipのSHA256を直ちに保存し、状態取得と待機（既定90分）を行います。保留・最終状態、標準出力・エラー、Appleのログを保存します。notary-stateアーティファクトにはアーキテクチャ別の提出ZIPと元リリース名を必ず保存し、証明書・秘密鍵・キーチェーンを含めません。再開時は同じ元リリースと前回の実行IDを指定します。保存ZIPのハッシュを照合し、再署名・再提出せず同じ申請を確認し、Acceptedの後だけチケットを添付します。署名やタイムスタンプを変えたアプリへ古い申請IDを流用してはいけません。公証済み配布は両版のチケット検証・Gatekeeper・画面テスト完了後に限ります。main上の公証ヘルパー・ワークフロー変更では最新のテスト済みプレビューを対象に実行します。手動実行では元リリースとresume_runを指定できます。旧実行では提出済みZIP・IDを保存していないため、新しいアーティファクト再開機能で直接再開できません。
+
+## Windows/Linuxデスクトップパッケージ
+
+依存関係の導入とコンパイラー実行の全手順は `.github/workflows/desktop-app.yml` にあります。ローダーは下記の固定コミットにあるユーザーのフォークからビルドし、Windowsで上流の配布パッケージに置き換えません。ソースのコミットと追跡ファイルの変更有無を確認し、対応ソース、ライセンス、コミット、ローダーのSHA256をTHIRD-PARTYに含めます。これは入力バイナリーとソースの組の記録であり、任意の外部prefixが実際にそのソースからビルドされた証明ではありません。CIは固定したcheckoutからprefixを直接ビルドします。
+
+```bash
+python -m pip install pyinstaller==6.22.3 certifi
+git clone https://github.com/nobukoba/openFPGALoader.git build/loader-source
+git -C build/loader-source checkout bf2b52916e7b6216ba1cc0b30933827d7735b05d
+```
+
+```bash
+python build-desktop-app.py --prefix build/prefix --loader-source build/loader-source
+```
+
+```powershell
+git -C build/loader-source checkout 3e5727bc1126307a0838d62f21971a2fa8f6a12f
+python build-desktop-app.py --prefix build/prefix --loader-source build/loader-source --cygwin C:/cygwin/bin --network-bin build/network
+```
+
+最初のコマンドでPython側のビルド依存と対応ソースを用意します。ビルダー実行前に、ワークフロー内のOS別CMakeコマンドで `build/prefix` にコンパイル・インストールしてください。LinuxではネイティブC++コンパイラーとTkも必要です。画面のないCIでは `xvfb-run -a` でビルダーを実行します。Windowsはpython.orgのネイティブx64 Python、ローダーにはUCRT64、変更していない4種類のSiTCPソースにはCygwinの `gcc-g++` を使用します。4種類の `.exe` を含むディレクトリーを `--network-bin` に渡し、POSIX宣言を有効にしてC++ランタイムを静的リンクするため `-D_POSIX_C_SOURCE=200809L -static-libgcc -static-libstdc++` を使ってください。補助コマンドにはcygwin1.dll、cygiconv-2.dll、cygintl-8.dllも必要なので、それぞれ同じディレクトリーに同梱します。cygpathの隣にもcygwin1.dllを同梱します。Cygwin/libiconv/gettextの対応ソースはビルド時にHTTPSで取得し、導入済みパッケージのバージョンとリポジトリーのSHA512・サイズ情報で検証して、ライセンスと一緒に含めます。したがってビルドにはインターネット接続が必要で、対応ソース情報がない場合やチェックサムが一致しない場合は停止します。Linuxの補助コマンドは自動コンパイルします。vendor内の上流C++ソースは変更しません。
+
+既定の出力先は `dist/desktop` で、開始時に存在してはいけません。フォルダー全体のWindows ZIPまたはLinux tar.gzとSHA256ファイルを生成します。`_internal` 全体を保持してください。Linuxは `runtime/linux/bin/openFPGALoader`、Windowsは `runtime/ucrt64/bin/openFPGALoader.exe` を使用します。非圧縮XC7K160Tブリッジ、CAデータ、ドキュメントを同梱し、ローダーの共有ライブラリー依存はPyInstallerで収集します。ビルド時に同梱GUIの起動検査、CLIヘルプ、ローダーの対応ケーブル一覧、4種類の補助コマンドのヘルプを実行します。ファームウェア取得や実機の変更は行いません。起動検査ではシステム標準のPATHのみを使い、開発環境のPython/Tcl/ライブラリー環境変数を除去し、Linux補助コマンドの検査では同梱ライブラリーディレクトリーのみを指定します。
+
+Windowsは `windows-hs3-d2xx` の `3e5727bc1126307a0838d62f21971a2fa8f6a12f` を `USE_FTDI_D2XX=ON`、`ENABLE_USB_SCAN=OFF`、`ENABLE_UDEV=OFF` でビルドします。導入済みFTDI CDM/System32のftd2xx.dllを使い、WinUSBへの変更は不要です。現在のビルダーはlibwdiとドライバー切り替えUIを同梱しません。既存のWinUSB接続はユーザー自身が別途FTDIへ復元する必要があります。Linuxの固定コミットは従来のままです。従来のUCRT64/libwdi明示ビルドには `build-windows-app.py` も引き続き使用できます。ホストの一時ネットワーク自動設定はmacOS専用です。バイナリーの公開前には依存関係の配布条件を確認し、必要な対応ソースを保持してください。このワークフローは保存期間30日のActions artifactを作り、Releaseには公開しません。
+
+今回のローカル検証では、Linux（WSL Ubuntu、Python 3.14）とネイティブWindows（Python 3.12）の両方で110件のオフラインテストが成功しました。Windows・Linuxのアーカイブを作成し、両方の同梱GUI、CLIヘルプ、ローダー、4種類の補助コマンドがシステム標準PATHのみで起動しました。Linuxでは空白を含む別ディレクトリーへ展開し、開発環境のPython/Tcl/ライブラリー環境変数なしでの再検査も成功しています。コンパイラーとランタイムの依存はローカルの作業ディレクトリーに置き、システムパッケージ、USBドライバー、フラッシュ、EEPROM、ホストIPは変更していません。ローカルLinuxアーカイブのglibc要件はビルドホストに依存し、Ubuntu 24.04のCI対象とは異なります。Actionsのホスト側実行、実機JTAG書き込み、ボードへのネットワーク書き込みは未検証です。
+
+D2XX対応では、選択したローダーの読み取り専用 `--scan-usb` 出力を使って接続可能なFT232Hシリアルを確認します。使用中・重複シリアル・D2XXで列挙できないWinUSB接続は拒否します。物理HS3確認後もドライバー判定とデバイス状態を保持します。USBスキャンはケーブルを開かず、JTAG検出・BIT/MCS書き込みの検証にはなりません。
+
+MCSの安全性修正：SPIブリッジを使う各dump/write操作に `--skip-reset` を渡し、容量全体を読み出したバックアップのハッシュを保存してから、1バイトの新しいプローブを実行します。消去・書き込みの呼び出し前に、型番・JEDECから得た識別情報と容量が最初の観測と一致することを要求します。不一致ではバックアップを保持して停止します。合成回帰テストでは、識別情報が変化した後に `-f` が呼ばれないことを確認します。
+
+Windows D2XXの実機検証：AMANEQ-official/StrLrTdcのコミットd1b625988b5d0d243be0e725e56dd4ded6b89d7bにあるAMANEQ v4 LR-TDC v2.AのMCSを、物理確認したHS3と既存FTDIBUSドライバーで書き込みました。JTAGはXC7K160Tを1個、フラッシュはS25FL128S、JEDEC 012018、16 MiBでした。消去前に全バックアップとSHA256を保存し、識別情報を再照合してから書き込み、MCSペイロード全6,692,572バイトが別のフラッシュダンプと一致しました。--skip-resetでSPIブリッジをSRAMに残しています。電源再投入後の起動、DAQ・ネットワーク動作、BITロード、macOS/Linuxでの実機書き込みは未検証です。ドライバー変更、独立したFPGAリセット、電源の再投入は行っていません。私的なバックアップ・ログはGitへ含めないでください。
