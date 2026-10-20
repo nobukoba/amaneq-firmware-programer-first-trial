@@ -4,9 +4,22 @@
 
 openFPGALoaderでAMANEQファームウェアを取得・書き込みます。対応する各種類で永続書き込み用MCSと一時SRAMロード用BITを選べます。
 
-## まず準備する
+## アプリをダウンロードする
 
-Python 3.10以上とopenFPGALoaderが必要です。Pythonプログラムは標準ライブラリだけを使うため、このリポジトリ自体の`pip install`は不要です。openFPGALoader本体、USBドライバー、ファームウェアは同梱していません。
+| 使用するOS | ダウンロード先・現在の配布状況 |
+| --- | --- |
+| macOS 15以降：Apple Silicon（M1/M2/M3/M4など） | [Mac用アプリをダウンロード（arm64 ZIP）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-7287552/amaneq-firmware-programer-macos-arm64.zip) |
+| macOS 15以降：Intel | [Mac用アプリをダウンロード（x86_64 ZIP）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-7287552/amaneq-firmware-programer-macos-x86_64.zip) |
+| Windows x64 | **公開ダウンロードは準備中**。今回の[自動ビルド](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39461876888)は失敗しており、配布ファイルはまだありません。 |
+| Linux x86_64 | **公開ダウンロードは準備中**。Windowsと同じ自動ビルドが失敗しており、配布ファイルはまだありません。 |
+
+MacはZIPを展開し、`amaneq-firmware-programer.app` をApplicationsへ移して起動します。Pythonのインストールは不要です。上のリンクは確認済みのプレビュー版です。他のバージョンは[リリース一覧](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases)の **Assets** から選べます。**Source code (zip)** はアプリではなくソースコードです。
+
+Windows・Linux版が公開されるまでは、以下の説明と[開発者向けビルド手順](FOR_DEVELOPERS.ja.md#windowslinuxデスクトップパッケージ)を参照してください。PC上で作成済みのローカル版と、GitHubから取得できる公開版は別です。
+
+## ソースコードから使う場合の準備
+
+Python 3.10以上とopenFPGALoaderが必要です。Pythonプログラムは標準ライブラリだけを使うため、このリポジトリ自体の`pip install`は不要です。ソースコードにはopenFPGALoader本体、USBドライバー、ファームウェアは同梱していません。上記のデスクトップ配布版にはPythonとopenFPGALoaderを同梱します。
 
 Ubuntu/Debianでは、ツールをインストールしてからリポジトリを取得します。
 
@@ -20,7 +33,7 @@ cd amaneq-firmware-programer-first-trial
 
 ## Windows・Linuxデスクトップ版のビルド
 
-Actionsの `Build Windows and Linux desktop apps` は、Windows x64用ZIPとLinux x86_64用tar.gz、およびSHA256ファイルを作成します。このワークフローの成功した実行から対応するartifactを取得し、アーカイブ全体を展開してください。`_internal` は実行ファイルの隣に置きます。artifactの保存期間は30日です。Windowsでは `amaneq-firmware-programer.exe` を起動します。Linuxでは次を実行します。
+Actionsの `Build Windows and Linux desktop apps` は、Windows x64用ZIPとLinux x86_64用tar.gz、およびSHA256ファイルを作成します。[ワークフロー一覧](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/workflows/desktop-app.yml)で成功した実行を開き、ページ下部の **Artifacts** から `amaneq-firmware-programer-windows-x64` または `amaneq-firmware-programer-linux-x86_64` を取得します（GitHubへのログインが必要です）。成功した実行に目的の成果物がある場合のみダウンロードできます。取得した外側のZIPを展開し、その中のアーカイブ全体を展開してください。`_internal` は実行ファイルの隣に置きます。artifactの保存期間は30日です。Windowsでは `amaneq-firmware-programer.exe` を起動します。Linuxでは次を実行します。
 
 ```bash
 tar -xzf amaneq-firmware-programer-linux-x86_64.tar.gz

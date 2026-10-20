@@ -1,12 +1,25 @@
 # AMANEQ Firmware Programer (first trial)
 
-**Language: English | [譌･譛ｬ隱枉(README.ja.md)**
+**Language: English | [日本語](README.ja.md)**
 
 Download and program AMANEQ firmware through openFPGALoader: persistent MCS and temporary SRAM BIT loading for all supported families.
 
-## Quick installation
+## Download the app
 
-Python 3.10 or later and openFPGALoader are required. The Python program uses only the standard library; no `pip install` is required for this repository. openFPGALoader, USB drivers, and firmware images are not bundled.
+| Your OS | Download and availability |
+| --- | --- |
+| macOS 15+: Apple Silicon (M1/M2/M3/M4, etc.) | [Download Mac app (arm64 ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-7287552/amaneq-firmware-programer-macos-arm64.zip) |
+| macOS 15+: Intel | [Download Mac app (x86_64 ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-7287552/amaneq-firmware-programer-macos-x86_64.zip) |
+| Windows x64 | **Public download pending**. The current [automated build](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39461876888) failed; no distribution file is available yet. |
+| Linux x86_64 | **Public download pending**. The same automated build failed; no distribution file is available yet. |
+
+On Mac, extract the ZIP, move `amaneq-firmware-programer.app` into Applications, and open it. No Python installation is required. The links above point to a verified preview release. For other versions, open **Assets** on the [releases page](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases). **Source code (zip)** contains source code, not the app.
+
+Until Windows/Linux downloads are published, see the instructions below and the [developer build guide](FOR_DEVELOPERS.md#windows-and-linux-desktop-packaging). Locally built packages on the development PC are separate from publicly downloadable GitHub packages.
+
+## Run from source
+
+Python 3.10 or later and openFPGALoader are required. The Python program uses only the standard library; no `pip install` is required for this repository. The source checkout does not bundle openFPGALoader, USB drivers, or firmware images. The desktop packages above bundle Python and openFPGALoader.
 
 For Ubuntu/Debian, install the tools, then clone this repository:
 
@@ -20,7 +33,7 @@ cd amaneq-firmware-programer-first-trial
 
 ## Windows and Linux desktop builds
 
-The `Build Windows and Linux desktop apps` Actions workflow builds a Windows x64 ZIP and a Linux x86_64 tar.gz, with SHA256 files. Download the matching artifact from a successful run of that workflow; extract the whole archive and keep `_internal` beside the executable. Artifacts are retained for 30 days. Windows starts with `amaneq-firmware-programer.exe`. Linux starts with:
+The `Build Windows and Linux desktop apps` Actions workflow builds a Windows x64 ZIP and a Linux x86_64 tar.gz, with SHA256 files. Open a successful run in the [workflow list](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/workflows/desktop-app.yml), then select `amaneq-firmware-programer-windows-x64` or `amaneq-firmware-programer-linux-x86_64` under **Artifacts** at the bottom (GitHub sign-in required). A download exists only when a successful run contains that artifact. Extract the outer artifact ZIP, then extract the whole archive inside and keep `_internal` beside the executable. Artifacts are retained for 30 days. Windows starts with `amaneq-firmware-programer.exe`. Linux starts with:
 
 ```bash
 tar -xzf amaneq-firmware-programer-linux-x86_64.tar.gz
