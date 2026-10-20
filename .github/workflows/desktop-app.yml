@@ -76,8 +76,11 @@ jobs:
             mingw-w64-ucrt-x86_64-pkgconf
             mingw-w64-ucrt-x86_64-libftdi
             mingw-w64-ucrt-x86_64-zlib
-      - uses: cygwin/cygwin-install-action@v5
+      - uses: cygwin/cygwin-install-action@3f0a3f9f988f7e96b8c18098ae05eaec175f5b52 # v6.1
         with:
+          install-dir: C:\cygwin
+          site: https://mirrors.kernel.org/sourceware/cygwin/
+          add-to-path: false
           packages: coreutils gcc-g++
       - name: Build the user's pinned Windows loader fork
         shell: msys2 {0}
