@@ -12,8 +12,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - run: python -m unittest test_amaneq_firmware_programer test_windows_usb test_macos_app test_macos_signing_credentials test_desktop_services test_network_operations test_desktop_bundle -v
-      - run: python -m compileall -q amaneq-firmware-programer.py test_amaneq_firmware_programer.py windows_usb.py amaneq-firmware-app.py build-windows-app.py
+      - run: python -m unittest test_amaneq_firmware_programer test_windows_usb test_macos_app test_macos_signing_credentials test_desktop_services test_network_operations test_desktop_bundle test_simple_workflow -v
+      - run: python -m compileall -q amaneq-firmware-programer.py test_amaneq_firmware_programer.py windows_usb.py amaneq-firmware-app.py build-windows-app.py simple_workflow.py ui_clipboard.py
       - name: Check Windows WSL setup without host changes
         if: runner.os == 'Windows'
         shell: pwsh

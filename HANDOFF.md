@@ -55,3 +55,7 @@ On the original development checkout, ignored local artifacts are under `dist/wi
 3. Vivado compatibility is the purpose of retaining FTDI/D2XX. The fork documents earlier coexistence evidence, but reconnecting Vivado after this session's MCS write was not tested. Do not claim it was.
 4. The Windows desktop application was launched for the user. Its current startup screen has not been visually inspected. Computer Use instructions exist, but this session lacked the required `node_repl` runtime; do not claim to see the live desktop. User-provided screenshots can be inspected.
 5. The user reads this chat on a phone. PC-local file links did not open there. After push, use HTTPS GitHub links for README/handoff, or show relevant text in chat.
+
+## UI update 2026-10-22
+
+Added AMANEQ-only selection, default tabless Simple mode and existing Expert mode, latest filename/version/commit display, adjacent firmware Help and copy menus. XG initialization defaults ON. Simple configures and reads back default clock/optional license/EEPROM IP before the final MCS write/readback; HR-TDC skips Simple network operations. DIP1=0 means default IP; saved custom IP uses DIP1=1. The new combined hardware workflow remains physically unverified.

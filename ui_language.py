@@ -12,6 +12,16 @@ JAPANESE = {
     "Jitter Cleaner": "ジッタークリーナー",
     "MPC / MPCX": "MPC / MPCX",
     "IP addr.": "IPアドレス",
+    "Configure and program": "設定して書き込む",
+    "Copy": "コピー",
+    "Copy all": "すべてコピー",
+    "Paste": "貼り付け",
+    "Simple mode": "シンプルモード",
+    "Expert mode": "詳細モード",
+    "Jitter Cleaner: Default (in_125_out_500_125)": "ジッタークリーナー: 既定 (in_125_out_500_125)",
+    "Loading latest firmware image...": "最新ファームウェアを取得中...",
+    "No matching latest firmware image available.": "対象に合う最新ファームウェアがありません。",
+    "Latest firmware unavailable; no image selected.": "最新ファームウェアを取得できません。未選択です。",
     "Latest firmware": "最新ファームウェア",
     "Custom": "カスタム",
     "Latest matching firmware from the official default branch": "公式の既定ブランチから対象に合う最新版を取得します",
@@ -112,7 +122,7 @@ HELP_JAPANESE = {
     ],
     "license": [
         "MPC / MPCXファイル",
-        "MPCとMPCXは、対象機器向けに提供されるSiTCP / SiTCP-XGの設定・ライセンスファイルです。FPGA用のBIT / MCSではありません。基板向けに発行されたファイルを使ってください。このアプリはライセンスを生成しません。\n\nファイルを選ぶかパスを入力します。拡張子ではなく内容から種類を判別します。MPCなら通常192.168.10.16、MPCXなら192.168.10.10を接続先の候補にしますが、実際の基板アドレスを保証するものではありません。\n\n読み取りは基板情報を取得し、照合は選択データを基板と比較します。書き込みは確認後に選択データを書き込みます。XG EEPROM初期化はライセンス書き込み前に現在のXG設定をコピーする操作です。その準備操作が必要な場合だけ有効にしてください。"
+        "MPCとMPCXは、対象機器向けに提供されるSiTCP / SiTCP-XGの設定・ライセンスファイルです。FPGA用のBIT / MCSではありません。基板向けに発行されたファイルを使ってください。このアプリはライセンスを生成しません。\n\nファイルを選ぶかパスを入力します。拡張子ではなく内容から種類を判別します。MPCなら通常192.168.10.16、MPCXなら192.168.10.10を接続先の候補にしますが、実際の基板アドレスを保証するものではありません。\n\n読み取りは基板情報を取得し、照合は選択データを基板と比較します。書き込みは確認後に選択データを書き込みます。XG EEPROM初期化はライセンス書き込み前に現在のXG設定をコピーする操作です。既定で有効です。既存のXG EEPROM初期設定を保持したい場合だけオフにしてください。"
     ],
     "clock": [
         "ジッタークリーナー",

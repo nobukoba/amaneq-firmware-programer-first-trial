@@ -25,6 +25,16 @@ Linux版は上のリンクからZIPを取得し、その中の `amaneq-firmware-
 
 Windows・Linuxのリンクは[成功済みビルド `6cdc836`](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39468344602)のActions成果物です。**Releasesには未掲載**で、保存期間は30日です。期限切れの場合は[ビルド一覧](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/workflows/desktop-app.yml)から対象OSの成功したジョブと成果物を確認してください。自分で作成する場合は[開発者向けビルド手順](FOR_DEVELOPERS.ja.md#windowslinuxデスクトップパッケージ)を参照してください。
 
+## Simple modeとExpert mode
+
+基板選択は現在AMANEQだけです。既定のSimple modeではタブを表示しません。Target・Firmware・Formatを選ぶと、最新イメージのファイル名・バージョン・コミットを取得して表示します。書き込みは表示したコミットに固定し、後から更新されたブランチへ勝手に変えません。HR-TDCメザニンでは実機のフラッシュ判定で候補が決まるため、判定前は候補ファイルとして表示します。
+
+HR-TDC以外のSimple設定では、現在のTarget IP（Ping可能）、任意のMPC/MPCXファイル、EEPROMへ保存するNew device IPを指定します。クロックはin_125_out_500_125を使用して保存します。XG EEPROM初期化は、Simpleでは項目を表示せず有効です。実行前の確認に変更内容を表示します。最初にファームウェアを取得・検証し、ネットワーク機器を確認してクロック・ライセンス・IPを書き込み・読み戻しした後、最後にMCSを書き込み、独立した読み戻しで照合します。失敗時は後続処理へ進まず、自動で書き込みをやり直しません。MCS後はSPIブリッジがSRAMに残りEthernetアプリが停止するため、ネットワーク設定を先に行います。HR-TDCでは指定どおりSimpleのネットワーク欄と処理を省きますが、HR-TDC本体にEthernet機能がないという意味ではありません。
+
+MCSの読み戻し成功後は、手動の電源再投入を案内します。[公式資料](https://spadi-alliance.rcnp.osaka-u.ac.jp/ug-amaneq/firmware/strhrtdc/strhrtdc/)ではDIP1=0は既定IP、DIP1=1は保存したユーザーIPです。指定されたDIP1=0での再起動案内は、独自のEEPROM IPで起動することを保証しません。読み戻し成功と電源再投入後の起動・DAQ動作は別で、起動後に確認が必要です。BITは一時SRAMロードなので、フラッシュ起動用の案内を出しません。
+
+Expert modeではFirmware／Jitter Cleaner／MPC-MPCX／IPのタブとLatest firmware／Customを維持します。ExpertでもInitialize XG EEPROMの既定値をONに変更しました。FirmwareのHelpはTarget・Firmware・Formatの横です。入力欄は通常の範囲選択・コピー・編集可能欄へのペーストに対応し、ラベル・設定・状態・選択したファームウェア行にも右クリックのCopy／Copy allを付けています。MacはControlクリックでも開けます。モード切り替えや最新版の表示だけでは実機へ書き込みません。
+
 ## ソースコードから使う場合の準備
 
 Python 3.10以上とopenFPGALoaderが必要です。Pythonプログラムは標準ライブラリだけを使うため、このリポジトリ自体の`pip install`は不要です。ソースコードにはopenFPGALoader本体、USBドライバー、ファームウェアは同梱していません。上記のデスクトップ配布版にはPythonとopenFPGALoaderを同梱します。

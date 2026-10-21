@@ -25,6 +25,16 @@ For Linux, download the artifact ZIP above, extract the `amaneq-firmware-program
 
 Windows/Linux links point to Actions artifacts from [successful build `6cdc836`](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39468344602). They are **not published in Releases** and are retained for 30 days. If expired, check the target OS job and artifacts in the [build list](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/workflows/desktop-app.yml). For local builds, see the [developer build guide](FOR_DEVELOPERS.md#windows-and-linux-desktop-packaging).
 
+## Simple and Expert modes
+
+Board selection currently exposes AMANEQ only. Simple mode is the default and has no visible tabs. Select Target, Firmware and Format; the app obtains and displays the latest filename, version and commit. Programming uses that displayed commit, not a later branch update. HR-TDC mezzanine candidates depend on the detected flash and are shown as candidates until that detection.
+
+For non-HR-TDC Simple setup, select the current Target IP (Ping remains available), optionally choose an MPC/MPCX file, and enter New device IP to save in EEPROM. The default clock is in_125_out_500_125 and is persisted. XG EEPROM initialization is enabled without a separate Simple checkbox. The confirmation lists the operations. The app validates/downloads firmware first, checks the connected network device, writes and reads back clock/license/IP settings, then programs and independently reads back MCS flash. It stops at the first failure without automatically retrying. Network setup must precede MCS because the SPI bridge left in SRAM removes the running Ethernet application. HR-TDC selections skip the Simple network controls and operations as requested; this does not mean the HR-TDC base hardware lacks Ethernet.
+
+After successful MCS readback, the app prompts for a manual restart. DIP1=0 selects the firmware default IP; DIP1=1 selects the saved user IP (see the [AMANEQ guide](https://spadi-alliance.rcnp.osaka-u.ac.jp/ug-amaneq/firmware/strhrtdc/strhrtdc/)). The requested DIP1=0 restart reminder therefore does not promise use of a custom EEPROM IP. Restart/boot and DAQ operation are not verified by a successful readback. BIT is temporary SRAM loading and does not receive the persistent-boot instruction.
+
+Expert mode retains the Firmware/Jitter Cleaner/MPC-MPCX/IP tabs and Latest firmware/Custom controls. Initialize XG EEPROM now defaults ON in Expert too. Firmware Help is beside Target/Firmware/Format. Text fields support normal selection/copy/paste where editable; right-click Copy/Copy all also works on labels, settings, status and selected firmware rows. macOS also supports Control-click for the menu. Simple/Expert switching and viewing latest metadata do not write hardware.
+
 ## Run from source
 
 Python 3.10 or later and openFPGALoader are required. The Python program uses only the standard library; no `pip install` is required for this repository. The source checkout does not bundle openFPGALoader, USB drivers, or firmware images. The desktop packages above bundle Python and openFPGALoader.

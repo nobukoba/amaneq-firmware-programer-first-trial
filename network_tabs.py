@@ -36,7 +36,7 @@ HELP_TOPICS = {
     ],
     "license": [
         "MPC / MPCX files",
-        "MPC and MPCX are SiTCP/SiTCP-XG configuration or license files supplied for the intended device. They are not FPGA BIT/MCS firmware images. Use the file issued for your board; this app does not generate a license.\n\nChoose or paste a file path. Type is determined from the contents rather than its extension: MPC normally selects Target IP 192.168.10.16, MPCX selects 192.168.10.10. These are presets, not proof of your board's current address.\n\nRead retrieves device information. Check validates the selected data against the device without programming it. Write MPC/MPCX writes the selected data after confirmation. Initialize XG EEPROM copies current XG settings before license programming; leave it off unless this setup step is intended."
+        "MPC and MPCX are SiTCP/SiTCP-XG configuration or license files supplied for the intended device. They are not FPGA BIT/MCS firmware images. Use the file issued for your board; this app does not generate a license.\n\nChoose or paste a file path. Type is determined from the contents rather than its extension: MPC normally selects Target IP 192.168.10.16, MPCX selects 192.168.10.10. These are presets, not proof of your board's current address.\n\nRead retrieves device information. Check validates the selected data against the device without programming it. Write MPC/MPCX writes the selected data after confirmation. Initialize XG EEPROM copies current XG settings before license programming; This initialization is enabled by default; disable it only when you intend to preserve the existing XG EEPROM initialization."
     ],
     "clock": [
         "Jitter Cleaner",
@@ -307,7 +307,7 @@ class NetworkTabs:
         self.file = tk.StringVar()
         self.new_ip = tk.StringVar()
         self.current = tk.BooleanVar(value=False)
-        self.initialize = tk.BooleanVar(value=False)
+        self.initialize = tk.BooleanVar(value=True)
         self.status = tk.StringVar()
         clock_page, self.clock = scrollable_tab(notebook)
         writer_page, self.writer = scrollable_tab(notebook)

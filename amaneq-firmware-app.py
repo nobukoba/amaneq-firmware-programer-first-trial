@@ -13,9 +13,18 @@ import sys
 import threading
 import uuid
 import windows_usb as usb
+import network_operations as operations
+import simple_workflow
 import macos_network as network
 from ui_language import LanguageManager
-from network_tabs import NetworkTabs, bind_horizontal_scroll, scrollable_tab, help_link
+from ui_clipboard import install_copy_support
+from network_tabs import (
+    TargetAddress,
+    NetworkTabs,
+    bind_horizontal_scroll,
+    scrollable_tab,
+    help_link,
+)
 from desktop_services import CategoryCooldown, DesktopServices, cable_arguments
 
 ROOT = Path(__file__).resolve().parent
@@ -214,6 +223,7 @@ def gui(smoke_test=False):
     temporary_panels = []
     confirmed_hs3 = tk.BooleanVar(value=False)
     cable_status = tk.StringVar(value="Scanning connected cables...")
+    latest_image = tk.StringVar(value="Loading latest firmware image...")
     catalog_status = tk.StringVar(value="Loading latest firmware images...")
     adapter_label = tk.StringVar()
     address = tk.StringVar(value="192.168.10.20")
@@ -228,7 +238,7 @@ def gui(smoke_test=False):
     ttk.Combobox(
         header,
         textvariable=board,
-        values=("AMANEQ", "CIRASAME", "STAG"),
+        values=("AMANEQ",),
         state="readonly",
         width=18,
     ).pack(side="left", padx=8)
@@ -250,6 +260,17 @@ def gui(smoke_test=False):
             "ja" if language_choice.get() == "日本語" else "en"
         ),
     )
+    ui_mode = tk.StringVar(value="Expert" if smoke_test else "Simple")
+    mode_controls = ttk.Frame(outer)
+    mode_controls.pack(fill="x", pady=(0, 6))
+    for value in ("Simple", "Expert"):
+        ttk.Radiobutton(
+            mode_controls,
+            text=value + " mode",
+            value=value,
+            variable=ui_mode,
+            command=lambda: apply_ui_mode(),
+        ).pack(side="left", padx=(0, 16))
     board_status = tk.StringVar()
     ttk.Label(header, textvariable=board_status).pack(side="left")
 
@@ -344,9 +365,7 @@ def gui(smoke_test=False):
             f"No-wait changes left: {category_cooldown.free_changes_left}"
         )
         if remaining:
-            cooldown_status.set(
-                f"Cooldown: {remaining} s"
-            )
+            cooldown_status.set(f"Cooldown: {remaining} s")
             cooldown_after = root.after(250, update_cooldown)
         else:
             cooldown_status.set("")
@@ -359,6 +378,7 @@ def gui(smoke_test=False):
             root.after_cancel(refresh_after)
             refresh_after = None
         if source_mode.get() == "GitHub":
+            latest_image.set("Loading latest firmware image...")
             remaining = category_cooldown.observe(
                 (board.get(), target.get(), firmware.get(), image_format.get())
             )
@@ -370,7 +390,9 @@ def gui(smoke_test=False):
                 cooldown_status.set(f"Cooldown: {remaining} s")
                 catalog_request += 1
                 images.delete(*images.get_children())
-                catalog_status.set("List acquisition will resume with the selected category after cooldown.")
+                catalog_status.set(
+                    "List acquisition will resume with the selected category after cooldown."
+                )
                 if cooldown_after is None:
                     events.put(
                         (
@@ -386,6 +408,7 @@ def gui(smoke_test=False):
         catalog_request += 1
         request = catalog_request
         images.delete(*images.get_children())
+        latest_image.set("Loading latest firmware image...")
         if source_mode.get() != "GitHub" or board.get() == "STAG":
             return
         chosen_repository = repository_url.get().strip()
@@ -394,7 +417,7 @@ def gui(smoke_test=False):
         include_history = selection_mode.get() == "Custom"
         try:
             chosen_limit = (
-                1 if selection_mode.get() == "Latest" else int(history_limit.get())
+                5 if selection_mode.get() == "Latest" else int(history_limit.get())
             )
             if not 1 <= chosen_limit <= 1000:
                 raise ValueError()
@@ -445,7 +468,31 @@ def gui(smoke_test=False):
                     ),
                 )
         visible = images.get_children()
+        if not visible:
+            latest_image.set("No matching latest firmware image available.")
         if visible:
+            row = catalog_rows[int(visible[0])]
+            version = services.core.version_key(row["path"])
+            version_text = (
+                "v" + ".".join(format(part, "X") for part in version)
+                if version
+                else "default branch"
+            )
+            if target.get() == "hrtdc-mezzanine":
+                latest_image.set(
+                    "Flash-dependent candidates: "
+                    + "; ".join(catalog_rows[int(item)]["name"] for item in visible)
+                    + " | "
+                    + row.get("commit", "")[:12]
+                )
+            else:
+                latest_image.set(
+                    row["name"]
+                    + " | "
+                    + version_text
+                    + " | "
+                    + row.get("commit", "")[:12]
+                )
             images.selection_set(visible[0])
             images.focus(visible[0])
             images.see(visible[0])
@@ -476,6 +523,7 @@ def gui(smoke_test=False):
     def profile_changed(*unused):
         nonlocal active_profile, changing_repository, catalog_request
         catalog_request += 1
+        update_simple_network()
         if target.get() == "hrtdc-mezzanine":
             firmware.set("hrtdc")
             set_firmware_choices(("hrtdc",))
@@ -539,7 +587,8 @@ def gui(smoke_test=False):
 
     def program():
         source = (
-            "latest" if selection_mode.get() == "Latest"
+            "latest"
+            if selection_mode.get() == "Latest"
             else "selected" if source_mode.get() == "GitHub" else "local"
         )
         if board.get() == "STAG":
@@ -572,20 +621,46 @@ def gui(smoke_test=False):
             )
             if source == "latest":
                 if category_cooldown.remaining():
-                    raise ValueError("Wait for the firmware category cooldown before programming.")
+                    raise ValueError(
+                        "Wait for the firmware category cooldown before programming."
+                    )
+                selection = images.selection()
+                if not selection:
+                    raise ValueError(
+                        "Wait for the latest firmware image to load successfully."
+                    )
+                latest_row = catalog_rows[int(selection[0])]
+                official_repo = services.default_repository(
+                    selected_target, selected_firmware
+                )
+                if (
+                    latest_row["repo"] != official_repo
+                    or latest_row["target"] != selected_target
+                    or latest_row["firmware"] != selected_firmware
+                    or latest_row["format"] != format_ids[image_format.get()]
+                ):
+                    raise ValueError(
+                        "The latest image is stale. Refresh the selected profile."
+                    )
                 arguments += [
-                    "--latest",
+                    "--ref",
+                    latest_row["commit"],
                     "--repo",
-                    "https://github.com/" + services.default_repository(
-                        selected_target, selected_firmware
-                    ),
+                    "https://github.com/"
+                    + services.default_repository(selected_target, selected_firmware),
                     "--format",
                     format_ids[image_format.get()],
                 ]
                 description = (
                     "Latest matching firmware from the official default branch"
-                    + "\nTarget: " + selected_target
-                    + "\nFormat: " + image_format.get()
+                    + "\nImage: "
+                    + latest_row["name"]
+                    + "\nCommit: "
+                    + latest_row["commit"][:12]
+                    + "\nTarget: "
+                    + selected_target
+                    + "\nFormat: "
+                    + image_format.get()
                 )
             elif source == "selected":
                 selection = images.selection()
@@ -645,12 +720,119 @@ def gui(smoke_test=False):
             messagebox.showerror("Selection required", str(error))
             return
         chosen_local_file = filename.get()
+        simple = ui_mode.get() == "Simple"
+        chosen_format = format_ids[image_format.get()]
+        network_plan = None
+        download_arguments = None
+        prepared_image = None
+        if simple:
+            try:
+                if (
+                    selected_firmware != "hrtdc"
+                    and selected_target != "hrtdc-mezzanine"
+                ):
+                    network_plan = simple_workflow.prepare_network(
+                        ROOT,
+                        simple_target.value(),
+                        network_tabs.selected_file(),
+                        network_tabs.new_ip.get(),
+                    )
+                    description += (
+                        "\n\nBefore firmware programming: verify the device; apply the default clock; "
+                        "write the selected MPC/MPCX (XG initialization enabled); "
+                        "write EEPROM IP "
+                        + network_plan.saved_ip
+                        + "; read back settings. Stop on the first failure."
+                    )
+                    download_root = app_data_directory() / "firmware/downloads"
+                    prepared_image = (
+                        download_root
+                        / latest_row["repo"].replace("/", "_")
+                        / latest_row["commit"][:12]
+                        / latest_row["name"]
+                    )
+                    download_arguments = [
+                        "download",
+                        "--repo",
+                        latest_row["repo"],
+                        "--ref",
+                        latest_row["commit"],
+                        "--artifact-path",
+                        latest_row["path"],
+                        "--target",
+                        selected_target,
+                        "--firmware",
+                        selected_firmware,
+                        "--format",
+                        chosen_format,
+                        "--download-dir",
+                        str(download_root),
+                    ]
+                    arguments = [
+                        "program",
+                        "--loader",
+                        loader.get(),
+                        "--target",
+                        selected_target,
+                        "--firmware",
+                        selected_firmware,
+                        "--yes",
+                        "--file",
+                        str(prepared_image),
+                    ] + cable_arguments(serial.get(), found_cables, confirmed_hs3.get())
+            except Exception as error:
+                messagebox.showerror("Simple configuration", str(error))
+                return
+
+        def run_network_command(command):
+            events.put(("log", subprocess.list2cmdline(command)))
+            with subprocess.Popen(
+                command,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            ) as child:
+                for line in child.stdout:
+                    events.put(("log", line.rstrip()))
+                if child.wait():
+                    raise RuntimeError(
+                        "Network setup or readback failed. No automatic retry was made."
+                    )
 
         def operation():
             if source == "local":
                 detected = services.core.inspect_file(Path(chosen_local_file))
                 arguments.extend(["--format", detected.kind])
-            return process(arguments)
+            if network_plan:
+                process(download_arguments)
+                image = services.core.inspect_file(prepared_image)
+                if (
+                    image.kind != chosen_format
+                    or image.idcode & 0x0FFFFFFF != 0x0364C093
+                ):
+                    raise ValueError(
+                        "Prepared firmware format/FPGA does not match the selected target."
+                    )
+                part = image.metadata.get("part", "").lower().removeprefix("xc")
+                if part and part != "7k160tffg676":
+                    raise ValueError("Prepared firmware is not for XC7K160T FFG676.")
+                simple_workflow.configure_network(
+                    network_plan,
+                    run_network_command,
+                    lambda message: events.put(("log", message)),
+                )
+            process(arguments)
+            if simple:
+                return "simple_complete", {
+                    "format": chosen_format,
+                    "target": selected_target,
+                    "network": network_plan is not None,
+                    "saved_ip": network_plan.saved_ip if network_plan else "",
+                }
 
         if messagebox.askyesno(
             "Program firmware",
@@ -865,15 +1047,25 @@ def gui(smoke_test=False):
     selection_controls.pack(fill="x", pady=4)
     for value, text in (("Latest", "Latest firmware"), ("Custom", "Custom")):
         ttk.Radiobutton(
-            selection_controls, text=text, value=value,
-            variable=selection_mode, command=change_selection,
+            selection_controls,
+            text=text,
+            value=value,
+            variable=selection_mode,
+            command=change_selection,
         ).pack(side="left", padx=(0, 16))
     latest_panel = ttk.Frame(page)
     ttk.Label(
         latest_panel,
         text="Latest matching firmware from the official default branch",
     ).pack(anchor="w")
-    ttk.Label(latest_panel, textvariable=catalog_status, wraplength=930).pack(anchor="w")
+    latest_image_entry = ttk.Entry(
+        latest_panel, textvariable=latest_image, state="readonly"
+    )
+    latest_image_entry.pack(fill="x", pady=4)
+    bind_horizontal_scroll(latest_image_entry)
+    ttk.Label(latest_panel, textvariable=catalog_status, wraplength=930).pack(
+        anchor="w"
+    )
     online = ttk.Frame(page)
     repository_box = ttk.Frame(online)
     repository_box.pack(fill="x", pady=4)
@@ -958,10 +1150,12 @@ def gui(smoke_test=False):
     )
     action_font.configure(weight="bold")
     style.configure("Action.TButton", font=action_font)
-    ttk.Button(
-        program_area, text="Program image", style="Action.TButton", command=program
-    ).pack(anchor="w")
-    help_link(program_area, "firmware").pack(anchor="w", pady=4)
+    program_text = tk.StringVar(value="Program image")
+    program_button = ttk.Button(
+        program_area, textvariable=program_text, style="Action.TButton", command=program
+    )
+    program_button.pack(anchor="w")
+    help_link(settings, "firmware").grid(row=0, column=6, padx=(8, 0))
     repository_url.trace_add("write", schedule_refresh)
     if os.name == "nt" and (ROOT / "runtime/libwdi.dll").is_file():
         controls = ttk.Frame(page)
@@ -1051,6 +1245,80 @@ def gui(smoke_test=False):
         show_network_status()
 
     network_tabs = NetworkTabs(notebook, board, ROOT, task, events, network_widgets)
+
+    simple_network = ttk.Frame(page)
+    simple_target = TargetAddress(simple_network, task, events)
+    network_tabs.new_ip.set(simple_target.value())
+    network_widgets(simple_network)
+    ttk.Label(simple_network, text="Jitter Cleaner: Default (in_125_out_500_125)").pack(
+        anchor="w", pady=4
+    )
+    simple_file = ttk.Frame(simple_network)
+    simple_file.pack(fill="x", pady=4)
+    ttk.Label(simple_file, text="MPC / MPCX file:").pack(side="left")
+    ttk.Entry(simple_file, textvariable=network_tabs.file).pack(
+        side="left", fill="x", expand=True, padx=6
+    )
+
+    def choose_simple_file():
+        network_tabs.choose_file()
+        if network_tabs.detected_file:
+            host = network_tabs.writer_target.value()
+            simple_target.set(host)
+            if network_tabs.new_ip.get() in ("192.168.10.10", "192.168.10.16", ""):
+                network_tabs.new_ip.set(host)
+
+    ttk.Button(simple_file, text="Choose file", command=choose_simple_file).pack(
+        side="left"
+    )
+    simple_ip = ttk.Frame(simple_network)
+    simple_ip.pack(fill="x", pady=4)
+    ttk.Label(simple_ip, text="New device IP:").pack(side="left")
+    ttk.Entry(simple_ip, textvariable=network_tabs.new_ip, width=20).pack(
+        side="left", padx=6
+    )
+    ttk.Label(simple_ip, text="EEPROM IP").pack(side="left")
+    expert_selection = "Latest"
+    previous_ui_mode = "Expert"
+    all_tabs = tuple(notebook.tabs())
+    style.layout("Simple.TNotebook.Tab", [])
+
+    def update_simple_network():
+        simple_network.pack_forget()
+        program_text.set("Program image")
+        if (
+            ui_mode.get() == "Simple"
+            and firmware.get() != "hrtdc"
+            and target.get() != "hrtdc-mezzanine"
+        ):
+            simple_network.pack(fill="x", pady=4, before=cable_box)
+            program_text.set("Configure and program")
+
+    def apply_ui_mode():
+        nonlocal expert_selection, previous_ui_mode
+        if mutation:
+            ui_mode.set(previous_ui_mode)
+            messagebox.showinfo("Busy", "Wait for the current operation to finish.")
+            return
+        if ui_mode.get() == "Simple":
+            if previous_ui_mode == "Expert":
+                expert_selection = selection_mode.get()
+            notebook.select(firmware_page)
+            for tab in all_tabs[1:]:
+                notebook.hide(tab)
+            notebook.configure(style="Simple.TNotebook")
+            selection_mode.set("Latest")
+            change_selection()
+            selection_controls.pack_forget()
+        else:
+            notebook.configure(style="TNotebook")
+            for tab in all_tabs[1:]:
+                notebook.add(tab)
+            selection_controls.pack(fill="x", pady=4, after=settings)
+            selection_mode.set(expert_selection)
+            change_selection()
+        update_simple_network()
+        previous_ui_mode = ui_mode.get()
 
     def board_changed(*unused):
         chosen = board.get()
@@ -1252,6 +1520,26 @@ def gui(smoke_test=False):
                     cable_status.set(
                         "Multiple cables: explicitly select a serial. " + description
                     )
+            elif kind == "simple_complete":
+                if value["format"] == "bit":
+                    message = "BIT loaded into SRAM. It is temporary and will be lost at power-off."
+                else:
+                    message = "Flash write and independent firmware readback completed."
+                    if value["network"]:
+                        message += (
+                            "\nNetwork settings were written and read back before the flash write."
+                            "\nSet AMANEQ DIP switch DIP1 to 0 and power-cycle the board to start with its default IP."
+                            "\nDIP1=0 selects the default IP; use DIP1=1 to use the saved EEPROM IP "
+                            + value["saved_ip"]
+                            + "."
+                        )
+                    else:
+                        message += "\nPower-cycle the board to start the saved firmware. Network setup was skipped."
+                    message += (
+                        "\nBoot and DAQ operation must be checked after restarting."
+                    )
+                events.put(("log", message))
+                messagebox.showinfo("Simple configuration completed", message)
             elif kind == "catalog":
                 request, result = value
                 if request != catalog_request or source_mode.get() != "GitHub":
@@ -1304,6 +1592,7 @@ def gui(smoke_test=False):
                     if name != f"Firmware list #{catalog_request}":
                         continue
                     catalog_status.set("Firmware list unavailable. " + text)
+                    latest_image.set("Latest firmware unavailable; no image selected.")
                 elif "IPv4" in name:
                     network_status.set(
                         "Network operation failed; inspect the log and use Restore network."
@@ -1334,6 +1623,9 @@ def gui(smoke_test=False):
     root.protocol("WM_DELETE_WINDOW", close)
     poll()
     languages = LanguageManager(root)
+    install_copy_support(root)
+    if not smoke_test:
+        apply_ui_mode()
     if smoke_test:
         root.update()
         assert initial_layout["ready"]
@@ -1478,6 +1770,24 @@ def gui(smoke_test=False):
         selection_mode.set("Custom")
         change_selection()
         assert repository_url.get() == "https://github.com/example/custom-firmware"
+        assert network_tabs.initialize.get() is True
+        ui_mode.set("Simple")
+        apply_ui_mode()
+        root.update_idletasks()
+        assert str(notebook.cget("style")) == "Simple.TNotebook"
+        assert all(notebook.tab(tab, "state") == "hidden" for tab in all_tabs[1:])
+        assert selection_mode.get() == "Latest"
+        assert not selection_controls.winfo_manager()
+        firmware.set("hrtdc")
+        profile_changed()
+        assert not simple_network.winfo_manager()
+        firmware.set("lrtdc")
+        profile_changed()
+        assert simple_network.winfo_manager() == "pack"
+        ui_mode.set("Expert")
+        apply_ui_mode()
+        assert all(notebook.tab(tab, "state") == "normal" for tab in all_tabs)
+        assert not simple_network.winfo_manager()
         for tab in notebook.tabs():
             notebook.select(tab)
             root.update_idletasks()
@@ -1565,25 +1875,35 @@ def gui(smoke_test=False):
             assert popup.call_count == len(HELP_TOPICS)
             assert jobs == jobs_before_cooldown
         before_language = (
-            target.get(), firmware.get(), image_format.get(), repository_url.get(),
-            category_cooldown.changes, set(jobs),
+            target.get(),
+            firmware.get(),
+            image_format.get(),
+            repository_url.get(),
+            category_cooldown.changes,
+            set(jobs),
         )
         languages.set_language("ja")
         assert notebook.tab(0, "text") == "ファームウェア"
         assert category_count_status.get().startswith("Changes:")
         assert any(
             widget.cget("text") == "JTAGケーブル:"
-            for widget, original in languages.widgets if original == "JTAG cable:"
+            for widget, original in languages.widgets
+            if original == "JTAG cable:"
         )
         from ui_language import HELP_JAPANESE
+
         with patch("network_tabs.messagebox.showinfo") as popup:
             show_help(root, "ip")
             assert popup.call_args.args[:2] == tuple(HELP_JAPANESE["ip"])
         languages.set_language("en")
         assert notebook.tab(0, "text") == "Firmware"
         assert before_language == (
-            target.get(), firmware.get(), image_format.get(), repository_url.get(),
-            category_cooldown.changes, set(jobs),
+            target.get(),
+            firmware.get(),
+            image_format.get(),
+            repository_url.get(),
+            category_cooldown.changes,
+            set(jobs),
         )
         root.after(300, root.destroy)
     else:
