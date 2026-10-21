@@ -10,6 +10,7 @@ on:
       - 'build-network-tools.py'
       - 'vendor/**'
       - 'macos_network.py'
+      - 'host_network.py'
       - 'test_desktop_services.py'
       - 'amaneq-firmware-programer.py'
       - 'build-macos-app.py'

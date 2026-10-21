@@ -32,7 +32,7 @@ HELP_TOPICS = {
     ],
     "host": [
         "Temporary host IP",
-        "Host means this computer; Target means the board. NIC means the computer's Ethernet network adapter. Choose the adapter physically connected to the board.\n\nA temporary host IP such as 192.168.10.20 with mask 255.255.255.0 places the computer on the board's 192.168.10.x network. Use different, unused host and board addresses. The mask describes which addresses belong to the same local network.\n\nOn macOS, enabling the checkbox only reveals controls. Apply temporarily adds an address to the selected adapter after administrator approval, preserving DHCP, DNS and gateway settings. DHCP is automatic network configuration. Restore network or normal app exit removes the app's temporary address. Cleanup failures are reported.\n\nThis does not change the board's IP. It is optional for Ethernet operations and unnecessary for USB/JTAG firmware programming."
+        "Host means this computer; Target means the board. NIC means the computer's Ethernet network adapter. Choose the adapter physically connected to the board.\n\nA temporary host IP such as 192.168.10.20 with mask 255.255.255.0 places the computer on the board's 192.168.10.x network. Use different, unused host and board addresses. The mask describes which addresses belong to the same local network.\n\nOn Windows, Linux and macOS, enabling the checkbox only reveals controls. Apply temporarily adds an address to the selected adapter after administrator approval, preserving DHCP, DNS and gateway settings. DHCP is automatic network configuration. Windows uses UAC; Linux needs iproute2, pkexec and a desktop authentication agent. Restore network or normal app exit removes the app's temporary address. Cleanup failures are reported.\n\nThis does not change the board's IP. It is optional for Ethernet operations and unnecessary for USB/JTAG firmware programming."
     ],
     "license": [
         "MPC / MPCX files",
@@ -166,10 +166,10 @@ class TargetAddress:
             textvariable=self.choice,
             values=tuple(TARGET_IP_PRESETS) + ("Custom",),
             state="readonly",
-            width=28,
+            width=33,
         )
         selector.pack(side="left")
-        self.entry = ttk.Entry(self.address_box, textvariable=self.custom, width=15)
+        self.entry = ttk.Entry(self.address_box, textvariable=self.custom, width=20)
         self.ping_button = ttk.Button(self.actions_box, text="Ping", command=self.ping)
         self.ping_button.pack(side="left", padx=(0, 4))
         self.ping_status = tk.StringVar()

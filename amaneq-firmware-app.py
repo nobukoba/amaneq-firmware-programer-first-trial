@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import queue
+import re
 import subprocess
 import sys
 import threading
@@ -15,7 +16,7 @@ import uuid
 import windows_usb as usb
 import network_operations as operations
 import simple_workflow
-import macos_network as network
+import host_network as network
 from ui_language import LanguageManager
 from ui_clipboard import install_copy_support
 from network_tabs import (
@@ -480,18 +481,21 @@ def gui(smoke_test=False):
             )
             if target.get() == "hrtdc-mezzanine":
                 latest_image.set(
-                    "Flash-dependent candidates: "
+                    "File name (flash-dependent candidates): "
                     + "; ".join(catalog_rows[int(item)]["name"] for item in visible)
-                    + " | "
-                    + row.get("commit", "")[:12]
+                    + " | Version: "
+                    + version_text
+                    + " | Commit: "
+                    + row.get("commit", "")
                 )
             else:
                 latest_image.set(
-                    row["name"]
-                    + " | "
+                    "File name: "
+                    + row["name"]
+                    + " | Version: "
                     + version_text
-                    + " | "
-                    + row.get("commit", "")[:12]
+                    + " | Commit: "
+                    + row.get("commit", "")
                 )
             images.selection_set(visible[0])
             images.focus(visible[0])
@@ -923,7 +927,7 @@ def gui(smoke_test=False):
             return
         if not messagebox.askyesno(
             "Temporary IPv4",
-            f"Add {chosen_ip} / {chosen_mask} to {adapter_label.get()}?\nExisting DHCP, DNS and gateway settings are preserved.\nOnly this alias will be removed on restore or application exit. macOS will request administrator approval.",
+            f"Add {chosen_ip} / {chosen_mask} to {adapter_label.get()}?\nExisting DHCP, DNS and gateway settings are preserved.\nOnly this alias will be removed on restore or application exit. The system will request administrator approval.",
         ):
             return
 
@@ -934,6 +938,7 @@ def gui(smoke_test=False):
             events.put(("lease", (path, data)))
             try:
                 result = network.authorize("apply", path, command_prefix())
+                data["applied"] = True
                 return (
                     "network",
                     f"Temporary {data['address']} on {interface}. Auto-cleanup active.",
@@ -1056,11 +1061,29 @@ def gui(smoke_test=False):
         latest_panel,
         text="Latest matching firmware from the official default branch",
     ).pack(anchor="w")
-    latest_image_entry = ttk.Entry(
-        latest_panel, textvariable=latest_image, state="readonly"
-    )
-    latest_image_entry.pack(fill="x", pady=4)
-    bind_horizontal_scroll(latest_image_entry)
+    latest_details = {
+        name: tk.StringVar() for name in ("File name", "Version", "Commit")
+    }
+
+    def show_latest_details(*unused):
+        text = latest_image.get()
+        match = re.fullmatch(
+            r"File name(?: \(flash-dependent candidates\))?: (.*?) \| Version: (.*?) \| Commit: (.*)",
+            text,
+        )
+        values = match.groups() if match else (text, "", "")
+        for variable, value in zip(latest_details.values(), values):
+            variable.set(value)
+
+    latest_image.trace_add("write", show_latest_details)
+    show_latest_details()
+    for name, variable in latest_details.items():
+        detail_row = ttk.Frame(latest_panel)
+        detail_row.pack(fill="x", pady=2)
+        ttk.Label(detail_row, text=name + ":", width=12).pack(side="left")
+        detail_entry = ttk.Entry(detail_row, textvariable=variable, state="readonly")
+        detail_entry.pack(side="left", fill="x", expand=True)
+        bind_horizontal_scroll(detail_entry)
     ttk.Label(latest_panel, textvariable=catalog_status, wraplength=930).pack(
         anchor="w"
     )
@@ -1198,13 +1221,6 @@ def gui(smoke_test=False):
         help_link(heading, "host").pack(side="left", padx=(8, 0))
         panel = ttk.Frame(holder)
         temporary_panels.append(panel)
-        if sys.platform != "darwin":
-            ttk.Label(
-                panel,
-                text="Temporary IP automation is available on macOS. On Linux/WSL configure the host Ethernet to 192.168.10.20/24 before using network operations.",
-                wraplength=900,
-            ).pack(anchor="w", pady=8)
-            return
         net = ttk.Frame(panel, padding=8)
         net.pack(fill="x", pady=6)
         ttk.Label(net, text="NIC:").grid(row=0, column=0, padx=(0, 4))
@@ -1625,6 +1641,12 @@ def gui(smoke_test=False):
     if not smoke_test:
         apply_ui_mode()
     if smoke_test:
+        latest_image.set(
+            "File name: example_v2_A.mcs | Version: v2.A | Commit: " + "a" * 40
+        )
+        assert latest_details["File name"].get() == "example_v2_A.mcs"
+        assert latest_details["Version"].get() == "v2.A"
+        assert latest_details["Commit"].get() == "a" * 40
         root.update()
         assert initial_layout["ready"]
         assert notebook.winfo_ismapped() and notebook.winfo_height() >= 180
@@ -1912,8 +1934,7 @@ def gui(smoke_test=False):
         root.after(300, root.destroy)
     else:
         root.after(50, lambda: scan(quiet=True))
-        if sys.platform == "darwin":
-            root.after(100, lambda: refresh_adapters(quiet=True))
+        root.after(100, lambda: refresh_adapters(quiet=True))
     root.mainloop()
 
 
@@ -1946,9 +1967,21 @@ def main():
             result = network.privileged(
                 args.network_worker, args.lease, command_prefix()
             )
+            if sys.platform != "darwin" and args.network_worker != "guard":
+                network.save(Path(args.lease).with_suffix(".result"), result)
             print(json.dumps(result))
             return 0
         except Exception as error:
+            if sys.platform != "darwin" and args.network_worker != "guard":
+                # Do not write a report to an unvalidated, user-supplied path.
+                try:
+                    network.read_lease(args.lease)
+                    network.save(
+                        Path(args.lease).with_suffix(".result"),
+                        {"success": False, "error": str(error)},
+                    )
+                except Exception:
+                    pass
             print(str(error), file=sys.stderr)
             return 1
     if getattr(sys, "frozen", False) and os.name == "nt":
