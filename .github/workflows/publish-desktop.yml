@@ -1,0 +1,45 @@
+name: Publish public desktop downloads
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-desktop.yml'
+      - '.github/scripts/publish-desktop.py'
+      - '.github/scripts/test_publish_desktop.py'
+  workflow_run:
+    workflows: [Build Windows and Linux desktop apps, Build macOS desktop app]
+    types: [completed]
+    branches: [main]
+concurrency:
+  group: public-desktop-downloads
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  publish:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository &&
+       github.event.workflow_run.head_branch == 'main' &&
+       (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test publication guards and checksum checks
+        run: python -m unittest discover -s .github/scripts -p 'test_*.py' -v
+      - name: Publish only successful verified main-branch artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python .github/scripts/publish-desktop.py
