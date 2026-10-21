@@ -1883,6 +1883,12 @@ def gui(smoke_test=False):
             set(jobs),
         )
         languages.set_language("ja")
+        from ui_clipboard import widget_text
+
+        assert widget_text(program_button) == "書き込む"
+        program_text.set("Configure and program")
+        assert widget_text(program_button) == "設定して書き込む"
+        program_text.set("Program image")
         assert notebook.tab(0, "text") == "ファームウェア"
         assert category_count_status.get().startswith("Changes:")
         assert any(

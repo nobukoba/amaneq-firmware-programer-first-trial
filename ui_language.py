@@ -167,7 +167,7 @@ class LanguageManager:
         if isinstance(widget, ttk.Treeview):
             for column in widget["columns"]:
                 self.headings.append((widget, column, widget.heading(column, "text")))
-        if isinstance(widget, (ttk.Label, tk.Label)) and widget.cget("textvariable"):
+        if isinstance(widget, (ttk.Label, tk.Label, ttk.Button)) and widget.cget("textvariable"):
             name = str(widget.cget("textvariable"))
             proxy = tk.StringVar(master=self.root)
 
