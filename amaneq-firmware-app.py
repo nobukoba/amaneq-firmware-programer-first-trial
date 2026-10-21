@@ -949,13 +949,15 @@ def gui(smoke_test=False):
     def network_widgets(parent):
         holder = ttk.Frame(parent)
         holder.pack(fill="x", pady=4)
+        heading = ttk.Frame(holder)
+        heading.pack(fill="x")
         ttk.Checkbutton(
-            holder,
+            heading,
             text="Temporary static host IP address (DHCP preserved, restored on exit)",
             variable=temporary_enabled,
             command=toggle_temporary,
-        ).pack(anchor="w")
-        help_link(holder, "host").pack(anchor="w")
+        ).pack(side="left")
+        help_link(heading, "host").pack(side="left", padx=(8, 0))
         panel = ttk.Frame(holder)
         temporary_panels.append(panel)
         if sys.platform != "darwin":

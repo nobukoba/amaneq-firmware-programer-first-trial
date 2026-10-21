@@ -233,3 +233,5 @@ For Windows CI, pin Cygwin install action v6.1 (`3f0a3f9f988f7e96b8c18098ae05eae
 Inside the Cygwin helper compilation step, use `export PATH="/usr/bin:/bin:$PATH"` so cc1plus can locate its Cygwin DLLs. Do not change system-wide PATH. The missing-DLL failure was locally reproduced without this setting; all four compiles and `--help` checks passed with CRLF scripts starting from a system-only PATH after the fix.
 
 Cygwin source acquisition falls back across official HTTPS mirrors only on transport failures. Each request has a 30-second timeout; metadata is capped at 100 MB and source downloads at their declared sizes. Preserve installed-version, size and SHA512 checks; do not retry content mismatches against another mirror. Actual downloads and checks of all three installed runtime package sources also passed locally.
+
+In every network tab, place the Help link immediately to the right of the Temporary static host IP address checkbox on the same row. Keep this shared heading independent of the expandable detail panel so Help remains available while disabled.

@@ -350,3 +350,5 @@ MCS programming saves a full flash backup and its SHA256, then rechecks flash id
 Windows D2XX hardware test: AMANEQ v4 LR-TDC v2.A MCS programming succeeded with the existing FTDI driver. A 16 MiB full-flash backup was saved, and all 6,692,572 image bytes matched the flash readback. The SPI bridge remains in SRAM: power-cycle the board manually to check boot. Boot/DAQ operation, BIT loading and macOS/Linux hardware programming remain unverified.
 
 For continuation in another chat, read the [development handoff](HANDOFF.md) and [agent instructions](AGENTS.md).
+
+In every network tab, place the Help link immediately to the right of the Temporary static host IP address checkbox on the same row. Keep this shared heading independent of the expandable detail panel so Help remains available while disabled.
