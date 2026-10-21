@@ -12,18 +12,18 @@ openFPGALoaderでAMANEQファームウェアを取得・書き込みます。対
 
 | 使用するOS | ダウンロード先・現在の配布状況 |
 | --- | --- |
-| macOS 15以降：Apple Silicon（M1/M2/M3/M4など） | [Mac用アプリをダウンロード（arm64 ZIP）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-a60c039/amaneq-firmware-programer-macos-arm64.zip) |
-| macOS 15以降：Intel | [Mac用アプリをダウンロード（x86_64 ZIP）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-a60c039/amaneq-firmware-programer-macos-x86_64.zip) |
-| Windows x64 | [Windows版をダウンロード（ZIP）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39468344602/artifacts/12285897572)。ビルド・起動チェック成功。GitHubログインが必要です。 |
-| Linux x86_64 | [Linux版をダウンロード（Actions成果物）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39468344602/artifacts/12285718432)。ビルド・起動チェック成功。GitHubログインが必要です。 |
+| macOS 15以降：Apple Silicon（M1/M2/M3/M4など） | [Mac用アプリをダウンロード（arm64 ZIP）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-be2ce6c/amaneq-firmware-programer-macos-arm64.zip) |
+| macOS 15以降：Intel | [Mac用アプリをダウンロード（x86_64 ZIP）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-be2ce6c/amaneq-firmware-programer-macos-x86_64.zip) |
+| Windows x64 | [Windows版をダウンロード（ZIP）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39669574336/artifacts/12378409855)。ビルド・起動チェック成功。GitHubログインが必要です。 |
+| Linux x86_64 | [Linux版をダウンロード（Actions成果物）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39669574336/artifacts/12378224601)。ビルド・起動チェック成功。GitHubログインが必要です。 |
 
-MacはZIPを展開し、`amaneq-firmware-programer.app` をApplicationsへ移して起動します。Pythonのインストールは不要です。上のMac用リンクは、Help位置変更と `Latest firmware / Custom` を含む[最新プレビュー `a60c039`](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/tag/macos-preview-v0.15.9-a60c039)です。**この最新版は未公証です**。公証済みの旧版 `bd163d8` とは別です。他のバージョンは[リリース一覧](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases)の **Assets** から選べます。**Source code (zip)** はアプリではなくソースコードです。
+MacはZIPを展開し、`amaneq-firmware-programer.app` をApplicationsへ移して起動します。Pythonのインストールは不要です。上のMac用リンクは、Simple／Expertモード・最新版情報・コピー用メニュー・Help位置変更を含む[最新プレビュー `be2ce6c`](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/tag/macos-preview-v0.15.9-be2ce6c)です。**この最新版は未公証です**。公証済みの旧版 `bd163d8` とは別です。他のバージョンは[リリース一覧](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases)の **Assets** から選べます。**Source code (zip)** はアプリではなくソースコードです。
 
 Windows版は上のリンクで取得した外側のZIPを展開し、その中の `amaneq-firmware-programer-windows-x64.zip` も展開します。`amaneq-firmware-programer` フォルダー内の `amaneq-firmware-programer.exe` を起動してください。`_internal` フォルダーは移動・削除せず、実行ファイルの隣に置きます。
 
 Linux版は上のリンクからZIPを取得し、その中の `amaneq-firmware-programer-linux-x86_64.tar.gz` を展開して、以下のLinux起動コマンドを実行してください。
 
-Windows・Linuxのリンクは[成功済みビルド `6cdc836`](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39468344602)のActions成果物です。**Releasesには未掲載**で、保存期間は30日です。期限切れの場合は[ビルド一覧](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/workflows/desktop-app.yml)から対象OSの成功したジョブと成果物を確認してください。自分で作成する場合は[開発者向けビルド手順](FOR_DEVELOPERS.ja.md#windowslinuxデスクトップパッケージ)を参照してください。
+Windows・Linuxのリンクは[成功済みビルド `be2ce6c`](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39669574336)のActions成果物です。**Releasesには未掲載**で、保存期間は30日です。期限切れの場合は[ビルド一覧](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/workflows/desktop-app.yml)から対象OSの成功したジョブと成果物を確認してください。自分で作成する場合は[開発者向けビルド手順](FOR_DEVELOPERS.ja.md#windowslinuxデスクトップパッケージ)を参照してください。
 
 ## Simple modeとExpert mode
 
@@ -82,7 +82,7 @@ Target IPは192.168.10.10 / 192.168.10.16 / CustomとPingボタンを1行に配�
 
 クロックはhul-common-libの6プリセットから選び、Applyを押します。レジスタの読み戻し一致後にEEPROMへコピーします。Save clock settings for the next power-onは、確認したクロック設定をチップ内EEPROMへ保存して次回電源投入時に使う設定です。上流と同様初期状態で有効で、一時変更だけなら外します。保存コマンドへの応答は電源再投入後の保持確認とは区別してください。
 
-MPC / MPCXタブではファイルを選び、読み取り専用のCheck、Read、Write MPC/MPCXを使います。Initialize XG EEPROMは初期状態で無効です。IPだけの読み書きはIPタブのRead IP / Write IPを使い、書き込みにはNew device IPが必須です。初期状態はEEPROM IPの変更で、current/runtime IPを選ぶと動作中IPを変更し、新しい接続先で検証します。IP変更はライセンスを保持します。Clear/resetは設けていません。書き込みは確認後に行い、上流の世代照合・待機・読み戻し検証を維持します。
+MPC / MPCXタブではファイルを選び、読み取り専用のCheck、Read、Write MPC/MPCXを使います。Initialize XG EEPROMは初期状態で有効です。IPだけの読み書きはIPタブのRead IP / Write IPを使い、書き込みにはNew device IPが必須です。初期状態はEEPROM IPの変更で、current/runtime IPを選ぶと動作中IPを変更し、新しい接続先で検証します。IP変更はライセンスを保持します。Clear/resetは設けていません。書き込みは確認後に行い、上流の世代照合・待機・読み戻し検証を維持します。
 
 Mac版ZIPには固定した版のSiTCPコマンドを同梱し、利用時のコンパイラーは不要です。Linux/WSLのソース利用ではTkとC++コンパイラーを導入して実行します。
 
@@ -363,4 +363,6 @@ Windows D2XXの実機検証では、既存FTDIドライバーでAMANEQ v4 LR-TDC
 
 ネットワーク用の各タブでは、`Temporary static host IP address` のHelpをチェック項目のすぐ右に同じ行で配置します。詳細入力欄の表示切り替えとは独立した共通の見出し行に置き、オフのときもHelpを利用できます。
 
-FirmwareタブではTarget・Firmware・Formatの下に `Latest firmware` / `Custom` を配置し、既定はLatest firmwareとします。Latest firmwareは公式リポジトリの既定ブランチにある対象・種類・形式に合う最新版を使い、GitHub URL・履歴一覧・ローカルファイル欄を隠します。CustomではGitHub URL・履歴一覧またはローカルファイル選択を表示します。Customのリポジトリはプロファイルごとに保持し、Latest firmwareへ変更しても上書きしません。Latestの書き込みは既存CLIの `--latest` 経路を使い、メザニンのフラッシュ判定を含む安全確認とカテゴリ変更後の待機を維持します。
+FirmwareタブではTarget・Firmware・Formatの下に `Latest firmware` / `Custom` を配置し、既定はLatest firmwareとします。Latest firmwareは公式リポジトリの既定ブランチにある対象・種類・形式に合う最新版を使い、GitHub URL・履歴一覧・ローカルファイル欄を隠します。CustomではGitHub URL・履歴一覧またはローカルファイル選択を表示します。Customのリポジトリはプロファイルごとに保持し、Latest firmwareへ変更しても上書きしません。Latestの書き込みは既存CLIへ表示したコミットを `--ref` で渡し、メザニンのフラッシュ判定を含む安全確認とカテゴリ変更後の待機を維持します。
+
+Simpleの一括設定には、互換性のあるファームウェアが既に動作し、指定したTarget IPでEthernet接続できることが必要です。空の基板やSPIブリッジだけが残った状態では、まずExpertのFirmwareで書き込み、手動で電源を入れ直してから設定してください。一括処理は隠れたBITロード・リセット・電源制御を行いません。

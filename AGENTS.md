@@ -201,7 +201,7 @@ Cygwin source acquisition falls back across official HTTPS mirrors only on trans
 
 In every network tab, place the Help link immediately to the right of the Temporary static host IP address checkbox on the same row. Keep this shared heading independent of the expandable detail panel so Help remains available while disabled.
 
-In the Firmware tab, place Latest firmware / Custom below Target, Firmware and Format; default to Latest firmware. Latest uses the newest matching target/family/format in the official repository default branch and hides the GitHub URL, history list and local-file controls. Custom reveals GitHub URL/history or local-file selection. Preserve custom repositories per profile when switching to Latest. Latest programming uses the existing CLI --latest path, retaining mezzanine flash identification, other safety guards and category cooldown.
+In the Firmware tab, place Latest firmware / Custom below Target, Firmware and Format; default to Latest firmware. Latest uses the newest matching target/family/format in the official repository default branch and hides the GitHub URL, history list and local-file controls. Custom reveals GitHub URL/history or local-file selection. Preserve custom repositories per profile when switching to Latest. Latest programming uses the existing CLI pinned to the displayed --ref commit, retaining mezzanine flash identification, other safety guards and category cooldown.
 
 ## Simple and Expert modes
 
@@ -212,3 +212,5 @@ For non-HR-TDC Simple setup, select the current Target IP (Ping remains availabl
 After successful MCS readback, the app prompts for a manual restart. DIP1=0 selects the firmware default IP; DIP1=1 selects the saved user IP (see the [AMANEQ guide](https://spadi-alliance.rcnp.osaka-u.ac.jp/ug-amaneq/firmware/strhrtdc/strhrtdc/)). The requested DIP1=0 restart reminder therefore does not promise use of a custom EEPROM IP. Restart/boot and DAQ operation are not verified by a successful readback. BIT is temporary SRAM loading and does not receive the persistent-boot instruction.
 
 Expert mode retains the Firmware/Jitter Cleaner/MPC-MPCX/IP tabs and Latest firmware/Custom controls. Initialize XG EEPROM now defaults ON in Expert too. Firmware Help is beside Target/Firmware/Format. Text fields support normal selection/copy/paste where editable; right-click Copy/Copy all also works on labels, settings, status and selected firmware rows. macOS also supports Control-click for the menu. Simple/Expert switching and viewing latest metadata do not write hardware.
+
+Combined Simple setup requires compatible firmware already running and reachable over Ethernet at Target IP. For a blank board or one left with only the SPI bridge, first use Expert Firmware programming and manually power-cycle before configuration. The combined workflow does not perform a hidden BIT load, reset or power operation.

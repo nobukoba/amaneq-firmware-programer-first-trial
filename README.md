@@ -12,18 +12,18 @@ The badge above updates automatically with the latest Windows/Linux build result
 
 | Your OS | Download and availability |
 | --- | --- |
-| macOS 15+: Apple Silicon (M1/M2/M3/M4, etc.) | [Download Mac app (arm64 ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-a60c039/amaneq-firmware-programer-macos-arm64.zip) |
-| macOS 15+: Intel | [Download Mac app (x86_64 ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-a60c039/amaneq-firmware-programer-macos-x86_64.zip) |
-| Windows x64 | [Download Windows package (ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39468344602/artifacts/12285897572). Build and startup checks passed. GitHub sign-in required. |
-| Linux x86_64 | [Download Linux package (Actions artifact)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39468344602/artifacts/12285718432). Build and startup checks passed. GitHub sign-in required. |
+| macOS 15+: Apple Silicon (M1/M2/M3/M4, etc.) | [Download Mac app (arm64 ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-be2ce6c/amaneq-firmware-programer-macos-arm64.zip) |
+| macOS 15+: Intel | [Download Mac app (x86_64 ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-be2ce6c/amaneq-firmware-programer-macos-x86_64.zip) |
+| Windows x64 | [Download Windows package (ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39669574336/artifacts/12378409855). Build and startup checks passed. GitHub sign-in required. |
+| Linux x86_64 | [Download Linux package (Actions artifact)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39669574336/artifacts/12378224601). Build and startup checks passed. GitHub sign-in required. |
 
-On Mac, extract the ZIP, move `amaneq-firmware-programer.app` into Applications, and open it. No Python installation is required. The Mac links above point to [latest preview `a60c039`](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/tag/macos-preview-v0.15.9-a60c039), including adjacent host-IP Help and Latest firmware / Custom. **This latest preview is not notarized**; it is separate from the older notarized `bd163d8` release. For other versions, open **Assets** on the [releases page](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases). **Source code (zip)** contains source code, not the app.
+On Mac, extract the ZIP, move `amaneq-firmware-programer.app` into Applications, and open it. No Python installation is required. The Mac links above point to [latest preview `be2ce6c`](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/tag/macos-preview-v0.15.9-be2ce6c), including Simple / Expert modes, latest image details, copy menus and adjacent Help. **This latest preview is not notarized**; it is separate from the older notarized `bd163d8` release. For other versions, open **Assets** on the [releases page](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases). **Source code (zip)** contains source code, not the app.
 
 For Windows, extract the outer artifact ZIP, then extract the `amaneq-firmware-programer-windows-x64.zip` inside. Open `amaneq-firmware-programer.exe` in the `amaneq-firmware-programer` folder. Keep `_internal` beside the executable; do not move or delete it.
 
 For Linux, download the artifact ZIP above, extract the `amaneq-firmware-programer-linux-x86_64.tar.gz` inside, then use the Linux launch command below.
 
-Windows/Linux links point to Actions artifacts from [successful build `6cdc836`](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39468344602). They are **not published in Releases** and are retained for 30 days. If expired, check the target OS job and artifacts in the [build list](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/workflows/desktop-app.yml). For local builds, see the [developer build guide](FOR_DEVELOPERS.md#windows-and-linux-desktop-packaging).
+Windows/Linux links point to Actions artifacts from [successful build `be2ce6c`](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39669574336). They are **not published in Releases** and are retained for 30 days. If expired, check the target OS job and artifacts in the [build list](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/workflows/desktop-app.yml). For local builds, see the [developer build guide](FOR_DEVELOPERS.md#windows-and-linux-desktop-packaging).
 
 ## Simple and Expert modes
 
@@ -82,7 +82,7 @@ Target IP is a single row with 192.168.10.10 / 192.168.10.16 / Custom and a Ping
 
 Choose one of the six hul-common-lib clock presets, then Apply. Register readback must match before copying to EEPROM. Save clock settings for the next power-on means copying verified clock registers to the chip’s EEPROM; it defaults on as upstream. Uncheck it for runtime-only changes. Acknowledging the copy does not prove power-cycle persistence.
 
-For licenses choose a file in MPC / MPCX, then Check (read-only), Read or Write MPC/MPCX. Initialize XG EEPROM defaults off. Use the IP tab's Read IP / Write IP for address-only operations. New device IP is required for writing. Saved EEPROM IP is the default; explicitly select current/runtime IP to migrate the active endpoint and verify through the new address. IP changes preserve license data. Clear/reset are not exposed. Writes require confirmation and retain upstream generation checks, settling and readback verification.
+For licenses choose a file in MPC / MPCX, then Check (read-only), Read or Write MPC/MPCX. Initialize XG EEPROM defaults on. Use the IP tab's Read IP / Write IP for address-only operations. New device IP is required for writing. Saved EEPROM IP is the default; explicitly select current/runtime IP to migrate the active endpoint and verify through the new address. IP changes preserve license data. Clear/reset are not exposed. Writes require confirmation and retain upstream generation checks, settling and readback verification.
 
 The Mac ZIP includes the pinned native SiTCP commands and needs no compiler at runtime. For Linux/WSL source use, install Tk and a C++ compiler, then run:
 
@@ -363,4 +363,6 @@ For continuation in another chat, read the [development handoff](HANDOFF.md) and
 
 In every network tab, place the Help link immediately to the right of the Temporary static host IP address checkbox on the same row. Keep this shared heading independent of the expandable detail panel so Help remains available while disabled.
 
-In the Firmware tab, place Latest firmware / Custom below Target, Firmware and Format; default to Latest firmware. Latest uses the newest matching target/family/format in the official repository default branch and hides the GitHub URL, history list and local-file controls. Custom reveals GitHub URL/history or local-file selection. Preserve custom repositories per profile when switching to Latest. Latest programming uses the existing CLI --latest path, retaining mezzanine flash identification, other safety guards and category cooldown.
+In the Firmware tab, place Latest firmware / Custom below Target, Firmware and Format; default to Latest firmware. Latest uses the newest matching target/family/format in the official repository default branch and hides the GitHub URL, history list and local-file controls. Custom reveals GitHub URL/history or local-file selection. Preserve custom repositories per profile when switching to Latest. Latest programming uses the existing CLI pinned to the displayed --ref commit, retaining mezzanine flash identification, other safety guards and category cooldown.
+
+Combined Simple setup requires compatible firmware already running and reachable over Ethernet at Target IP. For a blank board or one left with only the SPI bridge, first use Expert Firmware programming and manually power-cycle before configuration. The combined workflow does not perform a hidden BIT load, reset or power operation.

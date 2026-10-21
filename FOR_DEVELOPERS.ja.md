@@ -236,7 +236,7 @@ Cygwinソース取得は公式HTTPSミラー間で通信失敗時のみ切り替
 
 ネットワーク用の各タブでは、`Temporary static host IP address` のHelpをチェック項目のすぐ右に同じ行で配置します。詳細入力欄の表示切り替えとは独立した共通の見出し行に置き、オフのときもHelpを利用できます。
 
-FirmwareタブではTarget・Firmware・Formatの下に `Latest firmware` / `Custom` を配置し、既定はLatest firmwareとします。Latest firmwareは公式リポジトリの既定ブランチにある対象・種類・形式に合う最新版を使い、GitHub URL・履歴一覧・ローカルファイル欄を隠します。CustomではGitHub URL・履歴一覧またはローカルファイル選択を表示します。Customのリポジトリはプロファイルごとに保持し、Latest firmwareへ変更しても上書きしません。Latestの書き込みは既存CLIの `--latest` 経路を使い、メザニンのフラッシュ判定を含む安全確認とカテゴリ変更後の待機を維持します。
+FirmwareタブではTarget・Firmware・Formatの下に `Latest firmware` / `Custom` を配置し、既定はLatest firmwareとします。Latest firmwareは公式リポジトリの既定ブランチにある対象・種類・形式に合う最新版を使い、GitHub URL・履歴一覧・ローカルファイル欄を隠します。CustomではGitHub URL・履歴一覧またはローカルファイル選択を表示します。Customのリポジトリはプロファイルごとに保持し、Latest firmwareへ変更しても上書きしません。Latestの書き込みは既存CLIへ表示したコミットを `--ref` で渡し、メザニンのフラッシュ判定を含む安全確認とカテゴリ変更後の待機を維持します。
 
 ## Simple modeとExpert mode
 
@@ -247,3 +247,5 @@ HR-TDC以外のSimple設定では、現在のTarget IP（Ping可能）、任意�
 MCSの読み戻し成功後は、手動の電源再投入を案内します。[公式資料](https://spadi-alliance.rcnp.osaka-u.ac.jp/ug-amaneq/firmware/strhrtdc/strhrtdc/)ではDIP1=0は既定IP、DIP1=1は保存したユーザーIPです。指定されたDIP1=0での再起動案内は、独自のEEPROM IPで起動することを保証しません。読み戻し成功と電源再投入後の起動・DAQ動作は別で、起動後に確認が必要です。BITは一時SRAMロードなので、フラッシュ起動用の案内を出しません。
 
 Expert modeではFirmware／Jitter Cleaner／MPC-MPCX／IPのタブとLatest firmware／Customを維持します。ExpertでもInitialize XG EEPROMの既定値をONに変更しました。FirmwareのHelpはTarget・Firmware・Formatの横です。入力欄は通常の範囲選択・コピー・編集可能欄へのペーストに対応し、ラベル・設定・状態・選択したファームウェア行にも右クリックのCopy／Copy allを付けています。MacはControlクリックでも開けます。モード切り替えや最新版の表示だけでは実機へ書き込みません。
+
+Simpleの一括設定には、互換性のあるファームウェアが既に動作し、指定したTarget IPでEthernet接続できることが必要です。空の基板やSPIブリッジだけが残った状態では、まずExpertのFirmwareで書き込み、手動で電源を入れ直してから設定してください。一括処理は隠れたBITロード・リセット・電源制御を行いません。
