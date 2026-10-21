@@ -12,18 +12,18 @@ openFPGALoaderでAMANEQファームウェアを取得・書き込みます。対
 
 | 使用するOS | ダウンロード先・現在の配布状況 |
 | --- | --- |
-| macOS 15以降：Apple Silicon（M1/M2/M3/M4など） | [Mac用アプリをダウンロード（arm64 ZIP）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-be2ce6c/amaneq-firmware-programer-macos-arm64.zip) |
-| macOS 15以降：Intel | [Mac用アプリをダウンロード（x86_64 ZIP）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-be2ce6c/amaneq-firmware-programer-macos-x86_64.zip) |
-| Windows x64 | [Windows版をダウンロード（ZIP）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39669574336/artifacts/12378409855)。ビルド・起動チェック成功。GitHubログインが必要です。 |
-| Linux x86_64 | [Linux版をダウンロード（Actions成果物）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39669574336/artifacts/12378224601)。ビルド・起動チェック成功。GitHubログインが必要です。 |
+| macOS 15以降：Apple Silicon（M1/M2/M3/M4など） | [Mac用アプリをダウンロード（arm64 ZIP）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview/amaneq-firmware-programer-macos-arm64.zip) |
+| macOS 15以降：Intel | [Mac用アプリをダウンロード（x86_64 ZIP）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview/amaneq-firmware-programer-macos-x86_64.zip) |
+| Windows x64 | [Windows版をダウンロード（ZIP）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/desktop-preview/amaneq-firmware-programer-windows-x64.zip) |
+| Linux x86_64 | [Linux版をダウンロード（tar.gz）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/desktop-preview/amaneq-firmware-programer-linux-x86_64.tar.gz) |
 
-MacはZIPを展開し、`amaneq-firmware-programer.app` をApplicationsへ移して起動します。Pythonのインストールは不要です。上のMac用リンクは、Simple／Expertモード・最新版情報・コピー用メニュー・Help位置変更を含む[最新プレビュー `be2ce6c`](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/tag/macos-preview-v0.15.9-be2ce6c)です。**この最新版は未公証です**。公証済みの旧版 `bd163d8` とは別です。他のバージョンは[リリース一覧](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases)の **Assets** から選べます。**Source code (zip)** はアプリではなくソースコードです。
+MacはZIPを展開し、`amaneq-firmware-programer.app` をApplicationsへ移して起動します。Pythonは不要です。**上のMac版は未公証の最新プレビューです**。公証済みの旧版とは別です。 [Releases](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases) / **Assets**。
 
-Windows版は上のリンクで取得した外側のZIPを展開し、その中の `amaneq-firmware-programer-windows-x64.zip` も展開します。`amaneq-firmware-programer` フォルダー内の `amaneq-firmware-programer.exe` を起動してください。`_internal` フォルダーは移動・削除せず、実行ファイルの隣に置きます。
+Windows版は上のZIP全体を展開し、`amaneq-firmware-programer` フォルダー内の `amaneq-firmware-programer.exe` を起動します。`_internal` は実行ファイルの隣に置いてください。
 
-Linux版は上のリンクからZIPを取得し、その中の `amaneq-firmware-programer-linux-x86_64.tar.gz` を展開して、以下のLinux起動コマンドを実行してください。
+Linux版は上のtar.gzを取得し、以下のLinux起動コマンドを実行してください。
 
-Windows・Linuxのリンクは[成功済みビルド `be2ce6c`](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39669574336)のActions成果物です。**Releasesには未掲載**で、保存期間は30日です。期限切れの場合は[ビルド一覧](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/workflows/desktop-app.yml)から対象OSの成功したジョブと成果物を確認してください。自分で作成する場合は[開発者向けビルド手順](FOR_DEVELOPERS.ja.md#windowslinuxデスクトップパッケージ)を参照してください。
+**すべてGitHubログイン不要でダウンロードできます。リンクは固定で、ビルド・起動確認・SHA256照合が成功した版へ自動更新します。READMEの毎回の修正は不要です。ビルド失敗時は直前の成功版を維持します。** 各リリースの `build-info.json` にソースコミット・ビルド実行・SHA256を記録します。バージョン別リリースも残します。
 
 ## Simple modeとExpert mode
 
@@ -51,7 +51,7 @@ cd amaneq-firmware-programer-first-trial
 
 ## Windows・Linuxデスクトップ版のビルド
 
-Actionsの `Build Windows and Linux desktop apps` は、Windows x64用ZIPとLinux x86_64用tar.gz、およびSHA256ファイルを作成します。[ワークフロー一覧](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/workflows/desktop-app.yml)で対象OSのジョブが成功した実行を開き、ページ下部の **Artifacts** から `amaneq-firmware-programer-windows-x64` または `amaneq-firmware-programer-linux-x86_64` を取得します（GitHubへのログインが必要です）。対象OSのジョブが成功し、目的の成果物がある場合のみダウンロードできます。取得した外側のZIPを展開し、その中のアーカイブ全体を展開してください。`_internal` は実行ファイルの隣に置きます。artifactの保存期間は30日です。Windowsでは `amaneq-firmware-programer.exe` を起動します。Linuxでは次を実行します。
+上の固定リンクからZIP／tar.gzを直接取得できます。WindowsはZIP全体を展開して `amaneq-firmware-programer.exe` を起動します。`_internal` は隣に置いてください。Linuxでは次を実行します。
 
 ```bash
 tar -xzf amaneq-firmware-programer-linux-x86_64.tar.gz

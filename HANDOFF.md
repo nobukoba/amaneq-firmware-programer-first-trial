@@ -61,3 +61,8 @@ On the original development checkout, ignored local artifacts are under `dist/wi
 Added AMANEQ-only selection, default tabless Simple mode and existing Expert mode, latest filename/version/commit display, adjacent firmware Help and copy menus. XG initialization defaults ON. Simple configures and reads back default clock/optional license/EEPROM IP before the final MCS write/readback; HR-TDC skips Simple network operations. DIP1=0 means default IP; saved custom IP uses DIP1=1. The new combined hardware workflow remains physically unverified.
 
 Final verification: code be2ce6c passed 115 tests across all OS/Python 3.10/3.12 jobs. Both Mac architectures built, smoke-tested and published in run 39669574244; Windows/Linux built, smoke-tested and uploaded in run 39669574336. Current Mac preview is macos-preview-v0.15.9-be2ce6c (not notarized). README links for all platforms point to this code snapshot.
+
+
+## Automatic public desktop downloads
+
+This supersedes earlier Actions-only distribution instructions. `publish-desktop.yml` accepts successful same-repository main builds, verifies SHA256, and publishes Windows/Linux at `desktop-preview` and unnotarized Mac at `macos-preview`. Ordinary users need no GitHub sign-in. Keep the fixed Release URLs in README; do not edit links per build. Failed, PR, fork or older builds cannot replace the successful download. Preserve commit-specific releases and `build-info.json`. Publication is independent of notarization and never submits to Apple. Test with `python -m unittest discover -s .github/scripts -p 'test_*.py' -v`.

@@ -206,3 +206,8 @@ MCSの読み戻し成功後は、手動の電源再投入を案内します。[�
 Expert modeではFirmware／Jitter Cleaner／MPC-MPCX／IPのタブとLatest firmware／Customを維持します。ExpertでもInitialize XG EEPROMの既定値をONに変更しました。FirmwareのHelpはTarget・Firmware・Formatの横です。入力欄は通常の範囲選択・コピー・編集可能欄へのペーストに対応し、ラベル・設定・状態・選択したファームウェア行にも右クリックのCopy／Copy allを付けています。MacはControlクリックでも開けます。モード切り替えや最新版の表示だけでは実機へ書き込みません。
 
 Simpleの一括設定には、互換性のあるファームウェアが既に動作し、指定したTarget IPでEthernet接続できることが必要です。空の基板やSPIブリッジだけが残った状態では、まずExpertのFirmwareで書き込み、手動で電源を入れ直してから設定してください。一括処理は隠れたBITロード・リセット・電源制御を行いません。
+
+
+## 公開ダウンロードの自動更新
+
+現在の配布方式は以前のActions限定案内を置き換えます。`publish-desktop.yml` は同一リポジトリmainの成功したビルドのみ取得し、SHA256照合後、Windows/Linuxは `desktop-preview`、未公証Macは `macos-preview` の固定Release URLへ公開します。一般利用者のGitHubログインは不要です。READMEは固定URLを維持し、ビルドごとに変更しません。失敗・PR・fork・古いビルドで成功版を上書きしません。コミット別Releaseと `build-info.json` を残します。公証ワークフローとは独立で、公開処理はAppleへのサブミットを行いません。テスト: `python -m unittest discover -s .github/scripts -p 'test_*.py' -v`。

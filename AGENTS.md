@@ -214,3 +214,8 @@ After successful MCS readback, the app prompts for a manual restart. DIP1=0 sele
 Expert mode retains the Firmware/Jitter Cleaner/MPC-MPCX/IP tabs and Latest firmware/Custom controls. Initialize XG EEPROM now defaults ON in Expert too. Firmware Help is beside Target/Firmware/Format. Text fields support normal selection/copy/paste where editable; right-click Copy/Copy all also works on labels, settings, status and selected firmware rows. macOS also supports Control-click for the menu. Simple/Expert switching and viewing latest metadata do not write hardware.
 
 Combined Simple setup requires compatible firmware already running and reachable over Ethernet at Target IP. For a blank board or one left with only the SPI bridge, first use Expert Firmware programming and manually power-cycle before configuration. The combined workflow does not perform a hidden BIT load, reset or power operation.
+
+
+## Automatic public desktop downloads
+
+This supersedes earlier Actions-only distribution instructions. `publish-desktop.yml` accepts successful same-repository main builds, verifies SHA256, and publishes Windows/Linux at `desktop-preview` and unnotarized Mac at `macos-preview`. Ordinary users need no GitHub sign-in. Keep the fixed Release URLs in README; do not edit links per build. Failed, PR, fork or older builds cannot replace the successful download. Preserve commit-specific releases and `build-info.json`. Publication is independent of notarization and never submits to Apple. Test with `python -m unittest discover -s .github/scripts -p 'test_*.py' -v`.

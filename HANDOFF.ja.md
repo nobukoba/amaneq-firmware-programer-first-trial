@@ -61,3 +61,8 @@ Tkを導入したPythonを使ってください。依存の導入・コンパイ
 AMANEQのみの選択、既定のタブなしSimple modeと従来のExpert mode、最新版ファイル名・版・コミット表示、Helpの位置変更、コピー用メニューを追加しました。Initialize XG EEPROMは既定ONです。Simpleでは固定クロック・任意ライセンス・EEPROM IPを読み戻し付きで先に設定し、最後にMCSを書き込んで照合します。HR-TDCではSimpleネットワーク処理を省きます。DIP1=0の案内は既定IPで、EEPROMの独自IPはDIP1=1です。実機の新しい一括処理は未検証です。
 
 最終検証: コード `be2ce6c` で115件のテストが全OSのPython 3.10/3.12で成功しました。Mac両アーキテクチャのビルド・起動・公開は実行39669574244、Windows/Linuxのビルド・起動・成果物作成は実行39669574336で成功しています。Mac最新版は `macos-preview-v0.15.9-be2ce6c`（未公証）。READMEの全OSリンクはこのコードの配布物に更新しました。
+
+
+## 公開ダウンロードの自動更新
+
+現在の配布方式は以前のActions限定案内を置き換えます。`publish-desktop.yml` は同一リポジトリmainの成功したビルドのみ取得し、SHA256照合後、Windows/Linuxは `desktop-preview`、未公証Macは `macos-preview` の固定Release URLへ公開します。一般利用者のGitHubログインは不要です。READMEは固定URLを維持し、ビルドごとに変更しません。失敗・PR・fork・古いビルドで成功版を上書きしません。コミット別Releaseと `build-info.json` を残します。公証ワークフローとは独立で、公開処理はAppleへのサブミットを行いません。テスト: `python -m unittest discover -s .github/scripts -p 'test_*.py' -v`。

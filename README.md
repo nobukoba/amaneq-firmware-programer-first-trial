@@ -12,18 +12,18 @@ The badge above updates automatically with the latest Windows/Linux build result
 
 | Your OS | Download and availability |
 | --- | --- |
-| macOS 15+: Apple Silicon (M1/M2/M3/M4, etc.) | [Download Mac app (arm64 ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-be2ce6c/amaneq-firmware-programer-macos-arm64.zip) |
-| macOS 15+: Intel | [Download Mac app (x86_64 ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-be2ce6c/amaneq-firmware-programer-macos-x86_64.zip) |
-| Windows x64 | [Download Windows package (ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39669574336/artifacts/12378409855). Build and startup checks passed. GitHub sign-in required. |
-| Linux x86_64 | [Download Linux package (Actions artifact)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39669574336/artifacts/12378224601). Build and startup checks passed. GitHub sign-in required. |
+| macOS 15+: Apple Silicon (M1/M2/M3/M4, etc.) | [Download Mac app (arm64 ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview/amaneq-firmware-programer-macos-arm64.zip) |
+| macOS 15+: Intel | [Download Mac app (x86_64 ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview/amaneq-firmware-programer-macos-x86_64.zip) |
+| Windows x64 | [Download Windows app (ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/desktop-preview/amaneq-firmware-programer-windows-x64.zip) |
+| Linux x86_64 | [Download Linux app (tar.gz)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/desktop-preview/amaneq-firmware-programer-linux-x86_64.tar.gz) |
 
-On Mac, extract the ZIP, move `amaneq-firmware-programer.app` into Applications, and open it. No Python installation is required. The Mac links above point to [latest preview `be2ce6c`](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/tag/macos-preview-v0.15.9-be2ce6c), including Simple / Expert modes, latest image details, copy menus and adjacent Help. **This latest preview is not notarized**; it is separate from the older notarized `bd163d8` release. For other versions, open **Assets** on the [releases page](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases). **Source code (zip)** contains source code, not the app.
+On Mac, extract the ZIP, move `amaneq-firmware-programer.app` to Applications and open it. Python is not required. **The Mac links above provide the latest preview, which is not notarized**, separately from older notarized releases.
 
-For Windows, extract the outer artifact ZIP, then extract the `amaneq-firmware-programer-windows-x64.zip` inside. Open `amaneq-firmware-programer.exe` in the `amaneq-firmware-programer` folder. Keep `_internal` beside the executable; do not move or delete it.
+On Windows, extract the entire ZIP and run `amaneq-firmware-programer.exe` inside the `amaneq-firmware-programer` folder. Keep `_internal` beside the executable.
 
-For Linux, download the artifact ZIP above, extract the `amaneq-firmware-programer-linux-x86_64.tar.gz` inside, then use the Linux launch command below.
+On Linux, download the tar.gz above and use the Linux launch commands below.
 
-Windows/Linux links point to Actions artifacts from [successful build `be2ce6c`](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39669574336). They are **not published in Releases** and are retained for 30 days. If expired, check the target OS job and artifacts in the [build list](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/workflows/desktop-app.yml). For local builds, see the [developer build guide](FOR_DEVELOPERS.md#windows-and-linux-desktop-packaging).
+**All downloads are public and require no GitHub sign-in. These fixed links automatically update after successful builds, startup checks and SHA256 verification. No per-build README edits are needed. Failed builds leave the previous successful download available.** Each release includes `build-info.json` with its source commit, build run and SHA256 hashes; versioned releases remain available.
 
 ## Simple and Expert modes
 
@@ -51,7 +51,7 @@ cd amaneq-firmware-programer-first-trial
 
 ## Windows and Linux desktop builds
 
-The `Build Windows and Linux desktop apps` Actions workflow builds a Windows x64 ZIP and a Linux x86_64 tar.gz, with SHA256 files. Open a run whose target OS job succeeded in the [workflow list](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/workflows/desktop-app.yml), then select `amaneq-firmware-programer-windows-x64` or `amaneq-firmware-programer-linux-x86_64` under **Artifacts** at the bottom (GitHub sign-in required). A download exists only when the target OS job succeeded and the run contains that artifact. Extract the outer artifact ZIP, then extract the whole archive inside and keep `_internal` beside the executable. Artifacts are retained for 30 days. Windows starts with `amaneq-firmware-programer.exe`. Linux starts with:
+Download the ZIP or tar.gz directly from the fixed links above. On Windows, extract the entire ZIP and launch `amaneq-firmware-programer.exe`, keeping `_internal` beside it. On Linux:
 
 ```bash
 tar -xzf amaneq-firmware-programer-linux-x86_64.tar.gz
