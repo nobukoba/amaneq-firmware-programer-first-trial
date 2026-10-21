@@ -25,6 +25,14 @@ On Linux, download the tar.gz above and use the Linux launch commands below.
 
 **All downloads are public and require no GitHub sign-in. These fixed links automatically update after successful builds, startup checks and SHA256 verification. No per-build README edits are needed. Failed builds leave the previous successful download available.** Each release includes `build-info.json` with its source commit, build run and SHA256 hashes; versioned releases remain available.
 
+## Temporary host IP and firmware details
+
+Windows, Linux and macOS support adding a temporary host IP. Enable the checkbox, choose the NIC connected to the board, check Host IP (default 192.168.10.20) and Mask (default 255.255.255.0), then press Apply temporarily and authorize the helper. DHCP, DNS and gateway settings are retained. Restore network or app exit removes only the added address. A separate helper also attempts cleanup after a crash and records failures. Existing addresses and subnet overlaps with other adapters are rejected.
+
+On Windows, approve UAC using the same user account. Linux requires iproute2, pkexec and a desktop authentication agent (Ubuntu: `sudo apt install iproute2 pkexec policykit-1-gnome`). Linux temporary leases require the standard `~/.local/share/AMANEQ` directory. Nothing is installed or applied automatically. The new Windows/Linux address operations have offline tests; adding/removing an address on a real adapter remains unverified. Temporary host IP is unnecessary for USB/JTAG alone.
+
+Target IP preset/custom fields are slightly wider. Latest firmware displays three copyable rows: File name, Version and Commit.
+
 ## Simple and Expert modes
 
 Board selection currently exposes AMANEQ only. Simple mode is the default and has no visible tabs. Select Target, Firmware and Format; the app obtains and displays the latest filename, version and commit. Programming uses that displayed commit, not a later branch update. HR-TDC mezzanine candidates depend on the detected flash and are shown as candidates until that detection.
@@ -58,7 +66,7 @@ tar -xzf amaneq-firmware-programer-linux-x86_64.tar.gz
 ./amaneq-firmware-programer/amaneq-firmware-programer
 ```
 
-The local Linux archive produced in this working tree targets Ubuntu 26.04. The Linux CI build targets Ubuntu 24.04 or a compatible newer distribution with a graphical session. Python/Tk, CA certificates, openFPGALoader and four SiTCP helpers are bundled. Windows uses the user's fork [nobukoba/openFPGALoader](https://github.com/nobukoba/openFPGALoader), `windows-hs3-d2xx` branch pinned to `3e5727bc1126307a0838d62f21971a2fa8f6a12f` with `USE_FTDI_D2XX=ON`. Windows USB/JTAG uses the installed FTDI CDM driver and System32 `ftd2xx.dll`; do not switch an HS3 to WinUSB. Close Vivado/hw_server before using the cable. Linux retains `bf2b52916e7b6216ba1cc0b30933827d7735b05d` and libftdi. Windows bundles Cygwin support for MCS paths and the unchanged POSIX SiTCP utilities; WSL is unnecessary. Windows USB drivers and Linux USB permissions still require host setup. The default Windows package omits libwdi and driver-switching buttons. Cygwin is still bundled for MCS path handling and SiTCP helpers; this USB backend change does not remove those separate dependencies. Temporary host-IP automation remains macOS-only; configure Ethernet manually on Windows/Linux. Packaging checks do not verify physical JTAG, flash boot or network writes.
+The local Linux archive produced in this working tree targets Ubuntu 26.04. The Linux CI build targets Ubuntu 24.04 or a compatible newer distribution with a graphical session. Python/Tk, CA certificates, openFPGALoader and four SiTCP helpers are bundled. Windows uses the user's fork [nobukoba/openFPGALoader](https://github.com/nobukoba/openFPGALoader), `windows-hs3-d2xx` branch pinned to `3e5727bc1126307a0838d62f21971a2fa8f6a12f` with `USE_FTDI_D2XX=ON`. Windows USB/JTAG uses the installed FTDI CDM driver and System32 `ftd2xx.dll`; do not switch an HS3 to WinUSB. Close Vivado/hw_server before using the cable. Linux retains `bf2b52916e7b6216ba1cc0b30933827d7735b05d` and libftdi. Windows bundles Cygwin support for MCS paths and the unchanged POSIX SiTCP utilities; WSL is unnecessary. Windows USB drivers and Linux USB permissions still require host setup. The default Windows package omits libwdi and driver-switching buttons. Cygwin is still bundled for MCS path handling and SiTCP helpers; this USB backend change does not remove those separate dependencies. Temporary host IP is available on Windows/Linux/macOS through explicit Apply; see the temporary host IP section above. Packaging checks do not verify physical JTAG, flash boot or network writes.
 
 See [native build instructions](FOR_DEVELOPERS.md#windows-and-linux-desktop-packaging) for rebuilding and the distinction between local validation and CI results.
 
@@ -91,7 +99,7 @@ python3 build-network-tools.py
 python3 amaneq-firmware-app.py
 ```
 
-Temporary-IP automation is currently macOS-only. On Linux/WSL configure host Ethernet to 192.168.10.20/24; setting only a WSL guest IP does not configure Windows Ethernet. Actual clock/license writes and adapter changes in the new GUI remain physically unverified.
+Temporary-IP automation supports native Windows, Linux and macOS. A WSL guest IP alone does not configure Windows Ethernet; use the native Windows app for its physical adapter. Actual clock/license writes and adapter changes in the new GUI remain physically unverified.
 
 ## Legacy Windows desktop app: optional USB driver switching
 

@@ -254,3 +254,8 @@ Simpleの一括設定には、互換性のあるファームウェアが既に�
 ## 公開ダウンロードの自動更新
 
 現在の配布方式は以前のActions限定案内を置き換えます。`publish-desktop.yml` は同一リポジトリmainの成功したビルドのみ取得し、SHA256照合後、Windows/Linuxは `desktop-preview`、未公証Macは `macos-preview` の固定Release URLへ公開します。一般利用者のGitHubログインは不要です。READMEは固定URLを維持し、ビルドごとに変更しません。失敗・PR・fork・古いビルドで成功版を上書きしません。コミット別Releaseと `build-info.json` を残します。公証ワークフローとは独立で、公開処理はAppleへのサブミットを行いません。テスト: `python -m unittest discover -s .github/scripts -p 'test_*.py' -v`。
+
+
+## Windows/Linuxの一時ホストIP
+
+以前のmacOS専用という説明を置き換えます。`host_network.py` はMac既存処理へ委譲し、Windowsは標準IP HelperのCreate/Get/DeleteUnicastIpAddressEntry、Linuxはiproute2のaddress add/delを使用します。New-NetIPAddress/netsh/プロファイル変更でDHCPを無効化しません。UACは同じユーザー、Linuxはpkexecと認証エージェント・標準データディレクトリが必要です。追加IP・MAC・マスク・元プロセスの起動識別を照合し、権限を持つ監視へ不変スナップショットを私有パイプで渡します。追加前失敗時は削除せず、監視起動失敗・Windows重複IP判定失敗は自分の追加のみ巻き戻します。実アダプターの変更は未検証です。Target IP幅は選択33文字・入力20文字。LatestはFile name/Version/Commitをコピー可能な3行に分け、完全なコミットを表示します。126件のネイティブWindowsテストとGUI smokeが成功しました。

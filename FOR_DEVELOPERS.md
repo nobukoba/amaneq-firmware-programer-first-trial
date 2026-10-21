@@ -254,3 +254,8 @@ Combined Simple setup requires compatible firmware already running and reachable
 ## Automatic public desktop downloads
 
 This supersedes earlier Actions-only distribution instructions. `publish-desktop.yml` accepts successful same-repository main builds, verifies SHA256, and publishes Windows/Linux at `desktop-preview` and unnotarized Mac at `macos-preview`. Ordinary users need no GitHub sign-in. Keep the fixed Release URLs in README; do not edit links per build. Failed, PR, fork or older builds cannot replace the successful download. Preserve commit-specific releases and `build-info.json`. Publication is independent of notarization and never submits to Apple. Test with `python -m unittest discover -s .github/scripts -p 'test_*.py' -v`.
+
+
+## Windows/Linux temporary host IP
+
+This supersedes macOS-only temporary-IP instructions. `host_network.py` delegates Mac operations to the existing backend, uses standard Windows IP Helper Create/Get/DeleteUnicastIpAddressEntry, and Linux iproute2 address add/del. Do not disable DHCP through New-NetIPAddress, netsh or profile replacement. UAC requires the same user; Linux requires pkexec, an authentication agent and the standard data directory. Verify address/MAC/mask/parent creation identity and send an immutable snapshot to the privileged guardian through a private pipe. Never delete on a failed add; roll back owned addresses on guardian startup failure or Windows duplicate-address detection failure. Real adapter mutation remains unverified. Target IP widths are 33 characters for presets and 20 for input. Latest shows copyable File name/Version/Commit rows with the full commit. All 126 native Windows tests and GUI smoke passed.

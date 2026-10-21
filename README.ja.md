@@ -25,6 +25,14 @@ Linux版は上のtar.gzを取得し、以下のLinux起動コマンドを実行�
 
 **すべてGitHubログイン不要でダウンロードできます。リンクは固定で、ビルド・起動確認・SHA256照合が成功した版へ自動更新します。READMEの毎回の修正は不要です。ビルド失敗時は直前の成功版を維持します。** 各リリースの `build-info.json` にソースコミット・ビルド実行・SHA256を記録します。バージョン別リリースも残します。
 
+## 一時ホストIPと表示情報
+
+Windows・Linux・macOSで、一時ホストIPを追加できます。チェックで設定欄を表示し、基板につながるNICを選び、Host IP（既定192.168.10.20）とMask（既定255.255.255.0）を確認して「一時的に適用」を押します。管理者確認後に適用し、DHCP・DNS・ゲートウェイは変更しません。「ネットワークを復元」またはアプリ終了で追加IPだけを削除します。異常終了時も監視ヘルパーが削除を試み、失敗時は記録を残します。既存IPや他アダプターと重なる設定は拒否します。
+
+WindowsはUACを同じ利用者アカウントで承認してください。Linuxはiproute2・pkexec・デスクトップ認証エージェントが必要です（Ubuntuでは `sudo apt install iproute2 pkexec policykit-1-gnome`）。Linuxの一時IP記録は標準の `~/.local/share/AMANEQ` を使用してください。インストール・適用は自動実行しません。新しいWindows/Linux一時IP処理はオフライン試験済みですが、実アダプターへの追加・削除は未検証です。USB/JTAG書き込みだけなら一時IPは不要です。
+
+Target IPの選択欄・カスタム入力欄を少し広げました。Latest firmwareはFile name・Version・Commitの3行で表示し、各値をコピーできます。
+
 ## Simple modeとExpert mode
 
 基板選択は現在AMANEQだけです。既定のSimple modeではタブを表示しません。Target・Firmware・Formatを選ぶと、最新イメージのファイル名・バージョン・コミットを取得して表示します。書き込みは表示したコミットに固定し、後から更新されたブランチへ勝手に変えません。HR-TDCメザニンでは実機のフラッシュ判定で候補が決まるため、判定前は候補ファイルとして表示します。
@@ -58,7 +66,7 @@ tar -xzf amaneq-firmware-programer-linux-x86_64.tar.gz
 ./amaneq-firmware-programer/amaneq-firmware-programer
 ```
 
-この作業ツリーで作成したローカルLinuxアーカイブはUbuntu 26.04向けです。LinuxのCIビルドは、GUIセッションのあるUbuntu 24.04または互換性のある新しいディストリビューションを対象にします。Python/Tk、CA証明書、openFPGALoader、4種類のSiTCP補助コマンドを同梱します。Windowsはユーザーのフォーク [nobukoba/openFPGALoader](https://github.com/nobukoba/openFPGALoader) の `windows-hs3-d2xx` ブランチ、コミット `3e5727bc1126307a0838d62f21971a2fa8f6a12f` を `USE_FTDI_D2XX=ON` で使用します。WindowsのUSB/JTAGは導入済みFTDI CDMドライバーとSystem32の `ftd2xx.dll` を利用し、HS3をWinUSBへ切り替える必要はありません。使用前にVivado/hw_serverを終了してください。Linuxは引き続き `bf2b52916e7b6216ba1cc0b30933827d7735b05d` とlibftdiを使用します。WindowsはMCSパス処理と変更していないPOSIX版SiTCP補助コマンドのためにCygwinを同梱し、WSLは不要です。WindowsのUSBドライバーとLinuxのUSBアクセス権限はホスト側の設定が必要です。標準Windowsパッケージはlibwdiとドライバー切り替えボタンを含みません。CygwinはMCSパス処理とSiTCP補助コマンド向けに引き続き同梱します。今回のUSBバックエンド変更は、これらの別の依存を除去するものではありません。ホストの一時IP自動設定は引き続きmacOS専用なので、Windows/LinuxのEthernetは手動設定してください。パッケージ検査は実機JTAG、フラッシュ起動、ネットワーク書き込みの検証を意味しません。
+この作業ツリーで作成したローカルLinuxアーカイブはUbuntu 26.04向けです。LinuxのCIビルドは、GUIセッションのあるUbuntu 24.04または互換性のある新しいディストリビューションを対象にします。Python/Tk、CA証明書、openFPGALoader、4種類のSiTCP補助コマンドを同梱します。Windowsはユーザーのフォーク [nobukoba/openFPGALoader](https://github.com/nobukoba/openFPGALoader) の `windows-hs3-d2xx` ブランチ、コミット `3e5727bc1126307a0838d62f21971a2fa8f6a12f` を `USE_FTDI_D2XX=ON` で使用します。WindowsのUSB/JTAGは導入済みFTDI CDMドライバーとSystem32の `ftd2xx.dll` を利用し、HS3をWinUSBへ切り替える必要はありません。使用前にVivado/hw_serverを終了してください。Linuxは引き続き `bf2b52916e7b6216ba1cc0b30933827d7735b05d` とlibftdiを使用します。WindowsはMCSパス処理と変更していないPOSIX版SiTCP補助コマンドのためにCygwinを同梱し、WSLは不要です。WindowsのUSBドライバーとLinuxのUSBアクセス権限はホスト側の設定が必要です。標準Windowsパッケージはlibwdiとドライバー切り替えボタンを含みません。CygwinはMCSパス処理とSiTCP補助コマンド向けに引き続き同梱します。今回のUSBバックエンド変更は、これらの別の依存を除去するものではありません。ホストの一時IPはWindows/Linux/macOSで明示適用できます。上記の一時ホストIPの説明を参照してください。パッケージ検査は実機JTAG、フラッシュ起動、ネットワーク書き込みの検証を意味しません。
 
 再ビルド方法とローカル検証・CI結果の区別は [開発者向け説明](FOR_DEVELOPERS.ja.md#windowslinuxデスクトップパッケージ) を参照してください。
 

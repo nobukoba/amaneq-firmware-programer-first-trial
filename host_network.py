@@ -27,6 +27,14 @@ def save(path, data):
     try:
         descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            if (
+                hasattr(os, "fchown")
+                and not IS_WINDOWS
+                and os.geteuid() == 0
+                and path.suffix == ".result"
+            ):
+                owner = path.parent.stat()
+                os.fchown(stream.fileno(), owner.st_uid, owner.st_gid)
             json.dump(data, stream, indent=2)
         temporary.replace(path)
     finally:
