@@ -196,6 +196,7 @@ def gui(smoke_test=False):
     format_ids = {label: key for key, label in format_labels.items()}
     image_format = tk.StringVar(value=format_labels["mcs"])
     filename = tk.StringVar()
+    selection_mode = tk.StringVar(value="Latest")
     source_mode = tk.StringVar(value="GitHub")
     history_limit = tk.StringVar(value="5")
     repository_url = tk.StringVar()
@@ -390,8 +391,11 @@ def gui(smoke_test=False):
         chosen_repository = repository_url.get().strip()
         chosen_target, chosen_firmware = target.get(), firmware.get()
         chosen_format = format_ids[image_format.get()]
+        include_history = selection_mode.get() == "Custom"
         try:
-            chosen_limit = int(history_limit.get())
+            chosen_limit = (
+                1 if selection_mode.get() == "Latest" else int(history_limit.get())
+            )
             if not 1 <= chosen_limit <= 1000:
                 raise ValueError()
         except ValueError:
@@ -405,7 +409,7 @@ def gui(smoke_test=False):
                 chosen_target,
                 chosen_firmware,
                 force,
-                include_history=True,
+                include_history=include_history,
                 history_limit=chosen_limit,
                 image_format=chosen_format,
             )
@@ -500,7 +504,9 @@ def gui(smoke_test=False):
             return
         changing_repository = True
         repository_url.set(
-            repository_overrides.get(
+            "https://github.com/" + services.default_repository(*active_profile)
+            if selection_mode.get() == "Latest"
+            else repository_overrides.get(
                 active_profile,
                 "https://github.com/" + services.default_repository(*active_profile),
             )
@@ -508,22 +514,34 @@ def gui(smoke_test=False):
         changing_repository = False
         refresh_catalog(force=False, quiet=True) if not smoke_test else show_catalog()
 
-    def change_source(*unused):
+    def change_source(*unused, refresh=True):
         nonlocal catalog_request
         catalog_request += 1
-        settings.pack_forget()
+        source_controls.pack_forget()
+        latest_panel.pack_forget()
         online.pack_forget()
         local.pack_forget()
-        if source_mode.get() == "GitHub":
-            online.pack(fill="both", expand=True, before=cable_box)
-            settings.pack(fill="x", pady=8, before=online)
-            if not smoke_test:
-                refresh_catalog(force=False, quiet=True)
+        if selection_mode.get() == "Latest":
+            latest_panel.pack(fill="x", pady=4, before=cable_box)
         else:
-            local.pack(fill="x", pady=12, before=cable_box)
+            source_controls.pack(fill="x", pady=4, before=cable_box)
+            if source_mode.get() == "GitHub":
+                online.pack(fill="both", expand=True, before=cable_box)
+            else:
+                local.pack(fill="x", pady=12, before=cable_box)
+        if refresh and not smoke_test and source_mode.get() == "GitHub":
+            refresh_catalog(force=False, quiet=True)
+
+    def change_selection():
+        source_mode.set("GitHub")
+        change_source(refresh=False)
+        profile_changed()
 
     def program():
-        source = "selected" if source_mode.get() == "GitHub" else "local"
+        source = (
+            "latest" if selection_mode.get() == "Latest"
+            else "selected" if source_mode.get() == "GitHub" else "local"
+        )
         if board.get() == "STAG":
             messagebox.showerror(
                 "Firmware profile",
@@ -552,7 +570,24 @@ def gui(smoke_test=False):
             arguments += cable_arguments(
                 serial.get(), found_cables, confirmed_hs3.get()
             )
-            if source == "selected":
+            if source == "latest":
+                if category_cooldown.remaining():
+                    raise ValueError("Wait for the firmware category cooldown before programming.")
+                arguments += [
+                    "--latest",
+                    "--repo",
+                    "https://github.com/" + services.default_repository(
+                        selected_target, selected_firmware
+                    ),
+                    "--format",
+                    format_ids[image_format.get()],
+                ]
+                description = (
+                    "Latest matching firmware from the official default branch"
+                    + "\nTarget: " + selected_target
+                    + "\nFormat: " + image_format.get()
+                )
+            elif source == "selected":
                 selection = images.selection()
                 if not selection:
                     raise ValueError(
@@ -745,7 +780,6 @@ def gui(smoke_test=False):
         task("Restore IPv4", operation, changes=True)
 
     source_controls = ttk.Frame(page)
-    source_controls.pack(fill="x", pady=4)
     ttk.Label(source_controls, text="Image source:").pack(side="left", padx=(0, 12))
     for value, text in (("GitHub", "GitHub list"), ("Local", "Local file")):
         ttk.Radiobutton(
@@ -827,8 +861,20 @@ def gui(smoke_test=False):
     format_box.bind(
         "<<ComboboxSelected>>", lambda unused: refresh_catalog(force=False, quiet=True)
     )
+    selection_controls = ttk.Frame(page)
+    selection_controls.pack(fill="x", pady=4)
+    for value, text in (("Latest", "Latest firmware"), ("Custom", "Custom")):
+        ttk.Radiobutton(
+            selection_controls, text=text, value=value,
+            variable=selection_mode, command=change_selection,
+        ).pack(side="left", padx=(0, 16))
+    latest_panel = ttk.Frame(page)
+    ttk.Label(
+        latest_panel,
+        text="Latest matching firmware from the official default branch",
+    ).pack(anchor="w")
+    ttk.Label(latest_panel, textvariable=catalog_status, wraplength=930).pack(anchor="w")
     online = ttk.Frame(page)
-    online.pack(fill="both", expand=True)
     repository_box = ttk.Frame(online)
     repository_box.pack(fill="x", pady=4)
     ttk.Label(repository_box, text="GitHub URL:").pack(side="left", padx=(0, 8))
@@ -1035,6 +1081,7 @@ def gui(smoke_test=False):
         profile_changed()
 
     board.trace_add("write", board_changed)
+    change_source(refresh=False)
     board_changed()
     messages = ttk.Frame(split, padding=(0, 4))
     split.add(messages, minsize=80, stretch="always")
@@ -1391,10 +1438,15 @@ def gui(smoke_test=False):
         temporary_enabled.set(False)
         toggle_temporary()
         notebook.select(0)
+        assert selection_mode.get() == "Latest"
+        assert latest_panel.winfo_manager() == "pack"
+        assert not online.winfo_manager()
+        selection_mode.set("Custom")
+        change_selection()
         source_mode.set("Local")
         change_source()
         root.update_idletasks()
-        assert not settings.winfo_manager()
+        assert settings.winfo_manager() == "pack"
         assert not online.winfo_manager()
         assert local.winfo_manager() == "pack"
         assert len(local.winfo_children()) == 1
@@ -1406,11 +1458,26 @@ def gui(smoke_test=False):
         assert not local.winfo_manager()
         order = page.pack_slaves()
         assert (
-            order.index(source_controls)
-            < order.index(settings)
+            order.index(settings)
+            < order.index(selection_controls)
+            < order.index(source_controls)
             < order.index(online)
             < order.index(cable_box)
         )
+        repository_url.set("https://github.com/example/custom-firmware")
+        selection_mode.set("Latest")
+        change_selection()
+        root.update_idletasks()
+        assert not source_controls.winfo_manager()
+        assert not online.winfo_manager()
+        assert not local.winfo_manager()
+        assert latest_panel.winfo_manager() == "pack"
+        assert repository_url.get() == (
+            "https://github.com/" + services.default_repository(*active_profile)
+        )
+        selection_mode.set("Custom")
+        change_selection()
+        assert repository_url.get() == "https://github.com/example/custom-firmware"
         for tab in notebook.tabs():
             notebook.select(tab)
             root.update_idletasks()

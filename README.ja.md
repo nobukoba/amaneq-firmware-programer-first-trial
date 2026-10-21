@@ -352,3 +352,5 @@ Windows D2XXの実機検証では、既存FTDIドライバーでAMANEQ v4 LR-TDC
 別チャットでの開発再開は [開発引き継ぎ](HANDOFF.ja.md) と [エージェント向け指示](AGENTS.ja.md) を参照してください。
 
 ネットワーク用の各タブでは、`Temporary static host IP address` のHelpをチェック項目のすぐ右に同じ行で配置します。詳細入力欄の表示切り替えとは独立した共通の見出し行に置き、オフのときもHelpを利用できます。
+
+FirmwareタブではTarget・Firmware・Formatの下に `Latest firmware` / `Custom` を配置し、既定はLatest firmwareとします。Latest firmwareは公式リポジトリの既定ブランチにある対象・種類・形式に合う最新版を使い、GitHub URL・履歴一覧・ローカルファイル欄を隠します。CustomではGitHub URL・履歴一覧またはローカルファイル選択を表示します。Customのリポジトリはプロファイルごとに保持し、Latest firmwareへ変更しても上書きしません。Latestの書き込みは既存CLIの `--latest` 経路を使い、メザニンのフラッシュ判定を含む安全確認とカテゴリ変更後の待機を維持します。

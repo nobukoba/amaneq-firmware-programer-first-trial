@@ -235,3 +235,5 @@ Windows CIではCygwin導入アクションをv6.1（`3f0a3f9f988f7e96b8c18098ae
 Cygwinソース取得は公式HTTPSミラー間で通信失敗時のみ切り替えます。各取得は30秒のタイムアウト、パッケージ一覧は100 MBの上限、ソースは宣言されたサイズを上限にします。バージョン・サイズ・SHA512照合を維持し、不一致を理由に別ミラーから取り直しません。実際に導入済みの3パッケージのソース取得と照合も手元で確認済みです。
 
 ネットワーク用の各タブでは、`Temporary static host IP address` のHelpをチェック項目のすぐ右に同じ行で配置します。詳細入力欄の表示切り替えとは独立した共通の見出し行に置き、オフのときもHelpを利用できます。
+
+FirmwareタブではTarget・Firmware・Formatの下に `Latest firmware` / `Custom` を配置し、既定はLatest firmwareとします。Latest firmwareは公式リポジトリの既定ブランチにある対象・種類・形式に合う最新版を使い、GitHub URL・履歴一覧・ローカルファイル欄を隠します。CustomではGitHub URL・履歴一覧またはローカルファイル選択を表示します。Customのリポジトリはプロファイルごとに保持し、Latest firmwareへ変更しても上書きしません。Latestの書き込みは既存CLIの `--latest` 経路を使い、メザニンのフラッシュ判定を含む安全確認とカテゴリ変更後の待機を維持します。

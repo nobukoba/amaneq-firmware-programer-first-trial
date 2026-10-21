@@ -352,3 +352,5 @@ Windows D2XX hardware test: AMANEQ v4 LR-TDC v2.A MCS programming succeeded with
 For continuation in another chat, read the [development handoff](HANDOFF.md) and [agent instructions](AGENTS.md).
 
 In every network tab, place the Help link immediately to the right of the Temporary static host IP address checkbox on the same row. Keep this shared heading independent of the expandable detail panel so Help remains available while disabled.
+
+In the Firmware tab, place Latest firmware / Custom below Target, Firmware and Format; default to Latest firmware. Latest uses the newest matching target/family/format in the official repository default branch and hides the GitHub URL, history list and local-file controls. Custom reveals GitHub URL/history or local-file selection. Preserve custom repositories per profile when switching to Latest. Latest programming uses the existing CLI --latest path, retaining mezzanine flash identification, other safety guards and category cooldown.
