@@ -768,18 +768,16 @@ def gui(smoke_test=False):
                         "--download-dir",
                         str(download_root),
                     ]
-                    arguments = [
-                        "program",
-                        "--loader",
+                    arguments = simple_workflow.firmware_file_command(
                         loader.get(),
-                        "--target",
                         selected_target,
-                        "--firmware",
                         selected_firmware,
-                        "--yes",
-                        "--file",
-                        str(prepared_image),
-                    ] + cable_arguments(serial.get(), found_cables, confirmed_hs3.get())
+                        chosen_format,
+                        prepared_image,
+                        cable_arguments(
+                            serial.get(), found_cables, confirmed_hs3.get()
+                        ),
+                    )
             except Exception as error:
                 messagebox.showerror("Simple configuration", str(error))
                 return

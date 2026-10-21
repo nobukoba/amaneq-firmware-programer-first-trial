@@ -6,6 +6,25 @@ import simple_workflow as simple
 
 
 class SimpleWorkflowTests(unittest.TestCase):
+    def test_selected_bit_and_mcs_format_survive_prepared_file_programming(self):
+        for kind in ("bit", "mcs"):
+            command = simple.firmware_file_command(
+                "loader",
+                "amaneq-v4",
+                "lrtdc",
+                kind,
+                "prepared." + kind,
+                ["--cable", "hs3", "--serial", "SYNTHETIC"],
+            )
+            self.assertEqual(command[command.index("--format") + 1], kind)
+            self.assertEqual(command[command.index("--file") + 1], "prepared." + kind)
+            self.assertNotIn("--latest", command)
+            self.assertEqual(command[command.index("--serial") + 1], "SYNTHETIC")
+        with self.assertRaises(ValueError):
+            simple.firmware_file_command(
+                "loader", "amaneq-v4", "lrtdc", "hex", "image", []
+            )
+
     def test_initialization_and_persistent_ip_are_explicit(self):
         with (
             patch.object(simple.operations, "license_kind", return_value="MPCX"),

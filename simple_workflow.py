@@ -55,3 +55,23 @@ def configure_network(plan, run_command, log, clock=operations.configure_clock):
     run_command(list(plan.ip_write))
     run_command(list(plan.ip_read))
     log("Network configuration and readback completed; EEPROM IP: " + plan.saved_ip)
+
+
+def firmware_file_command(loader, target, firmware, image_format, filename, cable_args):
+    """Keep an explicitly selected BIT/MCS format when programming a prepared file."""
+    if image_format not in ("bit", "mcs"):
+        raise ValueError("Select BIT or MCS format.")
+    return [
+        "program",
+        "--loader",
+        loader,
+        "--target",
+        target,
+        "--firmware",
+        firmware,
+        "--format",
+        image_format,
+        "--yes",
+        "--file",
+        str(filename),
+    ] + list(cable_args)
