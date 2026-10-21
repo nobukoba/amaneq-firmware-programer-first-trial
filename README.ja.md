@@ -12,12 +12,12 @@ openFPGALoaderでAMANEQファームウェアを取得・書き込みます。対
 
 | 使用するOS | ダウンロード先・現在の配布状況 |
 | --- | --- |
-| macOS 15以降：Apple Silicon（M1/M2/M3/M4など） | [Mac用アプリをダウンロード（arm64 ZIP）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-7287552/amaneq-firmware-programer-macos-arm64.zip) |
-| macOS 15以降：Intel | [Mac用アプリをダウンロード（x86_64 ZIP）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-7287552/amaneq-firmware-programer-macos-x86_64.zip) |
+| macOS 15以降：Apple Silicon（M1/M2/M3/M4など） | [Mac用アプリをダウンロード（arm64 ZIP）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-a60c039/amaneq-firmware-programer-macos-arm64.zip) |
+| macOS 15以降：Intel | [Mac用アプリをダウンロード（x86_64 ZIP）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-a60c039/amaneq-firmware-programer-macos-x86_64.zip) |
 | Windows x64 | [Windows版をダウンロード（ZIP）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39468344602/artifacts/12285897572)。ビルド・起動チェック成功。GitHubログインが必要です。 |
 | Linux x86_64 | [Linux版をダウンロード（Actions成果物）](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39468344602/artifacts/12285718432)。ビルド・起動チェック成功。GitHubログインが必要です。 |
 
-MacはZIPを展開し、`amaneq-firmware-programer.app` をApplicationsへ移して起動します。Pythonのインストールは不要です。上のリンクは確認済みのプレビュー版です。他のバージョンは[リリース一覧](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases)の **Assets** から選べます。**Source code (zip)** はアプリではなくソースコードです。
+MacはZIPを展開し、`amaneq-firmware-programer.app` をApplicationsへ移して起動します。Pythonのインストールは不要です。上のMac用リンクは、Help位置変更と `Latest firmware / Custom` を含む[最新プレビュー `a60c039`](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/tag/macos-preview-v0.15.9-a60c039)です。**この最新版は未公証です**。公証済みの旧版 `bd163d8` とは別です。他のバージョンは[リリース一覧](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases)の **Assets** から選べます。**Source code (zip)** はアプリではなくソースコードです。
 
 Windows版は上のリンクで取得した外側のZIPを展開し、その中の `amaneq-firmware-programer-windows-x64.zip` も展開します。`amaneq-firmware-programer` フォルダー内の `amaneq-firmware-programer.exe` を起動してください。`_internal` フォルダーは移動・削除せず、実行ファイルの隣に置きます。
 

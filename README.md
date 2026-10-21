@@ -12,12 +12,12 @@ The badge above updates automatically with the latest Windows/Linux build result
 
 | Your OS | Download and availability |
 | --- | --- |
-| macOS 15+: Apple Silicon (M1/M2/M3/M4, etc.) | [Download Mac app (arm64 ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-7287552/amaneq-firmware-programer-macos-arm64.zip) |
-| macOS 15+: Intel | [Download Mac app (x86_64 ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-7287552/amaneq-firmware-programer-macos-x86_64.zip) |
+| macOS 15+: Apple Silicon (M1/M2/M3/M4, etc.) | [Download Mac app (arm64 ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-a60c039/amaneq-firmware-programer-macos-arm64.zip) |
+| macOS 15+: Intel | [Download Mac app (x86_64 ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/download/macos-preview-v0.15.9-a60c039/amaneq-firmware-programer-macos-x86_64.zip) |
 | Windows x64 | [Download Windows package (ZIP)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39468344602/artifacts/12285897572). Build and startup checks passed. GitHub sign-in required. |
 | Linux x86_64 | [Download Linux package (Actions artifact)](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/actions/runs/39468344602/artifacts/12285718432). Build and startup checks passed. GitHub sign-in required. |
 
-On Mac, extract the ZIP, move `amaneq-firmware-programer.app` into Applications, and open it. No Python installation is required. The links above point to a verified preview release. For other versions, open **Assets** on the [releases page](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases). **Source code (zip)** contains source code, not the app.
+On Mac, extract the ZIP, move `amaneq-firmware-programer.app` into Applications, and open it. No Python installation is required. The Mac links above point to [latest preview `a60c039`](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases/tag/macos-preview-v0.15.9-a60c039), including adjacent host-IP Help and Latest firmware / Custom. **This latest preview is not notarized**; it is separate from the older notarized `bd163d8` release. For other versions, open **Assets** on the [releases page](https://github.com/nobukoba/amaneq-firmware-programer-first-trial/releases). **Source code (zip)** contains source code, not the app.
 
 For Windows, extract the outer artifact ZIP, then extract the `amaneq-firmware-programer-windows-x64.zip` inside. Open `amaneq-firmware-programer.exe` in the `amaneq-firmware-programer` folder. Keep `_internal` beside the executable; do not move or delete it.
 
