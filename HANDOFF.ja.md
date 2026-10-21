@@ -71,3 +71,5 @@ AMANEQのみの選択、既定のタブなしSimple modeと従来のExpert mode�
 ## Windows/Linuxの一時ホストIP
 
 以前のmacOS専用という説明を置き換えます。`host_network.py` はMac既存処理へ委譲し、Windowsは標準IP HelperのCreate/Get/DeleteUnicastIpAddressEntry、Linuxはiproute2のaddress add/delを使用します。New-NetIPAddress/netsh/プロファイル変更でDHCPを無効化しません。UACは同じユーザー、Linuxはpkexecと認証エージェント・標準データディレクトリが必要です。追加IP・MAC・マスク・元プロセスの起動識別を照合し、権限を持つ監視へ不変スナップショットを私有パイプで渡します。追加前失敗時は削除せず、監視起動失敗・Windows重複IP判定失敗は自分の追加のみ巻き戻します。実アダプターの変更は未検証です。Target IP幅は選択33文字・入力20文字。LatestはFile name/Version/Commitをコピー可能な3行に分け、完全なコミットを表示します。126件のネイティブWindowsテストとGUI smokeが成功しました。
+
+最終配布確認: ソース `3a5f2d491095deba69379f7a66f02daf037d3df9` はOffline tests実行39695137222の全6 OS/Python環境とネットワーク補助ツール試験が成功しました。Windows/Linuxの実行39695137054、Mac両アーキテクチャの実行39695137057もビルド・GUI smoke・配布作成が成功。desktop-previewとmacos-previewのbuild-info.jsonが同コミットを示し、4アーカイブへの未ログイン取得（HTTP 206、ZIP/gzip識別子）を確認しました。実アダプターへのIP追加・削除と実機書き込みは実行していません。
